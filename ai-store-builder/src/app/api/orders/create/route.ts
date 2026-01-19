@@ -1,0 +1,271 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { z } from 'zod'
+import { validateCartItems } from '@/lib/cart/validation'
+import { calculateCartTotal } from '@/lib/cart/calculations'
+import { createRazorpayOrder } from '@/lib/payment/razorpay'
+import { reserveInventory } from '@/lib/orders/inventory'
+import type { StoreSettings } from '@/lib/types/store'
+import type { CreateOrderResponse, ShippingAddress } from '@/lib/types/order'
+
+// Initialize Supabase with service role for server-side operations
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+// Validation schema for order creation (variant-aware)
+const createOrderSchema = z.object({
+  store_id: z.string().uuid('Invalid store ID'),
+  items: z
+    .array(
+      z.object({
+        product_id: z.string().uuid('Invalid product ID'),
+        variant_id: z.string().uuid('Invalid variant ID').optional(),
+        quantity: z.number().int().positive('Quantity must be positive'),
+      })
+    )
+    .min(1, 'Cart cannot be empty'),
+  shipping_address: z.object({
+    name: z.string().min(1, 'Name is required'),
+    phone: z.string().min(10, 'Valid phone number required'),
+    address_line1: z.string().min(1, 'Address is required'),
+    address_line2: z.string().optional(),
+    city: z.string().min(1, 'City is required'),
+    state: z.string().min(1, 'State is required'),
+    pincode: z.string().min(5, 'Valid pincode required'),
+    country: z.string().default('India'),
+  }),
+  customer_details: z.object({
+    name: z.string().min(1, 'Name is required'),
+    email: z.string().email('Valid email required'),
+    phone: z.string().min(10, 'Valid phone number required'),
+  }),
+  payment_method: z.enum(['razorpay', 'cod']),
+})
+
+export async function POST(
+  request: NextRequest
+): Promise<NextResponse<CreateOrderResponse>> {
+  try {
+    const body = await request.json()
+
+    // Validate request body
+    const validationResult = createOrderSchema.safeParse(body)
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validationResult.error.errors.map((e) => e.message),
+        },
+        { status: 400 }
+      )
+    }
+
+    const {
+      store_id,
+      items,
+      shipping_address,
+      customer_details,
+      payment_method,
+    } = validationResult.data
+
+    // 1. Validate cart items
+    const { valid, validatedItems, errors } = await validateCartItems(
+      store_id,
+      items
+    )
+
+    if (!valid || validatedItems.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Cart validation failed',
+          details: errors,
+        },
+        { status: 400 }
+      )
+    }
+
+    // 2. Get store settings
+    const { data: store, error: storeError } = await supabase
+      .from('stores')
+      .select('settings, owner_id, name')
+      .eq('id', store_id)
+      .single()
+
+    if (storeError || !store) {
+      return NextResponse.json(
+        { success: false, error: 'Store not found' },
+        { status: 404 }
+      )
+    }
+
+    const settings = (store.settings || {}) as StoreSettings
+
+    // 3. Check if COD is allowed
+    if (payment_method === 'cod' && !settings.shipping?.cod_enabled) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Cash on Delivery is not available for this store',
+        },
+        { status: 400 }
+      )
+    }
+
+    // 4. Calculate totals
+    const totals = calculateCartTotal(validatedItems, settings, payment_method)
+
+    // 5. Generate order ID and number
+    const orderId = crypto.randomUUID()
+    const orderNumber = `ORD-${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2, 7)
+      .toUpperCase()}`
+
+    // 6. Reserve inventory (prevents overselling) - variant-aware
+    const reservationResult = await reserveInventory(
+      items.map((item) => ({
+        product_id: item.product_id,
+        variant_id: item.variant_id,
+        quantity: item.quantity,
+      })),
+      orderId
+    )
+
+    if (!reservationResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: reservationResult.error || 'Failed to reserve inventory',
+        },
+        { status: 400 }
+      )
+    }
+
+    // 7. Create order in database
+    const { error: orderError } = await supabase.from('orders').insert({
+      id: orderId,
+      order_number: orderNumber,
+      store_id,
+      customer_name: customer_details.name,
+      customer_email: customer_details.email,
+      customer_phone: customer_details.phone,
+      shipping_address: shipping_address as ShippingAddress,
+      subtotal: totals.subtotal,
+      shipping_cost: totals.shipping,
+      tax_amount: totals.tax,
+      discount_amount: totals.discount,
+      total_amount: totals.total,
+      payment_method,
+      payment_status: 'pending',
+      order_status: 'pending',
+      created_at: new Date().toISOString(),
+    })
+
+    if (orderError) {
+      console.error('Order creation error:', orderError)
+      return NextResponse.json(
+        { success: false, error: 'Failed to create order' },
+        { status: 500 }
+      )
+    }
+
+    // 8. Create order items (variant-aware)
+    const orderItems = validatedItems.map((item) => {
+      // Use variant image if available, otherwise product image
+      const imageUrl = item.variant?.image?.url
+        || item.product.images?.[0]?.url
+        || null
+
+      return {
+        order_id: orderId,
+        product_id: item.product_id,
+        variant_id: item.variant_id || null,
+        variant_attributes: item.variant_attributes || null,
+        variant_sku: item.variant?.sku || null,
+        product_title: item.product.title,
+        product_image: imageUrl,
+        quantity: item.quantity,
+        unit_price: item.price, // Uses effective price (variant or product)
+        total_price: item.price * item.quantity,
+      }
+    })
+
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItems)
+
+    if (itemsError) {
+      console.error('Order items creation error:', itemsError)
+      // Clean up order if items failed
+      await supabase.from('orders').delete().eq('id', orderId)
+      return NextResponse.json(
+        { success: false, error: 'Failed to create order items' },
+        { status: 500 }
+      )
+    }
+
+    // 9. Create Razorpay order (for online payment only)
+    let razorpayOrder = null
+    if (payment_method === 'razorpay') {
+      try {
+        razorpayOrder = await createRazorpayOrder(
+          totals.total,
+          'INR',
+          orderNumber,
+          {
+            order_id: orderId,
+            store_id,
+            customer_email: customer_details.email,
+          }
+        )
+
+        // Update order with Razorpay order ID
+        await supabase
+          .from('orders')
+          .update({ razorpay_order_id: razorpayOrder.id })
+          .eq('id', orderId)
+      } catch (razorpayError) {
+        console.error('Razorpay order creation failed:', razorpayError)
+        // Clean up order and items
+        await supabase.from('order_items').delete().eq('order_id', orderId)
+        await supabase.from('orders').delete().eq('id', orderId)
+        return NextResponse.json(
+          { success: false, error: 'Failed to initialize payment' },
+          { status: 500 }
+        )
+      }
+    }
+
+    // 10. For COD orders, mark as confirmed immediately
+    if (payment_method === 'cod') {
+      await supabase
+        .from('orders')
+        .update({
+          order_status: 'confirmed',
+        })
+        .eq('id', orderId)
+    }
+
+    // 11. Return order details
+    return NextResponse.json({
+      success: true,
+      order: {
+        id: orderId,
+        order_number: orderNumber,
+        total_amount: totals.total,
+        razorpay_order_id: razorpayOrder?.id,
+        razorpay_key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      },
+    })
+  } catch (error) {
+    console.error('Order creation error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}

@@ -1,0 +1,311 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { verifyWebhookSignature } from '@/lib/payment/razorpay'
+import { reduceInventory, releaseReservation, restoreInventory } from '@/lib/orders/inventory'
+import {
+  sendOrderConfirmationEmail,
+  sendRefundProcessedEmail,
+} from '@/lib/email/order-confirmation'
+import type {
+  RazorpayWebhookEvent,
+  RazorpayPayment,
+  RazorpayRefund,
+  Order,
+  OrderItem,
+} from '@/lib/types/order'
+
+// Initialize Supabase with service role for server-side operations
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  try {
+    // Get raw body for signature verification
+    const body = await request.text()
+    const signature = request.headers.get('x-razorpay-signature')
+
+    if (!signature) {
+      console.error('Webhook: Missing signature')
+      return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
+    }
+
+    // Verify webhook signature
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
+    if (!webhookSecret) {
+      console.error('Webhook: Missing webhook secret')
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
+
+    const isValid = verifyWebhookSignature(body, signature, webhookSecret)
+
+    if (!isValid) {
+      console.error('Webhook: Invalid signature')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+    }
+
+    // Parse event
+    const event: RazorpayWebhookEvent = JSON.parse(body)
+
+    console.log('Webhook received:', event.event)
+
+    // Handle different webhook events
+    switch (event.event) {
+      case 'payment.captured':
+        await handlePaymentCaptured(event.payload.payment!.entity)
+        break
+
+      case 'payment.failed':
+        await handlePaymentFailed(event.payload.payment!.entity)
+        break
+
+      case 'refund.created':
+        await handleRefundCreated(event.payload.refund!.entity)
+        break
+
+      case 'refund.processed':
+        await handleRefundProcessed(event.payload.refund!.entity)
+        break
+
+      case 'refund.failed':
+        await handleRefundFailed(event.payload.refund!.entity)
+        break
+
+      default:
+        console.log('Unhandled webhook event:', event.event)
+    }
+
+    return NextResponse.json({ received: true })
+  } catch (error) {
+    console.error('Webhook error:', error)
+    return NextResponse.json(
+      { error: 'Webhook processing failed' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * Handle payment.captured event
+ * This is the primary success path for payments
+ */
+async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
+  const razorpayOrderId = payment.order_id
+
+  console.log('Payment captured:', payment.id, 'for order:', razorpayOrderId)
+
+  // Find order by Razorpay order ID
+  const { data: order, error: findError } = await supabase
+    .from('orders')
+    .select(
+      `
+      *,
+      order_items (*)
+    `
+    )
+    .eq('razorpay_order_id', razorpayOrderId)
+    .single()
+
+  if (findError || !order) {
+    console.error('Order not found for Razorpay order:', razorpayOrderId)
+    return
+  }
+
+  // Skip if already paid (idempotency)
+  if (order.payment_status === 'paid') {
+    console.log('Order already paid:', order.id)
+    return
+  }
+
+  // Update order status
+  const { error: updateError } = await supabase
+    .from('orders')
+    .update({
+      payment_status: 'paid',
+      order_status: 'confirmed',
+      razorpay_payment_id: payment.id,
+      paid_at: new Date(payment.created_at * 1000).toISOString(),
+    })
+    .eq('id', order.id)
+
+  if (updateError) {
+    console.error('Failed to update order:', updateError)
+    return
+  }
+
+  // Reduce inventory
+  const orderItems = (order.order_items || []) as OrderItem[]
+  await reduceInventory(
+    orderItems.map((item) => ({
+      product_id: item.product_id,
+      quantity: item.quantity,
+    }))
+  )
+
+  // Release inventory reservation
+  await releaseReservation(order.id)
+
+  // Get store name for email
+  const { data: store } = await supabase
+    .from('stores')
+    .select('name')
+    .eq('id', order.store_id)
+    .single()
+
+  // Send confirmation email
+  const orderWithStore: Order & { store?: { name: string } } = {
+    ...order,
+    order_items: orderItems,
+    store: store ? { name: store.name } : undefined,
+  }
+
+  await sendOrderConfirmationEmail(orderWithStore)
+
+  console.log('Order confirmed:', order.order_number)
+}
+
+/**
+ * Handle payment.failed event
+ */
+async function handlePaymentFailed(payment: RazorpayPayment): Promise<void> {
+  const razorpayOrderId = payment.order_id
+
+  console.log('Payment failed:', payment.id, 'for order:', razorpayOrderId)
+
+  // Find order by Razorpay order ID
+  const { data: order, error: findError } = await supabase
+    .from('orders')
+    .select('id, order_items(*)')
+    .eq('razorpay_order_id', razorpayOrderId)
+    .single()
+
+  if (findError || !order) {
+    console.error('Order not found for Razorpay order:', razorpayOrderId)
+    return
+  }
+
+  // Update order status
+  await supabase
+    .from('orders')
+    .update({
+      payment_status: 'failed',
+      order_status: 'cancelled',
+      payment_error: payment.error_description || 'Payment failed',
+      cancelled_at: new Date().toISOString(),
+    })
+    .eq('id', order.id)
+
+  // Release inventory reservation
+  await releaseReservation(order.id)
+
+  console.log('Order cancelled due to payment failure:', order.id)
+}
+
+/**
+ * Handle refund.created event
+ */
+async function handleRefundCreated(refund: RazorpayRefund): Promise<void> {
+  const paymentId = refund.payment_id
+
+  console.log('Refund created:', refund.id, 'for payment:', paymentId)
+
+  // Find order by payment ID
+  const { data: order, error: findError } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('razorpay_payment_id', paymentId)
+    .single()
+
+  if (findError || !order) {
+    console.error('Order not found for payment:', paymentId)
+    return
+  }
+
+  // Create refund record
+  await supabase.from('refunds').insert({
+    order_id: order.id,
+    razorpay_refund_id: refund.id,
+    amount: refund.amount / 100, // Convert from paise
+    status: 'pending',
+    created_at: new Date(refund.created_at * 1000).toISOString(),
+  })
+
+  console.log('Refund record created for order:', order.order_number)
+}
+
+/**
+ * Handle refund.processed event
+ */
+async function handleRefundProcessed(refund: RazorpayRefund): Promise<void> {
+  const paymentId = refund.payment_id
+
+  console.log('Refund processed:', refund.id, 'for payment:', paymentId)
+
+  // Find order by payment ID
+  const { data: order, error: findError } = await supabase
+    .from('orders')
+    .select('*, order_items(*)')
+    .eq('razorpay_payment_id', paymentId)
+    .single()
+
+  if (findError || !order) {
+    console.error('Order not found for payment:', paymentId)
+    return
+  }
+
+  const refundAmount = refund.amount / 100 // Convert from paise
+  const isFullRefund = refundAmount >= order.total_amount
+
+  // Update refund record
+  await supabase
+    .from('refunds')
+    .update({
+      status: 'processed',
+      processed_at: new Date().toISOString(),
+    })
+    .eq('razorpay_refund_id', refund.id)
+
+  // Update order status for full refunds
+  if (isFullRefund) {
+    await supabase
+      .from('orders')
+      .update({
+        payment_status: 'refunded',
+        order_status: 'refunded',
+      })
+      .eq('id', order.id)
+
+    // Restore inventory for full refunds
+    const orderItems = (order.order_items || []) as OrderItem[]
+    await restoreInventory(
+      orderItems.map((item) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+      }))
+    )
+  }
+
+  // Send refund notification email
+  await sendRefundProcessedEmail(order, refundAmount)
+
+  console.log('Refund completed for order:', order.order_number)
+}
+
+/**
+ * Handle refund.failed event
+ */
+async function handleRefundFailed(refund: RazorpayRefund): Promise<void> {
+  console.log('Refund failed:', refund.id)
+
+  // Update refund record
+  await supabase
+    .from('refunds')
+    .update({
+      status: 'failed',
+    })
+    .eq('razorpay_refund_id', refund.id)
+}
