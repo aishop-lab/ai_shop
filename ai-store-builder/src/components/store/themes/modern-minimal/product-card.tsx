@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShoppingCart, Heart, Eye } from 'lucide-react'
+import { ShoppingCart, Heart, Eye, Star } from 'lucide-react'
 import type { Product } from '@/lib/types/store'
 import { useStore } from '@/lib/contexts/store-context'
 import { useState } from 'react'
@@ -16,28 +16,28 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
   const { store, addToCart, formatPrice, isInCart } = useStore()
   const [isAdding, setIsAdding] = useState(false)
   const [imageError, setImageError] = useState(false)
-  
+
   const baseUrl = `/${store.slug}`
   const primaryImage = product.images?.[0]?.url
   const secondaryImage = product.images?.[1]?.url
   const inCart = isInCart(product.id)
-  
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    
+
     setIsAdding(true)
     addToCart(product, 1)
-    
+
     setTimeout(() => setIsAdding(false), 500)
   }
-  
-  const discount = product.compare_at_price 
+
+  const discount = product.compare_at_price
     ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
     : 0
-  
+
   const isOutOfStock = product.track_quantity && product.quantity <= 0
-  
+
   return (
     <div className="group relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       {/* Image Container */}
@@ -71,7 +71,7 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
               </svg>
             </div>
           )}
-          
+
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-2">
             {discount > 0 && (
@@ -80,7 +80,7 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
               </span>
             )}
             {product.featured && (
-              <span 
+              <span
                 className="px-2 py-1 text-xs font-semibold text-white rounded"
                 style={{ backgroundColor: 'var(--color-primary)' }}
               >
@@ -93,7 +93,7 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
               </span>
             )}
           </div>
-          
+
           {/* Quick Actions */}
           {showQuickView && (
             <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -114,7 +114,7 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
           )}
         </div>
       </Link>
-      
+
       {/* Product Info */}
       <div className="p-4">
         {/* Categories */}
@@ -123,24 +123,32 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
             {product.categories[0]}
           </p>
         )}
-        
+
         {/* Title */}
-        <h3 
+        <h3
           className="font-semibold text-gray-900 mb-2 line-clamp-2 min-h-[48px]"
           style={{ fontFamily: 'var(--font-heading)' }}
         >
-          <Link 
+          <Link
             href={`${baseUrl}/products/${product.id}`}
             className="hover:text-[var(--color-primary)] transition-colors"
           >
             {product.title}
           </Link>
         </h3>
-        
+
+        {/* Rating */}
+        {product.review_count && product.review_count > 0 && (
+          <div className="flex items-center gap-1 text-sm mb-2">
+            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+            <span className="font-medium">{product.average_rating?.toFixed(1) || '0.0'}</span>
+            <span className="text-gray-500">({product.review_count})</span>
+          </div>
+        )}
         {/* Price & Add to Cart */}
         <div className="flex items-center justify-between">
           <div>
-            <span 
+            <span
               className="text-lg font-bold"
               style={{ color: 'var(--color-primary)' }}
             >
@@ -152,17 +160,16 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
               </span>
             )}
           </div>
-          
+
           {!isOutOfStock && (
             <button
               onClick={handleAddToCart}
               disabled={isAdding}
-              className={`p-2 rounded-full transition-all ${
-                inCart 
-                  ? 'bg-green-500 text-white' 
-                  : 'hover:scale-110'
-              }`}
-              style={{ 
+              className={`p-2 rounded-full transition-all ${inCart
+                ? 'bg-green-500 text-white'
+                : 'hover:scale-110'
+                }`}
+              style={{
                 backgroundColor: inCart ? undefined : 'var(--color-primary)',
                 color: 'white'
               }}

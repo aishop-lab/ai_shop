@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Truck, Printer, Package, Mail, Phone, MapPin, Loader2 } from 'lucide-react'
+import { ArrowLeft, Truck, Printer, Package, Mail, Phone, MapPin, Loader2, AlertCircle, RotateCcw, CreditCard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,14 +17,16 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/orders/order-status-badge'
+import { RefundModal } from '@/components/orders/refund-modal'
 import { useToast } from '@/lib/hooks/use-toast'
 import { formatCurrency } from '@/lib/utils'
 import { format } from 'date-fns'
-import type { Order, OrderItem, ShippingAddress } from '@/lib/types/order'
+import type { Order, OrderItem, ShippingAddress, Refund } from '@/lib/types/order'
 
 interface OrderWithItems extends Order {
   order_items: OrderItem[]
   shipping_address: ShippingAddress
+  refunded_at?: string
 }
 
 export default function OrderDetailPage() {
@@ -36,6 +38,8 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<OrderWithItems | null>(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
+  const [showRefundModal, setShowRefundModal] = useState(false)
+  const [refunds, setRefunds] = useState<Refund[]>([])
 
   const [newStatus, setNewStatus] = useState('')
   const [trackingNumber, setTrackingNumber] = useState('')
@@ -48,14 +52,23 @@ export default function OrderDetailPage() {
   const fetchOrder = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/dashboard/orders/${orderId}`)
-      if (!response.ok) throw new Error('Order not found')
-      
-      const data = await response.json()
-      setOrder(data.order)
-      setNewStatus(data.order.order_status)
-      setTrackingNumber(data.order.tracking_number || '')
-      setCourierName(data.order.courier_name || '')
+      const [orderResponse, refundsResponse] = await Promise.all([
+        fetch(`/api/dashboard/orders/${orderId}`),
+        fetch(`/api/dashboard/orders/${orderId}/refund`)
+      ])
+
+      if (!orderResponse.ok) throw new Error('Order not found')
+
+      const orderData = await orderResponse.json()
+      setOrder(orderData.order)
+      setNewStatus(orderData.order.order_status)
+      setTrackingNumber(orderData.order.tracking_number || '')
+      setCourierName(orderData.order.courier_name || '')
+
+      if (refundsResponse.ok) {
+        const refundsData = await refundsResponse.json()
+        setRefunds(refundsData.refunds || [])
+      }
     } catch (error) {
       console.error('Failed to fetch order:', error)
       toast({
@@ -321,6 +334,88 @@ export default function OrderDetailPage() {
             </CardContent>
           </Card>
 
+          {/* Refund Section */}
+          {order.payment_status === 'paid' && order.razorpay_payment_id && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RotateCcw className="h-5 w-5" />
+                  Refund
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Process a full or partial refund for this order
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRefundModal(true)}
+                  className="w-full"
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Process Refund
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Refunded Status */}
+          {order.payment_status === 'refunded' && (
+            <Card className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-red-800 dark:text-red-200">Refunded</p>
+                    {order.refunded_at && (
+                      <p className="text-sm text-red-700 dark:text-red-300">
+                        Refunded on {format(new Date(order.refunded_at), 'MMM dd, yyyy')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Refund History */}
+          {refunds.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Refund History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {refunds.map((refund) => (
+                    <div
+                      key={refund.id}
+                      className="flex items-center justify-between text-sm border-b pb-2 last:border-0 last:pb-0"
+                    >
+                      <div>
+                        <p className="font-medium">{formatCurrency(refund.amount, 'INR')}</p>
+                        <p className="text-xs text-muted-foreground">{refund.reason}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(refund.created_at), 'MMM dd, h:mm a')}
+                        </p>
+                      </div>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          refund.status === 'processed'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                            : refund.status === 'failed'
+                            ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                        }`}
+                      >
+                        {refund.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Update order */}
           <Card>
             <CardHeader>
@@ -433,11 +528,29 @@ export default function OrderDetailPage() {
                     variant="destructive"
                   />
                 )}
+                {order.refunded_at && (
+                  <TimelineItem
+                    label="Refunded"
+                    date={order.refunded_at}
+                    active
+                    variant="destructive"
+                  />
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Refund Modal */}
+      {order && (
+        <RefundModal
+          order={order}
+          open={showRefundModal}
+          onClose={() => setShowRefundModal(false)}
+          onSuccess={fetchOrder}
+        />
+      )}
     </div>
   )
 }

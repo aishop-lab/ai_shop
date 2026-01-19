@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import type { OrderUpdateRequest } from '@/lib/types/dashboard'
+import {
+  sendOrderShippedEmail,
+  sendOrderDeliveredEmail,
+} from '@/lib/email/order-confirmation'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -105,9 +109,9 @@ export async function PATCH(
       const validTransitions = getValidStatusTransitions(currentOrder.order_status)
       if (!validTransitions.includes(order_status)) {
         return NextResponse.json(
-          { 
+          {
             error: `Invalid status transition from ${currentOrder.order_status} to ${order_status}`,
-            validTransitions 
+            validTransitions
           },
           { status: 400 }
         )
@@ -143,10 +147,34 @@ export async function PATCH(
 
     if (updateError) throw updateError
 
-    // TODO: Send email notification to customer about status update
-    // await sendOrderStatusUpdateEmail(order)
+    // Send email notifications based on status change
+    if (order_status === 'shipped' && order.tracking_number) {
+      const { data: store } = await supabase
+        .from('stores')
+        .select('name, contact_email')
+        .eq('id', order.store_id)
+        .single()
 
-    return NextResponse.json({ 
+      await sendOrderShippedEmail({
+        ...order,
+        store: store ? { name: store.name, contact_email: store.contact_email } : undefined,
+      })
+    }
+
+    if (order_status === 'delivered') {
+      const { data: store } = await supabase
+        .from('stores')
+        .select('name, contact_email')
+        .eq('id', order.store_id)
+        .single()
+
+      await sendOrderDeliveredEmail({
+        ...order,
+        store: store ? { name: store.name, contact_email: store.contact_email } : undefined,
+      })
+    }
+
+    return NextResponse.json({
       order,
       message: `Order status updated to ${order_status || 'updated'}`
     })
@@ -204,7 +232,7 @@ export async function DELETE(
     // TODO: If payment was made, initiate refund
     // TODO: Restore inventory
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Order cancelled successfully'
     })
