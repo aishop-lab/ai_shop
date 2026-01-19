@@ -8,6 +8,13 @@ export interface StorePageData {
   settings: StoreSettings
 }
 
+export interface MarketingPixels {
+  facebook_pixel_id: string | null
+  google_analytics_id: string | null
+  google_ads_conversion_id: string | null
+  google_ads_conversion_label: string | null
+}
+
 export interface Store {
   id: string
   owner_id: string
@@ -32,6 +39,7 @@ export interface Store {
   instagram_handle?: string
   facebook_url?: string
   settings: StoreSettings
+  marketing_pixels?: MarketingPixels
   status: 'draft' | 'active' | 'suspended'
   created_at: string
   updated_at: string

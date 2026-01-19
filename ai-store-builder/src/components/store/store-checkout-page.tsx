@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import Script from 'next/script'
 import { ArrowLeft, Lock, CreditCard, Truck, ShoppingBag, Loader2, AlertCircle } from 'lucide-react'
 import { useStore, useIsHydrated } from '@/lib/contexts/store-context'
+import { useAnalytics } from '@/lib/analytics'
 import { toast } from 'sonner'
 import {
   isRazorpayLoaded,
@@ -30,6 +31,7 @@ interface OrderResponse {
 export default function StoreCheckoutPage() {
   const router = useRouter()
   const { store, cart, cartSubtotal, cartTotal, shippingCost, formatPrice, settings, clearCart } = useStore()
+  const analytics = useAnalytics()
   const isHydrated = useIsHydrated()
   const baseUrl = `/${store.slug}`
   
@@ -52,7 +54,23 @@ export default function StoreCheckoutPage() {
   
   const codFee = formData.paymentMethod === 'cod' && settings.shipping?.cod_fee ? settings.shipping.cod_fee : 0
   const finalTotal = cartTotal + codFee
-  
+
+  // Track begin checkout when page loads with items
+  useEffect(() => {
+    if (isHydrated && cart.length > 0) {
+      analytics.trackBeginCheckout({
+        items: cart.map(item => ({
+          id: item.product.id,
+          name: item.product.title,
+          price: item.product.price,
+          category: item.product.categories?.[0],
+          quantity: item.quantity
+        })),
+        value: cartTotal
+      })
+    }
+  }, [isHydrated]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Get brand color from store blueprint
   const brandColor = store.blueprint?.branding?.colors?.primary || '#3b82f6'
   

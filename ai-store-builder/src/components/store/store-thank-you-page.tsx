@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle, Package, Mail, ArrowRight, Home, Truck, Loader2, ShoppingBag, Copy, Check } from 'lucide-react'
 import { useStore } from '@/lib/contexts/store-context'
+import { useAnalytics } from '@/lib/analytics'
 import { toast } from 'sonner'
 import type { Order, OrderItem, ShippingAddress } from '@/lib/types/order'
 
@@ -16,25 +17,46 @@ interface OrderDetails extends Order {
 
 export default function StoreThankYouPage() {
   const { store, formatPrice } = useStore()
+  const analytics = useAnalytics()
   const searchParams = useSearchParams()
   const orderNumber = searchParams.get('order')
   const baseUrl = `/${store.slug}`
-  
+
   const [order, setOrder] = useState<OrderDetails | null>(null)
   const [loading, setLoading] = useState(!!orderNumber)
   const [showConfetti, setShowConfetti] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [purchaseTracked, setPurchaseTracked] = useState(false)
   
   // Fetch order details
   useEffect(() => {
     if (orderNumber) {
       fetchOrderDetails()
     }
-    
+
     // Stop confetti after 5 seconds
     const timer = setTimeout(() => setShowConfetti(false), 5000)
     return () => clearTimeout(timer)
   }, [orderNumber])
+
+  // Track purchase conversion once order data is loaded
+  useEffect(() => {
+    if (order && !purchaseTracked) {
+      analytics.trackPurchase({
+        id: order.order_number,
+        items: order.order_items?.map(item => ({
+          id: item.product_id,
+          name: item.product_title,
+          price: item.unit_price,
+          quantity: item.quantity
+        })) || [],
+        total: order.total_amount,
+        shipping: order.shipping_cost,
+        tax: order.tax_amount
+      })
+      setPurchaseTracked(true)
+    }
+  }, [order, purchaseTracked]) // eslint-disable-line react-hooks/exhaustive-deps
   
   const fetchOrderDetails = async () => {
     try {

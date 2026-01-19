@@ -5,6 +5,7 @@ import { generateStoreMeta, generateStoreStructuredData } from '@/lib/store/seo'
 import { generateStyleVars, getBrandFontsUrl } from '@/lib/store/dynamic-styles'
 import { StoreProvider } from '@/lib/contexts/store-context'
 import { SidebarProvider } from '@/lib/contexts/sidebar-context'
+import { AnalyticsProvider, TrackingScripts } from '@/lib/analytics'
 import StoreHeader from '@/components/store/store-header'
 import StoreFooter from '@/components/store/store-footer'
 import StoreSidebar from '@/components/store/store-sidebar'
@@ -55,6 +56,9 @@ export default async function StoreLayout({ children, params }: StoreLayoutProps
   // Generate structured data
   const structuredData = generateStoreStructuredData(store)
   
+  // Get currency from blueprint
+  const currency = store.blueprint?.location?.currency || 'INR'
+
   return (
     <>
       {/* Preload Google Fonts */}
@@ -72,20 +76,25 @@ export default async function StoreLayout({ children, params }: StoreLayoutProps
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
 
+      {/* Marketing Tracking Scripts */}
+      <TrackingScripts pixels={store.marketing_pixels || null} />
+
       {/* Store Provider with CSS Variables */}
       <div style={styleVars as React.CSSProperties}>
         <StoreProvider initialData={storeData}>
           <SidebarProvider>
-            <StoreClientWrapper storeName={store.name}>
-              <StoreSidebar />
-              <div className="flex flex-col min-h-screen bg-white">
-                <StoreHeader />
-                <main className="flex-1">
-                  {children}
-                </main>
-                <StoreFooter />
-              </div>
-            </StoreClientWrapper>
+            <AnalyticsProvider pixels={store.marketing_pixels || null} currency={currency}>
+              <StoreClientWrapper storeName={store.name}>
+                <StoreSidebar />
+                <div className="flex flex-col min-h-screen bg-white">
+                  <StoreHeader />
+                  <main className="flex-1">
+                    {children}
+                  </main>
+                  <StoreFooter />
+                </div>
+              </StoreClientWrapper>
+            </AnalyticsProvider>
           </SidebarProvider>
         </StoreProvider>
       </div>

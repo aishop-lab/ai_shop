@@ -301,6 +301,7 @@ function transformStoreData(data: Record<string, unknown>): Store {
     instagram_handle: data.instagram_handle as string || blueprint?.contact?.instagram || undefined,
     facebook_url: data.facebook_url as string || undefined,
     settings: mergeSettings(data.settings as StoreSettings | null, blueprint?.settings),
+    marketing_pixels: data.marketing_pixels as Store['marketing_pixels'] || undefined,
     status: data.status as Store['status'],
     created_at: data.created_at as string,
     updated_at: data.updated_at as string

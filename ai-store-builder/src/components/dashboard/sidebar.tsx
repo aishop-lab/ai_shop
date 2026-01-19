@@ -14,7 +14,10 @@ import {
   Plus,
   ExternalLink,
   Store as StoreIcon,
-  Ticket
+  Ticket,
+  RotateCcw,
+  MessageSquare,
+  Megaphone
 } from 'lucide-react'
 import { UserDropdown } from './user-dropdown'
 import { Button } from '@/components/ui/button'
@@ -145,11 +148,35 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
             onNavigate={onClose}
           />
 
+          {/* Reviews */}
+          <NavSection
+            label="Reviews"
+            icon={MessageSquare}
+            href="/dashboard/reviews"
+            onNavigate={onClose}
+          />
+
+          {/* Refunds */}
+          <NavSection
+            label="Refunds"
+            icon={RotateCcw}
+            href="/dashboard/refunds"
+            onNavigate={onClose}
+          />
+
           {/* Analytics */}
           <NavSection
             label="Analytics"
             icon={BarChart3}
             href="/dashboard/analytics"
+            onNavigate={onClose}
+          />
+
+          {/* Marketing */}
+          <NavSection
+            label="Marketing"
+            icon={Megaphone}
+            href="/dashboard/settings/marketing"
             onNavigate={onClose}
           />
 

@@ -7,8 +7,10 @@ import { Minus, Plus, ShoppingCart, Heart, Share2, ChevronLeft, ChevronRight, Ch
 import type { Product } from '@/lib/types/store'
 import type { ProductWithVariants, VariantSelection, ProductVariant } from '@/lib/types/variant'
 import { useStore } from '@/lib/contexts/store-context'
+import { useAnalytics } from '@/lib/analytics'
 import { VariantSelector, useVariantSelection } from './variant-selector'
 import ProductCard from './themes/modern-minimal/product-card'
+import { ReviewsList } from '@/components/reviews/reviews-list'
 
 interface StoreProductDetailProps {
   product: Product | ProductWithVariants
@@ -17,6 +19,7 @@ interface StoreProductDetailProps {
 
 export default function StoreProductDetail({ product, relatedProducts }: StoreProductDetailProps) {
   const { store, addToCart, formatPrice, isInCart, settings } = useStore()
+  const analytics = useAnalytics()
   const [quantity, setQuantity] = useState(1)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isAdding, setIsAdding] = useState(false)
@@ -76,21 +79,43 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
     ? Math.round(((effectiveCompareAtPrice - effectivePrice) / effectiveCompareAtPrice) * 100)
     : 0
 
+  // Track product view
+  useEffect(() => {
+    analytics.trackViewProduct({
+      id: product.id,
+      name: product.title,
+      price: effectivePrice,
+      category: product.categories?.[0],
+      variant: selectedVariant?.id
+    })
+  }, [product.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleAddToCart = () => {
     if (isOutOfStock || needsVariantSelection) return
     setIsAdding(true)
     addToCart(product, quantity, selectedVariant)
+
+    // Track add to cart event
+    analytics.trackAddToCart({
+      id: product.id,
+      name: product.title,
+      price: effectivePrice,
+      category: product.categories?.[0],
+      variant: selectedVariant?.id,
+      quantity
+    })
+
     setTimeout(() => setIsAdding(false), 500)
   }
-  
+
   const nextImage = () => {
     setSelectedImageIndex((prev) => (prev + 1) % images.length)
   }
-  
+
   const prevImage = () => {
     setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length)
   }
-  
+
   return (
     <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
       {/* Breadcrumb */}
@@ -101,7 +126,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
         <span>/</span>
         <span className="text-gray-900">{product.title}</span>
       </nav>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Image Gallery */}
         <div className="space-y-4">
@@ -122,7 +147,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
                 </svg>
               </div>
             )}
-            
+
             {/* Badges */}
             <div className="absolute top-4 left-4 flex flex-col gap-2">
               {discount > 0 && (
@@ -136,7 +161,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
                 </span>
               )}
             </div>
-            
+
             {/* Navigation Arrows */}
             {images.length > 1 && (
               <>
@@ -155,7 +180,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
               </>
             )}
           </div>
-          
+
           {/* Thumbnails */}
           {images.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
@@ -163,11 +188,10 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
                 <button
                   key={image.id}
                   onClick={() => setSelectedImageIndex(index)}
-                  className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                    selectedImageIndex === index 
-                      ? 'border-[var(--color-primary)]' 
-                      : 'border-transparent'
-                  }`}
+                  className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${selectedImageIndex === index
+                    ? 'border-[var(--color-primary)]'
+                    : 'border-transparent'
+                    }`}
                 >
                   <Image
                     src={image.url}
@@ -181,7 +205,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
             </div>
           )}
         </div>
-        
+
         {/* Product Info */}
         <div>
           {/* Categories */}
@@ -198,15 +222,15 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
               ))}
             </div>
           )}
-          
+
           {/* Title */}
-          <h1 
+          <h1
             className="text-2xl md:text-3xl font-bold mb-4"
             style={{ fontFamily: 'var(--font-heading)' }}
           >
             {product.title}
           </h1>
-          
+
           {/* Price */}
           <div className="flex items-baseline gap-3 mb-6">
             <span
@@ -226,15 +250,15 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
               </>
             )}
           </div>
-          
+
           {/* Description */}
-          <p 
+          <p
             className="text-gray-600 mb-8 leading-relaxed"
             style={{ fontFamily: 'var(--font-body)' }}
           >
             {product.description}
           </p>
-          
+
           {/* Variant Selector */}
           {hasVariants && variantOptions.length > 0 && (
             <div className="mb-6">
@@ -262,7 +286,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
               )}
             </div>
           )}
-          
+
           {/* Quantity & Add to Cart */}
           {(!isOutOfStock || needsVariantSelection) && (
             <div className="space-y-4 mb-8">
@@ -293,9 +317,8 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
                 <button
                   onClick={handleAddToCart}
                   disabled={isAdding || needsVariantSelection || isOutOfStock}
-                  className={`flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-lg font-semibold text-white transition-all ${
-                    inCart ? 'bg-green-500' : ''
-                  } ${needsVariantSelection || isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''} ${isAdding ? 'scale-95' : 'hover:scale-105'}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-lg font-semibold text-white transition-all ${inCart ? 'bg-green-500' : ''
+                    } ${needsVariantSelection || isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''} ${isAdding ? 'scale-95' : 'hover:scale-105'}`}
                   style={!inCart ? { backgroundColor: 'var(--color-primary)' } : {}}
                 >
                   {inCart ? (
@@ -323,7 +346,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
               </div>
             </div>
           )}
-          
+
           {/* Features */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-8 border-t">
             <div className="flex items-center gap-3 text-sm">
@@ -343,11 +366,11 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
           </div>
         </div>
       </div>
-      
+
       {/* Related Products */}
       {relatedProducts.length > 0 && (
         <section className="mt-16 pt-12 border-t">
-          <h2 
+          <h2
             className="text-2xl font-bold mb-8"
             style={{ fontFamily: 'var(--font-heading)' }}
           >
@@ -360,6 +383,11 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
           </div>
         </section>
       )}
+
+      {/* Customer Reviews */}
+      <section className="mt-16 pt-12 border-t">
+        <ReviewsList productId={product.id} />
+      </section>
     </div>
   )
 }
