@@ -5,7 +5,10 @@ import type { OrderUpdateRequest } from '@/lib/types/dashboard'
 import {
   sendOrderShippedEmail,
   sendOrderDeliveredEmail,
+  sendOrderCancelledEmail,
 } from '@/lib/email/order-confirmation'
+import { restoreInventory, releaseReservation } from '@/lib/orders/inventory'
+import { refundPayment } from '@/lib/payment/razorpay'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -147,31 +150,84 @@ export async function PATCH(
 
     if (updateError) throw updateError
 
-    // Send email notifications based on status change
-    if (order_status === 'shipped' && order.tracking_number) {
-      const { data: store } = await supabase
-        .from('stores')
-        .select('name, contact_email')
-        .eq('id', order.store_id)
-        .single()
+    // Get store info for emails
+    const { data: store } = await supabase
+      .from('stores')
+      .select('name, contact_email')
+      .eq('id', order.store_id)
+      .single()
 
+    const storeInfo = store ? { name: store.name, contact_email: store.contact_email } : undefined
+
+    // Handle status-specific actions
+    if (order_status === 'shipped' && order.tracking_number) {
       await sendOrderShippedEmail({
         ...order,
-        store: store ? { name: store.name, contact_email: store.contact_email } : undefined,
+        store: storeInfo,
       })
     }
 
     if (order_status === 'delivered') {
-      const { data: store } = await supabase
-        .from('stores')
-        .select('name, contact_email')
-        .eq('id', order.store_id)
-        .single()
-
       await sendOrderDeliveredEmail({
         ...order,
-        store: store ? { name: store.name, contact_email: store.contact_email } : undefined,
+        store: storeInfo,
       })
+    }
+
+    // Handle cancellation: refund + inventory restoration
+    if (order_status === 'cancelled') {
+      let refundResult = null
+
+      // If payment was made (not COD pending), initiate full refund
+      if (currentOrder.payment_status === 'paid' && order.razorpay_payment_id) {
+        try {
+          refundResult = await refundPayment(
+            order.razorpay_payment_id,
+            undefined,
+            { order_id: orderId, reason: 'Order cancelled' }
+          )
+
+          // Create refund record
+          await supabase.from('refunds').insert({
+            order_id: orderId,
+            store_id: order.store_id,
+            razorpay_refund_id: refundResult.id,
+            amount: order.total_amount,
+            reason: 'Order cancelled by seller',
+            status: 'processed',
+            refund_type: 'full',
+            processed_at: new Date().toISOString(),
+          })
+
+          // Update payment status to refunded
+          await supabase
+            .from('orders')
+            .update({ payment_status: 'refunded' })
+            .eq('id', orderId)
+        } catch (refundError) {
+          console.error('Auto-refund failed during status update:', refundError)
+        }
+      }
+
+      // Restore inventory
+      const orderItems = (order.order_items || []).map((item: { product_id: string; variant_id?: string; quantity: number }) => ({
+        product_id: item.product_id,
+        variant_id: item.variant_id,
+        quantity: item.quantity,
+      }))
+
+      if (orderItems.length > 0) {
+        await restoreInventory(orderItems)
+      }
+
+      // Release reservations
+      await releaseReservation(orderId)
+
+      // Send cancellation email
+      await sendOrderCancelledEmail(
+        { ...order, store: storeInfo },
+        refundResult ? 'Your payment will be refunded within 5-7 business days.' : undefined
+      )
     }
 
     return NextResponse.json({
@@ -189,6 +245,7 @@ export async function PATCH(
 }
 
 // Delete order (soft delete - mark as cancelled)
+// Handles auto-refund for paid orders and inventory restoration
 export async function DELETE(
   request: NextRequest,
   { params }: RouteParams
@@ -196,10 +253,10 @@ export async function DELETE(
   try {
     const { orderId } = await params
 
-    // Check if order exists and can be cancelled
+    // Fetch full order with items for inventory restoration
     const { data: order, error: fetchError } = await supabase
       .from('orders')
-      .select('order_status, payment_status')
+      .select('*, order_items(*)')
       .eq('id', orderId)
       .single()
 
@@ -210,18 +267,53 @@ export async function DELETE(
       )
     }
 
-    // Can only cancel pending or confirmed orders
-    if (!['pending', 'confirmed'].includes(order.order_status)) {
+    // Can only cancel pending, confirmed, or processing orders
+    if (!['pending', 'confirmed', 'processing'].includes(order.order_status)) {
       return NextResponse.json(
         { error: `Cannot cancel order with status: ${order.order_status}` },
         { status: 400 }
       )
     }
 
+    let refundResult = null
+    let newPaymentStatus = order.payment_status
+
+    // If payment was made (not COD pending), initiate full refund
+    if (order.payment_status === 'paid' && order.razorpay_payment_id) {
+      try {
+        // Initiate full refund via Razorpay
+        refundResult = await refundPayment(
+          order.razorpay_payment_id,
+          undefined, // Full refund (no amount = full)
+          { order_id: orderId, reason: 'Order cancelled' }
+        )
+
+        // Create refund record in database
+        await supabase.from('refunds').insert({
+          order_id: orderId,
+          store_id: order.store_id,
+          razorpay_refund_id: refundResult.id,
+          amount: order.total_amount,
+          reason: 'Order cancelled by seller',
+          status: 'processed',
+          refund_type: 'full',
+          processed_at: new Date().toISOString(),
+        })
+
+        newPaymentStatus = 'refunded'
+      } catch (refundError) {
+        console.error('Auto-refund failed:', refundError)
+        // Continue with cancellation even if refund fails
+        // The seller can manually process the refund later
+      }
+    }
+
+    // Update order status
     const { error: updateError } = await supabase
       .from('orders')
       .update({
         order_status: 'cancelled',
+        payment_status: newPaymentStatus,
         cancelled_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -229,16 +321,46 @@ export async function DELETE(
 
     if (updateError) throw updateError
 
-    // TODO: If payment was made, initiate refund
-    // TODO: Restore inventory
+    // Restore inventory for all order items
+    const orderItems = (order.order_items || []).map((item: { product_id: string; variant_id?: string; quantity: number }) => ({
+      product_id: item.product_id,
+      variant_id: item.variant_id,
+      quantity: item.quantity,
+    }))
+
+    if (orderItems.length > 0) {
+      await restoreInventory(orderItems)
+    }
+
+    // Release any pending inventory reservations
+    await releaseReservation(orderId)
+
+    // Fetch store info for email
+    const { data: store } = await supabase
+      .from('stores')
+      .select('name, contact_email')
+      .eq('id', order.store_id)
+      .single()
+
+    // Send cancellation email to customer
+    await sendOrderCancelledEmail(
+      {
+        ...order,
+        store: store ? { name: store.name, contact_email: store.contact_email } : undefined,
+      },
+      refundResult ? 'Your payment will be refunded within 5-7 business days.' : undefined
+    )
 
     return NextResponse.json({
       success: true,
-      message: 'Order cancelled successfully'
+      message: 'Order cancelled successfully',
+      refunded: !!refundResult,
+      refund_id: refundResult?.id,
+      inventory_restored: orderItems.length > 0,
     })
 
   } catch (error) {
-    console.error('Order delete error:', error)
+    console.error('Order cancellation error:', error)
     return NextResponse.json(
       { error: 'Failed to cancel order' },
       { status: 500 }

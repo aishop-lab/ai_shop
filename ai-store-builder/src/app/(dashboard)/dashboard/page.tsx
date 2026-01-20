@@ -19,6 +19,7 @@ import {
 import { WelcomeBanner } from '@/components/dashboard/welcome-banner'
 import { StoreStatusCard } from '@/components/dashboard/store-status-card'
 import { AISuggestionsWidget } from '@/components/dashboard/ai-suggestions-widget'
+import { TrafficWidget } from '@/components/dashboard/traffic-widget'
 
 interface StoreBlueprint {
   identity?: {
@@ -201,12 +202,20 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* AI Suggestions Widget */}
-          {hasStore && storeCategory.length > 0 && (
-            <AISuggestionsWidget
-              storeCategory={storeCategory}
-              productCount={stats?.productCount || 0}
-            />
+          {/* AI Suggestions Widget + Traffic Widget */}
+          {hasStore && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {storeCategory.length > 0 && (
+                <AISuggestionsWidget
+                  storeCategory={storeCategory}
+                  productCount={stats?.productCount || 0}
+                />
+              )}
+              <TrafficWidget
+                storeSlug={stats?.store?.slug}
+                ga4Connected={false} // Will be true when user connects GA4 in marketing settings
+              />
+            </div>
           )}
 
           {/* Getting Started + Quick Actions (side by side) */}

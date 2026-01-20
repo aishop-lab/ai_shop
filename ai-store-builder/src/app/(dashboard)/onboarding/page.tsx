@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { OnboardingChat } from '@/components/onboarding/chat'
 import { ProgressSidebar } from '@/components/onboarding/progress-sidebar'
+import { OnboardingProgressBar } from '@/components/onboarding/progress-bar'
 import { Store, Loader2 } from 'lucide-react'
 
 export default function OnboardingPage() {
@@ -66,6 +67,11 @@ export default function OnboardingPage() {
           </Link>
         </div>
       </header>
+
+      {/* Progress bar for mobile - sticky at top */}
+      <div className="lg:hidden sticky top-0 z-10 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-sm border-b px-4 py-3">
+        <OnboardingProgressBar currentStep={currentStep} />
+      </div>
 
       {/* Main content */}
       <main className="container mx-auto px-4 py-8">

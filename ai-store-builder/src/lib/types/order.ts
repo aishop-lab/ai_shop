@@ -34,6 +34,17 @@ export interface Order {
   tracking_number?: string
   courier_name?: string
 
+  // Shiprocket integration
+  shiprocket_order_id?: number
+  shiprocket_shipment_id?: number
+  awb_code?: string
+  label_url?: string
+  manifest_url?: string
+  pickup_scheduled_date?: string
+  pickup_token?: string
+  estimated_delivery_date?: string
+  shipping_provider?: 'manual' | 'shiprocket'
+
   // Timestamps
   created_at: string
   paid_at?: string

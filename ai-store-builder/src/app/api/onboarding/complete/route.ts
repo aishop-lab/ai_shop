@@ -66,6 +66,20 @@ export async function POST(request: Request) {
       )
     }
 
+    // Generate legal policies for the store
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+      await fetch(`${baseUrl}/api/onboarding/generate-policies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ store_id })
+      })
+      console.log('[Complete] Legal policies generated for store:', store_id)
+    } catch (policyError) {
+      console.error('[Complete] Policy generation failed (non-blocking):', policyError)
+      // Don't fail the whole request - policies can be regenerated later
+    }
+
     // Update profile - mark onboarding as completed
     const { error: profileError } = await supabase
       .from('profiles')

@@ -17,7 +17,9 @@ import {
   Ticket,
   RotateCcw,
   MessageSquare,
-  Megaphone
+  Megaphone,
+  Folder,
+  FileSpreadsheet
 } from 'lucide-react'
 import { UserDropdown } from './user-dropdown'
 import { Button } from '@/components/ui/button'
@@ -128,6 +130,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
             items={[
               { label: 'All Products', href: '/dashboard/products' },
               { label: 'Add Product', href: '/dashboard/products/new', icon: Plus },
+              { label: 'Collections', href: '/dashboard/collections', icon: Folder },
             ]}
             onNavigate={onClose}
           />
@@ -169,6 +172,14 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
             label="Analytics"
             icon={BarChart3}
             href="/dashboard/analytics"
+            onNavigate={onClose}
+          />
+
+          {/* Reports */}
+          <NavSection
+            label="Reports"
+            icon={FileSpreadsheet}
+            href="/dashboard/reports"
             onNavigate={onClose}
           />
 

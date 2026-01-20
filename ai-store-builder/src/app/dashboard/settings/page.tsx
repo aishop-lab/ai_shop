@@ -19,8 +19,12 @@ import {
   Loader2,
   ExternalLink,
   ArrowLeft,
-  Upload
+  Upload,
+  FileText,
+  Database,
+  Shield
 } from 'lucide-react'
+import { ColorAccessibilityChecker } from '@/components/ui/color-accessibility-checker'
 
 interface StoreSettings {
   id: string
@@ -346,6 +350,7 @@ export default function SettingsPage() {
                   className="flex-1"
                 />
               </div>
+              <ColorAccessibilityChecker primaryColor={formData.primary_color} className="mt-3" />
             </div>
 
             <div className="space-y-2">
@@ -489,6 +494,80 @@ export default function SettingsPage() {
                 Configure Payments (Coming Soon)
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Legal Policies */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Legal Policies
+            </CardTitle>
+            <CardDescription>
+              Manage your store's legal documents
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Edit your Return Policy, Privacy Policy, Terms of Service, and Shipping Policy.
+            </p>
+            <Link href="/dashboard/settings/policies">
+              <Button variant="outline">
+                Manage Policies
+                <ExternalLink className="h-3 w-3 ml-2" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Data & Privacy */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Data & Privacy
+            </CardTitle>
+            <CardDescription>
+              Export your data, no lock-in
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Download all your store data including customers, orders, products, and analytics.
+              You own your data - export anytime.
+            </p>
+            <Link href="/dashboard/settings/data">
+              <Button variant="outline">
+                Export Data
+                <ExternalLink className="h-3 w-3 ml-2" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Security */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Security
+            </CardTitle>
+            <CardDescription>
+              Protect your account with 2FA
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Enable two-factor authentication to add an extra layer of security.
+              Use Google Authenticator or similar apps.
+            </p>
+            <Link href="/dashboard/settings/security">
+              <Button variant="outline">
+                Security Settings
+                <ExternalLink className="h-3 w-3 ml-2" />
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

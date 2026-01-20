@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Truck, Printer, Package, Mail, Phone, MapPin, Loader2, AlertCircle, RotateCcw, CreditCard } from 'lucide-react'
+import { ArrowLeft, Download, Package, Mail, Phone, MapPin, Loader2, AlertCircle, RotateCcw, CreditCard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,6 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/orders/order-status-badge'
 import { RefundModal } from '@/components/orders/refund-modal'
+import { ShippingActions } from '@/components/shipping/shipping-actions'
 import { useToast } from '@/lib/hooks/use-toast'
 import { formatCurrency } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -44,6 +45,7 @@ export default function OrderDetailPage() {
   const [newStatus, setNewStatus] = useState('')
   const [trackingNumber, setTrackingNumber] = useState('')
   const [courierName, setCourierName] = useState('')
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false)
 
   useEffect(() => {
     fetchOrder()
@@ -117,6 +119,38 @@ export default function OrderDetailPage() {
     }
   }
 
+  const handleDownloadInvoice = async () => {
+    if (!order) return
+    setDownloadingInvoice(true)
+    try {
+      const response = await fetch(`/api/orders/${orderId}/invoice`)
+      if (!response.ok) throw new Error('Failed to generate invoice')
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `invoice_${order.order_number}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+
+      toast({
+        title: 'Invoice Downloaded',
+        description: 'Invoice PDF has been downloaded'
+      })
+    } catch (error) {
+      toast({
+        title: 'Download Failed',
+        description: 'Failed to download invoice',
+        variant: 'destructive'
+      })
+    } finally {
+      setDownloadingInvoice(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -158,9 +192,17 @@ export default function OrderDetailPage() {
             </p>
           </div>
         </div>
-        <Button variant="outline">
-          <Printer className="h-4 w-4 mr-2" />
-          Print Invoice
+        <Button
+          variant="outline"
+          onClick={handleDownloadInvoice}
+          disabled={downloadingInvoice}
+        >
+          {downloadingInvoice ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 mr-2" />
+          )}
+          Download Invoice
         </Button>
       </div>
 
@@ -213,7 +255,7 @@ export default function OrderDetailPage() {
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Shipping</span>
                     <span>
-                      {order.shipping_cost === 0 
+                      {order.shipping_cost === 0
                         ? <span className="text-green-600">Free</span>
                         : formatCurrency(order.shipping_cost, 'INR')
                       }
@@ -298,6 +340,11 @@ export default function OrderDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Shiprocket Shipping */}
+          {order.payment_status === 'paid' && (
+            <ShippingActions order={order} onUpdate={fetchOrder} />
+          )}
 
           {/* Payment info */}
           <Card>
@@ -399,13 +446,12 @@ export default function OrderDetailPage() {
                         </p>
                       </div>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          refund.status === 'processed'
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${refund.status === 'processed'
                             ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                             : refund.status === 'failed'
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                        }`}
+                              ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                          }`}
                       >
                         {refund.status}
                       </span>
@@ -416,76 +462,80 @@ export default function OrderDetailPage() {
             </Card>
           )}
 
-          {/* Update order */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Update Order
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="status">Order Status</Label>
-                <Select value={newStatus} onValueChange={setNewStatus}>
-                  <SelectTrigger id="status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="shipped">Shipped</SelectItem>
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* Manual Update Order - shown when not using Shiprocket */}
+          {!order.shiprocket_shipment_id && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Manual Update
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-xs text-muted-foreground">
+                  Use this for manual shipping without Shiprocket
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Order Status</Label>
+                  <Select value={newStatus} onValueChange={setNewStatus}>
+                    <SelectTrigger id="status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="processing">Processing</SelectItem>
+                      <SelectItem value="shipped">Shipped</SelectItem>
+                      <SelectItem value="delivered">Delivered</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="courier">Courier Service</Label>
-                <Select value={courierName} onValueChange={setCourierName}>
-                  <SelectTrigger id="courier">
-                    <SelectValue placeholder="Select courier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="delhivery">Delhivery</SelectItem>
-                    <SelectItem value="bluedart">Blue Dart</SelectItem>
-                    <SelectItem value="dtdc">DTDC</SelectItem>
-                    <SelectItem value="ecom">Ecom Express</SelectItem>
-                    <SelectItem value="shiprocket">Shiprocket</SelectItem>
-                    <SelectItem value="xpressbees">XpressBees</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="courier">Courier Service</Label>
+                  <Select value={courierName} onValueChange={setCourierName}>
+                    <SelectTrigger id="courier">
+                      <SelectValue placeholder="Select courier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="delhivery">Delhivery</SelectItem>
+                      <SelectItem value="bluedart">Blue Dart</SelectItem>
+                      <SelectItem value="dtdc">DTDC</SelectItem>
+                      <SelectItem value="ecom">Ecom Express</SelectItem>
+                      <SelectItem value="xpressbees">XpressBees</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="tracking">Tracking Number</Label>
-                <Input
-                  id="tracking"
-                  value={trackingNumber}
-                  onChange={(e) => setTrackingNumber(e.target.value)}
-                  placeholder="Enter tracking number"
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tracking">Tracking Number</Label>
+                  <Input
+                    id="tracking"
+                    value={trackingNumber}
+                    onChange={(e) => setTrackingNumber(e.target.value)}
+                    placeholder="Enter tracking number"
+                  />
+                </div>
 
-              <Button
-                onClick={handleUpdateOrder}
-                disabled={updating}
-                className="w-full"
-              >
-                {updating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  'Update Order'
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+                <Button
+                  onClick={handleUpdateOrder}
+                  disabled={updating}
+                  className="w-full"
+                >
+                  {updating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Order'
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Timeline */}
           <Card>
@@ -555,12 +605,12 @@ export default function OrderDetailPage() {
   )
 }
 
-function TimelineItem({ 
-  label, 
-  date, 
+function TimelineItem({
+  label,
+  date,
   active = false,
   variant = 'default'
-}: { 
+}: {
   label: string
   date: string
   active?: boolean
@@ -568,11 +618,10 @@ function TimelineItem({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className={`w-2 h-2 rounded-full mt-1.5 ${
-        active 
+      <div className={`w-2 h-2 rounded-full mt-1.5 ${active
           ? variant === 'destructive' ? 'bg-red-500' : 'bg-green-500'
           : 'bg-muted'
-      }`} />
+        }`} />
       <div>
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs text-muted-foreground">

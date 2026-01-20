@@ -4,6 +4,7 @@ import OrderConfirmationEmail from '@/../emails/order-confirmation'
 import OrderShippedEmail from '@/../emails/order-shipped'
 import OrderDeliveredEmail from '@/../emails/order-delivered'
 import RefundProcessedEmail from '@/../emails/refund-processed'
+import OrderCancelledEmail from '@/../emails/order-cancelled'
 
 // Initialize Resend client
 const resend = process.env.RESEND_API_KEY
@@ -187,16 +188,40 @@ export async function sendOrderDeliveredEmail(
  */
 export async function sendOrderCancelledEmail(
   order: OrderWithStore,
-  reason?: string
+  refundMessage?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // TODO: Create cancelled email template
-    console.log('=== ORDER CANCELLED EMAIL ===')
-    console.log('To:', order.customer_email)
-    console.log('Order Number:', order.order_number)
-    console.log('Reason:', reason || 'N/A')
-    console.log('=============================')
+    const storeName = order.store?.name || 'Store'
 
+    // If Resend is not configured, log and return
+    if (!resend) {
+      console.log('=== ORDER CANCELLED EMAIL (Resend not configured) ===')
+      console.log('To:', order.customer_email)
+      console.log('Order Number:', order.order_number)
+      console.log('Refund Message:', refundMessage || 'N/A')
+      console.log('=====================================================')
+      return { success: true }
+    }
+
+    const { data, error } = await resend.emails.send({
+      from: `${storeName} <${fromEmail}>`,
+      to: order.customer_email,
+      subject: `Order Cancelled - #${order.order_number}`,
+      react: OrderCancelledEmail({
+        orderNumber: order.order_number,
+        customerName: order.customer_name,
+        storeName,
+        refundMessage,
+        supportEmail: order.store?.contact_email,
+      }),
+    })
+
+    if (error) {
+      console.error('Failed to send cancellation email:', error)
+      return { success: false, error: error.message }
+    }
+
+    console.log('Cancellation notification email sent:', data?.id)
     return { success: true }
   } catch (error) {
     console.error('Failed to send order cancelled email:', error)

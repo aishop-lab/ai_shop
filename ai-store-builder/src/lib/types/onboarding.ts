@@ -65,6 +65,11 @@ export interface StoreData {
   _ai_brand_colors?: { primary: string; secondary: string; reasoning: string }
   _ai_tagline?: string
   _ai_confidence?: number
+  _logo_colors?: {
+    colors: Array<{ hex: string; name: string; percentage: number }>
+    suggested_primary: string
+    suggested_secondary: string
+  }
 }
 
 export interface CategoryExtractionResult {
@@ -179,6 +184,11 @@ export interface ProcessMessageResponse {
   is_complete: boolean
   suggestions?: string[]
   options?: Array<{ value: string; label: string }>
+  ai_confidence?: {
+    score: number           // 0-1 confidence score
+    level: 'high' | 'medium' | 'low'  // Simplified level
+    reasoning?: string      // Optional explanation
+  }
 }
 
 // ============================================

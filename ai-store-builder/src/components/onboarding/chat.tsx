@@ -3,7 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2, Send, Upload, Check, Sparkles, Palette } from 'lucide-react'
+import { ColorAccessibilityChecker } from '@/components/ui/color-accessibility-checker'
+import { ConfidenceBadge } from '@/components/ui/confidence-badge'
+import { Loader2, Send, Upload, Check, Sparkles, Palette, Wand2, Image } from 'lucide-react'
 import { StoreBuildingPreview } from './store-building-preview'
 import { TemplateSelector } from './template-selector'
 import type { StoreData, ProcessMessageResponse, BrandVibe } from '@/lib/types/onboarding'
@@ -44,6 +46,17 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
   const [isBuildingStore, setIsBuildingStore] = useState(false)
   const [selectedColor, setSelectedColor] = useState('#3B82F6')
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestions | null>(null)
+  const [aiConfidence, setAiConfidence] = useState<{
+    score: number
+    level: 'high' | 'medium' | 'low'
+    reasoning?: string
+  } | null>(null)
+  const [logoColors, setLogoColors] = useState<{
+    colors: Array<{ hex: string; name: string; percentage: number }>
+    suggested_primary: string
+    suggested_secondary: string
+  } | null>(null)
+  const [isGeneratingLogo, setIsGeneratingLogo] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Contact info state for multi-input
@@ -217,6 +230,13 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
           setAiSuggestions(null)
         }
 
+        // Capture AI confidence if present
+        if (processedData.ai_confidence) {
+          setAiConfidence(processedData.ai_confidence)
+        } else {
+          setAiConfidence(null)
+        }
+
         // Reset contact info when entering step 8
         if (nextStep === 8) {
           setContactInfo({
@@ -328,7 +348,17 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
       const data = await response.json()
 
       if (data.success) {
-        sendMessage(data.url)
+        // Store logo colors if extracted
+        if (data.extracted_colors) {
+          setLogoColors(data.extracted_colors)
+        }
+
+        // Send both URL and extracted colors as JSON
+        const logoPayload = data.extracted_colors
+          ? JSON.stringify({ url: data.url, extracted_colors: data.extracted_colors })
+          : data.url
+
+        sendMessage(logoPayload, 'Logo uploaded')
       } else {
         throw new Error(data.error)
       }
@@ -344,6 +374,56 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
         }
       ])
       setIsLoading(false)
+    }
+  }
+
+  const handleGenerateLogo = async () => {
+    if (!sessionId) return
+
+    setIsGeneratingLogo(true)
+    try {
+      const response = await fetch('/api/onboarding/generate-logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_name: extractedData.business_name,
+          business_category: extractedData.business_category?.[0] || extractedData.business_type,
+          description: extractedData.description,
+          style_preference: extractedData.brand_vibe || 'modern'
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Store logo colors if extracted
+        if (data.extracted_colors) {
+          setLogoColors(data.extracted_colors)
+        }
+
+        // Send both URL and extracted colors as JSON
+        const logoPayload = data.extracted_colors
+          ? JSON.stringify({ url: data.url, extracted_colors: data.extracted_colors })
+          : data.url
+
+        sendMessage(logoPayload, 'AI-generated logo')
+      } else {
+        throw new Error(data.error)
+      }
+    } catch (error: unknown) {
+      console.error('Logo generation failed:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate logo'
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: `${errorMessage}. You can try again or upload your own logo.`,
+          type: 'text'
+        }
+      ])
+    } finally {
+      setIsGeneratingLogo(false)
     }
   }
 
@@ -424,6 +504,14 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
                 {option.label}
               </Button>
             ))}
+            {/* Show AI confidence badge for confirmation steps */}
+            {aiConfidence && currentStep === 3 && (
+              <ConfidenceBadge
+                score={aiConfidence.score}
+                level={aiConfidence.level}
+                reasoning={aiConfidence.reasoning}
+              />
+            )}
           </div>
         )}
 
@@ -470,8 +558,50 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
 
         {stepType === 'color' && !isLoading && (
           <div className="space-y-3 mb-3">
-            {/* AI Color Suggestion */}
-            {aiSuggestions?.brand_colors && (
+            {/* Logo-extracted colors (priority) */}
+            {logoColors && (
+              <div className="p-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <Image className="h-4 w-4 text-emerald-500" />
+                  <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                    Colors from your logo:
+                  </span>
+                  <span className="text-xs bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full ml-auto">
+                    Extracted
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Main suggested colors */}
+                  <button
+                    onClick={() => setSelectedColor(logoColors.suggested_primary)}
+                    className={`w-10 h-10 rounded-md border-2 shadow-md hover:scale-110 transition-transform ${selectedColor === logoColors.suggested_primary ? 'ring-2 ring-emerald-500 ring-offset-2' : 'border-white'}`}
+                    style={{ backgroundColor: logoColors.suggested_primary }}
+                    title={`Primary: ${logoColors.suggested_primary}`}
+                  />
+                  <button
+                    onClick={() => setSelectedColor(logoColors.suggested_secondary)}
+                    className={`w-8 h-8 rounded-md border shadow-md hover:scale-105 transition-transform ${selectedColor === logoColors.suggested_secondary ? 'ring-2 ring-emerald-500 ring-offset-2' : 'border-white/50'}`}
+                    style={{ backgroundColor: logoColors.suggested_secondary }}
+                    title={`Secondary: ${logoColors.suggested_secondary}`}
+                  />
+                  {/* Divider */}
+                  <div className="w-px h-6 bg-emerald-200 dark:bg-emerald-700 mx-1" />
+                  {/* All extracted colors */}
+                  {logoColors.colors.slice(0, 5).map((color, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedColor(color.hex)}
+                      className={`w-6 h-6 rounded-full border hover:scale-110 transition-transform ${selectedColor === color.hex ? 'ring-2 ring-emerald-500 ring-offset-1' : 'border-white/30'}`}
+                      style={{ backgroundColor: color.hex }}
+                      title={`${color.name}: ${color.hex} (${color.percentage}%)`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AI Color Suggestion (shown if no logo colors) */}
+            {!logoColors && aiSuggestions?.brand_colors && (
               <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
                 <Palette className="h-4 w-4 text-purple-500 flex-shrink-0" />
                 <div className="flex items-center gap-2 flex-1">
@@ -505,6 +635,7 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
                 className="h-10 w-20 cursor-pointer rounded border"
               />
               <span className="text-sm text-muted-foreground">{selectedColor}</span>
+              <ColorAccessibilityChecker primaryColor={selectedColor} compact />
               <Button size="sm" onClick={handleColorSubmit}>
                 <Check className="h-4 w-4 mr-1" />
                 Use This Color
@@ -513,25 +644,53 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
           </div>
         )}
 
-        {stepType === 'file' && !isLoading && (
-          <div className="flex items-center gap-3 mb-3">
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <Button variant="outline" size="sm" asChild>
-                <span>
-                  <Upload className="h-4 w-4 mr-1" />
-                  Upload Logo
-                </span>
+        {stepType === 'file' && !isLoading && !isGeneratingLogo && (
+          <div className="space-y-3 mb-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button variant="outline" size="sm" asChild>
+                  <span>
+                    <Upload className="h-4 w-4 mr-1" />
+                    Upload Logo
+                  </span>
+                </Button>
+              </label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateLogo}
+                className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200 dark:border-purple-800 hover:border-purple-400"
+              >
+                <Wand2 className="h-4 w-4 mr-1 text-purple-500" />
+                Generate with AI
               </Button>
-            </label>
-            <Button variant="ghost" size="sm" onClick={handleSkip}>
-              Skip for now
-            </Button>
+              <Button variant="ghost" size="sm" onClick={handleSkip}>
+                Skip for now
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Upload your logo or let AI create a professional icon for your brand.
+            </p>
+          </div>
+        )}
+
+        {stepType === 'file' && isGeneratingLogo && (
+          <div className="flex items-center gap-3 mb-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+            <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
+            <div>
+              <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                Generating your logo...
+              </p>
+              <p className="text-xs text-purple-600 dark:text-purple-400">
+                This may take a few moments
+              </p>
+            </div>
           </div>
         )}
 

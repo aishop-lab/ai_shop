@@ -81,7 +81,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 5,
     key: 'logo_url',
-    question: "Do you have a logo? You can upload it now or skip and add later.",
+    question: "Do you have a logo? Upload one, or let AI generate a professional icon for your brand.",
     type: 'file',
     required: false
   },

@@ -11,6 +11,7 @@ import { useAnalytics } from '@/lib/analytics'
 import { VariantSelector, useVariantSelection } from './variant-selector'
 import ProductCard from './themes/modern-minimal/product-card'
 import { ReviewsList } from '@/components/reviews/reviews-list'
+import { PincodeChecker } from './pincode-checker'
 
 interface StoreProductDetailProps {
   product: Product | ProductWithVariants
@@ -346,6 +347,9 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
               </div>
             </div>
           )}
+
+          {/* Pincode Checker */}
+          <PincodeChecker storeId={store.id} className="mt-6" />
 
           {/* Features */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-8 border-t">

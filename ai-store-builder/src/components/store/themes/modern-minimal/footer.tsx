@@ -8,26 +8,26 @@ export default function ModernMinimalFooter() {
   const { store } = useStore()
   const baseUrl = `/${store.slug}`
   const currentYear = new Date().getFullYear()
-  
+
   return (
     <footer className="bg-gray-900 text-white">
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <h3 
+            <h3
               className="text-2xl font-bold mb-4"
               style={{ fontFamily: 'var(--font-heading)' }}
             >
               {store.name}
             </h3>
-            <p 
+            <p
               className="text-gray-400 mb-6 max-w-md"
               style={{ fontFamily: 'var(--font-body)' }}
             >
               {store.description || store.tagline || `Welcome to ${store.name}. Quality products delivered with care.`}
             </p>
-            
+
             {/* Social Links */}
             <div className="flex space-x-4">
               {store.instagram_handle && (
@@ -54,7 +54,7 @@ export default function ModernMinimalFooter() {
               )}
             </div>
           </div>
-          
+
           {/* Quick Links */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
@@ -86,7 +86,7 @@ export default function ModernMinimalFooter() {
               </li>
             </ul>
           </div>
-          
+
           {/* Contact Info */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Contact Us</h4>
@@ -129,7 +129,7 @@ export default function ModernMinimalFooter() {
             </ul>
           </div>
         </div>
-        
+
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-gray-800">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
@@ -137,14 +137,17 @@ export default function ModernMinimalFooter() {
               &copy; {currentYear} {store.name}. All rights reserved.
             </p>
             <div className="flex space-x-6 text-sm text-gray-400">
-              <Link href={`${baseUrl}/privacy`} className="hover:text-white transition-colors">
-                Privacy Policy
+              <Link href={`${baseUrl}/policies/shipping`} className="hover:text-white transition-colors">
+                Shipping
               </Link>
-              <Link href={`${baseUrl}/terms`} className="hover:text-white transition-colors">
-                Terms of Service
+              <Link href={`${baseUrl}/policies/returns`} className="hover:text-white transition-colors">
+                Returns
               </Link>
-              <Link href={`${baseUrl}/refund`} className="hover:text-white transition-colors">
-                Refund Policy
+              <Link href={`${baseUrl}/policies/privacy`} className="hover:text-white transition-colors">
+                Privacy
+              </Link>
+              <Link href={`${baseUrl}/policies/terms`} className="hover:text-white transition-colors">
+                Terms
               </Link>
             </div>
           </div>

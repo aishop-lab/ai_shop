@@ -21,6 +21,18 @@ interface EnhancedProcessMessageResponse extends ProcessMessageResponse {
     tagline?: string
     should_auto_apply?: boolean
   }
+  ai_confidence?: {
+    score: number
+    level: 'high' | 'medium' | 'low'
+    reasoning?: string
+  }
+}
+
+// Helper function to get confidence level from score
+function getConfidenceLevel(score: number): 'high' | 'medium' | 'low' {
+  if (score >= 0.8) return 'high'
+  if (score >= 0.6) return 'medium'
+  return 'low'
 }
 
 export async function POST(request: Request) {
@@ -73,6 +85,7 @@ export async function POST(request: Request) {
 
     // Process based on step
     let aiSuggestions: EnhancedProcessMessageResponse['ai_suggestions'] | undefined
+    let aiConfidence: EnhancedProcessMessageResponse['ai_confidence'] | undefined
     let aiExtractedData: Partial<StoreData> = {}
     let cachedAnalysis: UnifiedOnboardingResult | undefined
 
@@ -126,6 +139,13 @@ export async function POST(request: Request) {
                 should_auto_apply: aiResult.overall_confidence >= AUTO_APPLY_THRESHOLD
               }
 
+              // Set AI confidence for display
+              aiConfidence = {
+                score: aiResult.overall_confidence,
+                level: getConfidenceLevel(aiResult.overall_confidence),
+                reasoning: aiResult.category.niche ? `Detected ${aiResult.category.niche} business` : undefined
+              }
+
               console.log(`[Onboarding] Vercel AI analysis complete. Confidence: ${aiResult.overall_confidence}`)
             } else {
               console.warn('Vercel AI analysis returned empty data')
@@ -161,6 +181,13 @@ export async function POST(request: Request) {
                 brand_colors: aiResult.brand_colors,
                 tagline: aiResult.tagline,
                 should_auto_apply: aiResult.overall_confidence >= LEGACY_AUTO_APPLY_THRESHOLD
+              }
+
+              // Set AI confidence for display
+              aiConfidence = {
+                score: aiResult.overall_confidence,
+                level: getConfidenceLevel(aiResult.overall_confidence),
+                reasoning: aiResult.category.niche ? `Detected ${aiResult.category.niche} business` : undefined
               }
 
               console.log(`[Onboarding] Legacy AI analysis complete. Confidence: ${aiResult.overall_confidence}`)
@@ -217,15 +244,43 @@ export async function POST(request: Request) {
 
       case 'logo_url':
         // Logo URL would be set via upload endpoint
+        // Message can be:
+        // 1. Simple URL string (legacy)
+        // 2. JSON with { url, extracted_colors } from enhanced upload
+        // 3. 'skip' to skip logo
         if (message && message !== 'skip') {
-          updatedData.logo_url = message
+          try {
+            // Try to parse as JSON (new format with colors)
+            const logoData = JSON.parse(message)
+            updatedData.logo_url = logoData.url
+            if (logoData.extracted_colors) {
+              updatedData._logo_colors = logoData.extracted_colors
+              console.log('[Onboarding] Logo colors stored:', logoData.extracted_colors.suggested_primary)
+            }
+          } catch {
+            // Fallback: simple URL string (legacy format)
+            updatedData.logo_url = message
+          }
         }
         break
 
       case 'brand_vibe':
         updatedData.brand_vibe = message as StoreData['brand_vibe']
-        // Include AI color suggestions for the next step
-        if (updatedData._ai_brand_colors) {
+        // Include color suggestions for the next step
+        // Priority: Logo colors > AI description-based colors
+        if (updatedData._logo_colors) {
+          // Logo colors take priority
+          aiSuggestions = {
+            brand_colors: {
+              primary: updatedData._logo_colors.suggested_primary,
+              secondary: updatedData._logo_colors.suggested_secondary,
+              reasoning: 'Extracted from your uploaded logo'
+            },
+            should_auto_apply: true // Logo colors are definitive
+          }
+          console.log('[Onboarding] Using logo-extracted colors for suggestions')
+        } else if (updatedData._ai_brand_colors) {
+          // Fall back to AI description-based colors
           aiSuggestions = {
             brand_colors: updatedData._ai_brand_colors as { primary: string; secondary: string; reasoning: string },
             should_auto_apply: (updatedData._ai_confidence as number) >= AUTO_APPLY_THRESHOLD
@@ -235,8 +290,10 @@ export async function POST(request: Request) {
 
       case 'primary_color':
         updatedData.primary_color = message
-        // Use AI-suggested secondary color if available, otherwise generate
-        if (updatedData._ai_brand_colors && (updatedData._ai_brand_colors as { primary: string; secondary: string }).secondary) {
+        // Use suggested secondary color: Logo colors > AI colors > Generated
+        if (updatedData._logo_colors?.suggested_secondary) {
+          updatedData.secondary_color = updatedData._logo_colors.suggested_secondary
+        } else if (updatedData._ai_brand_colors && (updatedData._ai_brand_colors as { primary: string; secondary: string }).secondary) {
           updatedData.secondary_color = (updatedData._ai_brand_colors as { primary: string; secondary: string }).secondary
         } else {
           updatedData.secondary_color = generateSecondaryColor(message)
@@ -308,6 +365,11 @@ export async function POST(request: Request) {
     // Include AI suggestions if available
     if (aiSuggestions) {
       response.ai_suggestions = aiSuggestions
+    }
+
+    // Include AI confidence if available
+    if (aiConfidence) {
+      response.ai_confidence = aiConfidence
     }
 
     console.log(`[Onboarding] Step ${current_step} -> ${nextStepDef.id} (${nextStepDef.key})`)

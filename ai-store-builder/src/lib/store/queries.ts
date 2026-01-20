@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Store, Product, PaginatedProducts, StoreSettings } from '@/lib/types/store'
 import { DEFAULT_STORE_SETTINGS, DEFAULT_BRAND_COLORS, DEFAULT_TYPOGRAPHY } from '@/lib/types/store'
+import type { ProductWithVariants, ProductVariantOption, ProductVariant } from '@/lib/types/variant'
 
 /**
  * Get store by slug
@@ -205,14 +206,16 @@ export async function getProduct(productId: string): Promise<Product | null> {
 
 /**
  * Get product by ID and verify it belongs to store
+ * Includes variant data if the product has variants
  */
 export async function getProductForStore(
   storeId: string,
   productId: string
-): Promise<Product | null> {
+): Promise<Product | ProductWithVariants | null> {
   try {
     const supabase = await createClient()
-    
+
+    // Fetch base product with images
     const { data, error } = await supabase
       .from('products')
       .select(`
@@ -229,12 +232,90 @@ export async function getProductForStore(
       .eq('store_id', storeId)
       .eq('status', 'published')
       .single()
-    
+
     if (error || !data) {
       return null
     }
-    
-    return transformProductData(data)
+
+    const product = transformProductData(data)
+
+    // If product has variants, fetch variant options and variants
+    if (product.has_variants) {
+      // Fetch variant options with their values
+      const { data: optionsData } = await supabase
+        .from('product_variant_options')
+        .select(`
+          id,
+          product_id,
+          name,
+          position,
+          product_variant_option_values (
+            id,
+            option_id,
+            value,
+            color_code,
+            position
+          )
+        `)
+        .eq('product_id', productId)
+        .order('position')
+
+      // Fetch active variants
+      const { data: variantsData } = await supabase
+        .from('product_variants')
+        .select('*')
+        .eq('product_id', productId)
+        .eq('status', 'active')
+        .order('created_at')
+
+      // Transform variant options to match types
+      const variant_options: ProductVariantOption[] = (optionsData || []).map(opt => ({
+        id: opt.id,
+        product_id: opt.product_id,
+        name: opt.name,
+        position: opt.position,
+        values: (opt.product_variant_option_values || [])
+          .sort((a, b) => a.position - b.position)
+          .map(val => ({
+            id: val.id,
+            option_id: val.option_id,
+            value: val.value,
+            color_code: val.color_code,
+            position: val.position
+          }))
+      }))
+
+      // Transform variants to match types
+      const variants: ProductVariant[] = (variantsData || []).map(v => ({
+        id: v.id,
+        product_id: v.product_id,
+        attributes: v.attributes,
+        price: v.price,
+        compare_at_price: v.compare_at_price,
+        sku: v.sku,
+        barcode: v.barcode,
+        quantity: v.quantity,
+        track_quantity: v.track_quantity,
+        weight: v.weight,
+        image_id: v.image_id,
+        is_default: v.is_default,
+        status: v.status,
+        created_at: v.created_at,
+        updated_at: v.updated_at
+      }))
+
+      // Return product with variants
+      return {
+        ...product,
+        has_variants: true,
+        variant_options,
+        variants,
+        variant_count: variants.length,
+        total_inventory: variants.reduce((sum, v) => sum + (v.quantity || 0), 0)
+      } as ProductWithVariants
+    }
+
+    return product
   } catch (error) {
     console.error('Product for store query failed:', error)
     return null
@@ -342,6 +423,7 @@ function transformProductData(data: Record<string, unknown>): Product {
     tags: data.tags as string[] || [],
     weight: data.weight as number | undefined,
     requires_shipping: data.requires_shipping as boolean ?? true,
+    has_variants: data.has_variants as boolean ?? false,
     created_at: data.created_at as string,
     updated_at: data.updated_at as string
   }

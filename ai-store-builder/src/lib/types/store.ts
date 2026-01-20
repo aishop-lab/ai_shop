@@ -15,6 +15,18 @@ export interface MarketingPixels {
   google_ads_conversion_label: string | null
 }
 
+export interface StorePolicy {
+  content: string
+  updated_at: string | null
+}
+
+export interface StorePolicies {
+  returns: StorePolicy
+  privacy: StorePolicy
+  terms: StorePolicy
+  shipping: StorePolicy
+}
+
 export interface Store {
   id: string
   owner_id: string
@@ -40,6 +52,7 @@ export interface Store {
   facebook_url?: string
   settings: StoreSettings
   marketing_pixels?: MarketingPixels
+  policies?: StorePolicies
   status: 'draft' | 'active' | 'suspended'
   created_at: string
   updated_at: string
@@ -127,6 +140,8 @@ export interface Product {
   weight?: number
   requires_shipping: boolean
   has_variants?: boolean        // Flag indicating product has variants
+  review_count?: number         // Number of approved reviews
+  average_rating?: number       // Average rating (1-5)
   created_at: string
   updated_at: string
 }
