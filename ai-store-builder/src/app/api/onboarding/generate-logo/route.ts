@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { business_name, business_category, description, style_preference } = body
+    const { business_name, business_category, description, style_preference, feedback } = body
 
     if (!business_name) {
       return NextResponse.json(
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log('[Generate Logo] Starting generation for:', business_name)
+    console.log('[Generate Logo] Starting generation for:', business_name, feedback ? `(with feedback: ${feedback})` : '')
 
     // Generate the logo
     let generatedLogo
@@ -81,7 +81,8 @@ export async function POST(request: Request) {
         business_name,
         business_category,
         description,
-        style_preference
+        style_preference,
+        feedback
       })
     } catch (genError: unknown) {
       console.error('[Generate Logo] Generation failed:', genError)

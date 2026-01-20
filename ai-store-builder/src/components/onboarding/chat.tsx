@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ColorAccessibilityChecker } from '@/components/ui/color-accessibility-checker'
 import { ConfidenceBadge } from '@/components/ui/confidence-badge'
-import { Loader2, Send, Upload, Check, Sparkles, Palette, Wand2, Image } from 'lucide-react'
+import { Loader2, Send, Upload, Check, Sparkles, Palette, Wand2, Image, RefreshCw, X } from 'lucide-react'
+import NextImage from 'next/image'
 import { StoreBuildingPreview } from './store-building-preview'
 import { TemplateSelector } from './template-selector'
 import type { StoreData, ProcessMessageResponse, BrandVibe } from '@/lib/types/onboarding'
@@ -57,6 +58,21 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
     suggested_secondary: string
   } | null>(null)
   const [isGeneratingLogo, setIsGeneratingLogo] = useState(false)
+
+  // Logo generation state
+  const [generatedLogos, setGeneratedLogos] = useState<Array<{
+    url: string
+    extracted_colors?: {
+      colors: Array<{ hex: string; name: string; percentage: number }>
+      suggested_primary: string
+      suggested_secondary: string
+    }
+  }>>([])
+  const [selectedLogoIndex, setSelectedLogoIndex] = useState<number | null>(null)
+  const [logoFeedback, setLogoFeedback] = useState('')
+  const [showFeedbackInput, setShowFeedbackInput] = useState(false)
+  const MAX_LOGO_GENERATIONS = 3
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Contact info state for multi-input
@@ -358,6 +374,10 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
           ? JSON.stringify({ url: data.url, extracted_colors: data.extracted_colors })
           : data.url
 
+        // Reset generated logos state since user uploaded their own
+        setGeneratedLogos([])
+        setSelectedLogoIndex(null)
+
         sendMessage(logoPayload, 'Logo uploaded')
       } else {
         throw new Error(data.error)
@@ -377,10 +397,14 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
     }
   }
 
-  const handleGenerateLogo = async () => {
+  const handleGenerateLogo = async (feedback?: string) => {
     if (!sessionId) return
+    if (generatedLogos.length >= MAX_LOGO_GENERATIONS) return
 
     setIsGeneratingLogo(true)
+    setShowFeedbackInput(false)
+    setLogoFeedback('')
+
     try {
       const response = await fetch('/api/onboarding/generate-logo', {
         method: 'POST',
@@ -389,24 +413,28 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
           business_name: extractedData.business_name,
           business_category: extractedData.business_category?.[0] || extractedData.business_type,
           description: extractedData.description,
-          style_preference: extractedData.brand_vibe || 'modern'
+          style_preference: extractedData.brand_vibe || 'modern',
+          feedback: feedback || undefined
         })
       })
 
       const data = await response.json()
 
       if (data.success) {
-        // Store logo colors if extracted
+        // Add to generated logos array
+        const newLogo = {
+          url: data.url,
+          extracted_colors: data.extracted_colors
+        }
+        setGeneratedLogos(prev => [...prev, newLogo])
+
+        // Auto-select the newly generated logo
+        setSelectedLogoIndex(generatedLogos.length)
+
+        // Store logo colors for the color picker step
         if (data.extracted_colors) {
           setLogoColors(data.extracted_colors)
         }
-
-        // Send both URL and extracted colors as JSON
-        const logoPayload = data.extracted_colors
-          ? JSON.stringify({ url: data.url, extracted_colors: data.extracted_colors })
-          : data.url
-
-        sendMessage(logoPayload, 'AI-generated logo')
       } else {
         throw new Error(data.error)
       }
@@ -424,6 +452,41 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
       ])
     } finally {
       setIsGeneratingLogo(false)
+    }
+  }
+
+  const handleSelectLogo = (index: number) => {
+    setSelectedLogoIndex(index)
+    const logo = generatedLogos[index]
+    if (logo.extracted_colors) {
+      setLogoColors(logo.extracted_colors)
+    }
+  }
+
+  const handleConfirmLogo = () => {
+    if (selectedLogoIndex === null || !generatedLogos[selectedLogoIndex]) return
+
+    const selectedLogo = generatedLogos[selectedLogoIndex]
+
+    // Send both URL and extracted colors as JSON
+    const logoPayload = selectedLogo.extracted_colors
+      ? JSON.stringify({ url: selectedLogo.url, extracted_colors: selectedLogo.extracted_colors })
+      : selectedLogo.url
+
+    sendMessage(logoPayload, 'AI-generated logo')
+
+    // Reset logo generation state
+    setGeneratedLogos([])
+    setSelectedLogoIndex(null)
+  }
+
+  const handleRegenerateLogo = () => {
+    if (generatedLogos.length >= MAX_LOGO_GENERATIONS) return
+
+    if (logoFeedback.trim()) {
+      handleGenerateLogo(logoFeedback.trim())
+    } else {
+      handleGenerateLogo()
     }
   }
 
@@ -644,53 +707,202 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
           </div>
         )}
 
-        {stepType === 'file' && !isLoading && !isGeneratingLogo && (
-          <div className="space-y-3 mb-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Button variant="outline" size="sm" asChild>
-                  <span>
-                    <Upload className="h-4 w-4 mr-1" />
-                    Upload Logo
-                  </span>
-                </Button>
-              </label>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleGenerateLogo}
-                className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200 dark:border-purple-800 hover:border-purple-400"
-              >
-                <Wand2 className="h-4 w-4 mr-1 text-purple-500" />
-                Generate with AI
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleSkip}>
-                Skip for now
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Upload your logo or let AI create a professional icon for your brand.
-            </p>
-          </div>
-        )}
+        {stepType === 'file' && !isLoading && (
+          <div className="space-y-4 mb-3">
+            {/* Generated Logos Display */}
+            {generatedLogos.length > 0 && (
+              <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="h-4 w-4 text-purple-500" />
+                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                      AI Generated Logos ({generatedLogos.length}/{MAX_LOGO_GENERATIONS})
+                    </span>
+                  </div>
+                  {generatedLogos.length < MAX_LOGO_GENERATIONS && !isGeneratingLogo && (
+                    <span className="text-xs text-purple-600 dark:text-purple-400">
+                      {MAX_LOGO_GENERATIONS - generatedLogos.length} generation{MAX_LOGO_GENERATIONS - generatedLogos.length !== 1 ? 's' : ''} left
+                    </span>
+                  )}
+                </div>
 
-        {stepType === 'file' && isGeneratingLogo && (
-          <div className="flex items-center gap-3 mb-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
-            <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
-            <div>
-              <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                Generating your logo...
+                {/* Logo Grid */}
+                <div className="flex gap-3 mb-4">
+                  {generatedLogos.map((logo, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleSelectLogo(index)}
+                      className={`relative w-20 h-20 rounded-lg border-2 overflow-hidden transition-all ${
+                        selectedLogoIndex === index
+                          ? 'border-purple-500 ring-2 ring-purple-500 ring-offset-2'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-purple-300'
+                      }`}
+                    >
+                      <NextImage
+                        src={logo.url}
+                        alt={`Generated logo ${index + 1}`}
+                        fill
+                        className="object-contain bg-white"
+                      />
+                      {selectedLogoIndex === index && (
+                        <div className="absolute top-1 right-1 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
+                          <Check className="h-3 w-3 text-white" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+
+                  {/* Generating placeholder */}
+                  {isGeneratingLogo && (
+                    <div className="w-20 h-20 rounded-lg border-2 border-dashed border-purple-300 dark:border-purple-700 flex items-center justify-center bg-purple-50 dark:bg-purple-950/30">
+                      <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Regeneration Controls */}
+                {!isGeneratingLogo && generatedLogos.length < MAX_LOGO_GENERATIONS && (
+                  <div className="space-y-2">
+                    {showFeedbackInput ? (
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Describe what you'd like different (e.g., 'more colorful', 'simpler shape')"
+                          value={logoFeedback}
+                          onChange={(e) => setLogoFeedback(e.target.value)}
+                          className="flex-1 text-sm"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={handleRegenerateLogo}
+                          className="bg-purple-500 hover:bg-purple-600"
+                        >
+                          <RefreshCw className="h-4 w-4 mr-1" />
+                          Generate
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setShowFeedbackInput(false)
+                            setLogoFeedback('')
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleGenerateLogo()}
+                          className="border-purple-200 dark:border-purple-800 hover:border-purple-400"
+                        >
+                          <RefreshCw className="h-4 w-4 mr-1" />
+                          Regenerate
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowFeedbackInput(true)}
+                          className="text-purple-600 dark:text-purple-400"
+                        >
+                          <Sparkles className="h-4 w-4 mr-1" />
+                          Regenerate with feedback
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Max generations reached message */}
+                {generatedLogos.length >= MAX_LOGO_GENERATIONS && !isGeneratingLogo && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    Maximum generations reached. Please select one of the logos above or upload your own.
+                  </p>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 mt-4 pt-3 border-t border-purple-200 dark:border-purple-800">
+                  <Button
+                    size="sm"
+                    onClick={handleConfirmLogo}
+                    disabled={selectedLogoIndex === null || isGeneratingLogo}
+                    className="bg-purple-500 hover:bg-purple-600"
+                  >
+                    <Check className="h-4 w-4 mr-1" />
+                    Use Selected Logo
+                  </Button>
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <Button variant="outline" size="sm" asChild>
+                      <span>
+                        <Upload className="h-4 w-4 mr-1" />
+                        Upload Instead
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Initial State - No logos generated yet */}
+            {generatedLogos.length === 0 && !isGeneratingLogo && (
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <Button variant="outline" size="sm" asChild>
+                    <span>
+                      <Upload className="h-4 w-4 mr-1" />
+                      Upload Logo
+                    </span>
+                  </Button>
+                </label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleGenerateLogo()}
+                  className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200 dark:border-purple-800 hover:border-purple-400"
+                >
+                  <Wand2 className="h-4 w-4 mr-1 text-purple-500" />
+                  Generate with AI
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleSkip}>
+                  Skip for now
+                </Button>
+              </div>
+            )}
+
+            {/* Loading State - First generation */}
+            {generatedLogos.length === 0 && isGeneratingLogo && (
+              <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
+                <div>
+                  <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                    Generating your logo...
+                  </p>
+                  <p className="text-xs text-purple-600 dark:text-purple-400">
+                    This may take a few moments
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {generatedLogos.length === 0 && !isGeneratingLogo && (
+              <p className="text-xs text-muted-foreground">
+                Upload your logo or let AI create a professional icon for your brand.
               </p>
-              <p className="text-xs text-purple-600 dark:text-purple-400">
-                This may take a few moments
-              </p>
-            </div>
+            )}
           </div>
         )}
 

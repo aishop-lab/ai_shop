@@ -14,6 +14,7 @@ export interface LogoGenerationParams {
   business_category?: string
   description?: string
   style_preference?: 'modern' | 'classic' | 'playful' | 'minimal'
+  feedback?: string // User feedback for regeneration
 }
 
 export interface GeneratedLogo {
@@ -26,7 +27,7 @@ export interface GeneratedLogo {
  * Generate a professional logo using Gemini 2.0 Flash image generation
  */
 export async function generateLogo(params: LogoGenerationParams): Promise<GeneratedLogo> {
-  const { business_name, business_category, description, style_preference = 'modern' } = params
+  const { business_name, business_category, description, style_preference = 'modern', feedback } = params
 
   // Build a detailed prompt for logo generation
   const styleGuide = getStyleGuide(style_preference)
@@ -35,7 +36,8 @@ export async function generateLogo(params: LogoGenerationParams): Promise<Genera
     business_name,
     business_category,
     description,
-    styleGuide
+    styleGuide,
+    feedback
   })
 
   console.log('[Logo Generator] Generating logo with prompt:', prompt.substring(0, 200) + '...')
@@ -100,8 +102,9 @@ function buildLogoPrompt(params: {
   business_category?: string
   description?: string
   styleGuide: string
+  feedback?: string
 }): string {
-  const { business_name, business_category, description, styleGuide } = params
+  const { business_name, business_category, description, styleGuide, feedback } = params
 
   let context = `Business Name: ${business_name}`
   if (business_category) {
@@ -109,6 +112,13 @@ function buildLogoPrompt(params: {
   }
   if (description) {
     context += `\nDescription: ${description.substring(0, 200)}`
+  }
+
+  let feedbackSection = ''
+  if (feedback) {
+    feedbackSection = `\n\nUser Feedback for this iteration:
+${feedback}
+Please incorporate this feedback while maintaining professional quality.`
   }
 
   return `Create a professional logo for a business.
@@ -126,7 +136,7 @@ Design Requirements:
 - Maximum 2-3 colors
 - White or transparent background
 - The icon should be centered and well-balanced
-
+${feedbackSection}
 Important: Generate ONLY an icon/symbol logo. Do NOT include any text, letters, or typography.`
 }
 
