@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 // Routes that require authentication
@@ -18,41 +18,6 @@ const publicRoutes = [
   '/api'
 ]
 
-async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request
-  })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-          supabaseResponse = NextResponse.next({
-            request
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        }
-      }
-    }
-  )
-
-  const {
-    data: { user }
-  } = await supabase.auth.getUser()
-
-  return { supabaseResponse, user }
-}
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -65,9 +30,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Update session (refresh tokens if needed)
-  const { supabaseResponse, user } = await updateSession(request)
-
   // Check if current path is a protected route
   const isProtectedRoute = protectedRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
@@ -77,6 +39,44 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute = publicRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   )
+
+  // If env vars are missing, allow the request through (will fail at page level with better error)
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.error('Missing Supabase environment variables')
+    return NextResponse.next()
+  }
+
+  let supabaseResponse = NextResponse.next({ request })
+  let user = null
+
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value)
+            )
+            supabaseResponse = NextResponse.next({ request })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options)
+            )
+          }
+        }
+      }
+    )
+
+    const { data } = await supabase.auth.getUser()
+    user = data?.user
+  } catch (error) {
+    console.error('Middleware auth error:', error)
+    // Continue without auth on error
+  }
 
   // Handle protected routes - redirect to sign-in if not authenticated
   if (isProtectedRoute && !user) {
@@ -88,11 +88,6 @@ export async function middleware(request: NextRequest) {
   // Redirect authenticated users away from auth pages
   if (user && (pathname === '/sign-in' || pathname === '/sign-up')) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
-  // Allow store slugs (any path that doesn't match protected/public routes)
-  if (!isProtectedRoute && !isPublicRoute) {
-    return supabaseResponse
   }
 
   return supabaseResponse
