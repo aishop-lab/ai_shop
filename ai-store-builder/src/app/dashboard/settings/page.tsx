@@ -19,12 +19,12 @@ import {
   Loader2,
   ExternalLink,
   ArrowLeft,
-  Upload,
   FileText,
   Database,
   Shield
 } from 'lucide-react'
 import { ColorAccessibilityChecker } from '@/components/ui/color-accessibility-checker'
+import { LogoEditor } from '@/components/dashboard/logo-editor'
 
 interface StoreSettings {
   id: string
@@ -57,8 +57,13 @@ interface StoreSettings {
       stripe_enabled?: boolean
       upi_enabled?: boolean
     }
+    ai_logo_generations?: number
   }
   status: string
+  blueprint?: {
+    business_category?: string[]
+    brand_vibe?: string
+  }
 }
 
 export default function SettingsPage() {
@@ -355,23 +360,22 @@ export default function SettingsPage() {
 
             <div className="space-y-2">
               <Label>Store Logo</Label>
-              <div className="flex items-center gap-4">
-                {store.logo_url ? (
-                  <img
-                    src={store.logo_url}
-                    alt="Store logo"
-                    className="w-16 h-16 rounded-lg object-cover border"
-                  />
-                ) : (
-                  <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center">
-                    <Store className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                )}
-                <Button variant="outline" disabled>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Change Logo (Coming Soon)
-                </Button>
-              </div>
+              <LogoEditor
+                currentLogoUrl={store.logo_url}
+                storeId={store.id}
+                businessName={store.name}
+                businessCategory={store.blueprint?.business_category?.[0]}
+                description={store.description || undefined}
+                brandVibe={store.blueprint?.brand_vibe}
+                onLogoChange={(url) => {
+                  setStore({ ...store, logo_url: url })
+                  toast.success('Logo updated successfully')
+                }}
+                onColorSuggestion={(colors) => {
+                  setFormData({ ...formData, primary_color: colors.suggested_primary })
+                  toast.info('Brand color updated from logo')
+                }}
+              />
             </div>
 
             <div className="pt-4 border-t">
