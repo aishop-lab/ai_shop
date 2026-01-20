@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const protectedRoutes = ['/dashboard', '/onboarding']
@@ -35,7 +35,7 @@ export async function middleware(request: NextRequest) {
     const supabase = createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll: () => request.cookies.getAll(),
-        setAll: (cookies) => {
+        setAll: (cookies: { name: string; value: string; options: CookieOptions }[]) => {
           cookies.forEach(({ name, value }) => request.cookies.set(name, value))
           response = NextResponse.next({ request })
           cookies.forEach(({ name, value, options }) =>
