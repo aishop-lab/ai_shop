@@ -1,5 +1,5 @@
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { updateSession } from './lib/supabase/middleware'
 
 // Routes that require authentication
 const protectedRoutes = [
@@ -17,6 +17,41 @@ const publicRoutes = [
   '/sign-up',
   '/api'
 ]
+
+async function updateSession(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          supabaseResponse = NextResponse.next({
+            request
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        }
+      }
+    }
+  )
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser()
+
+  return { supabaseResponse, user }
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -52,16 +87,11 @@ export async function middleware(request: NextRequest) {
 
   // Redirect authenticated users away from auth pages
   if (user && (pathname === '/sign-in' || pathname === '/sign-up')) {
-    // Check if user needs onboarding
-    // We can't make DB calls in middleware easily, so redirect to dashboard
-    // and let the dashboard handle onboarding redirect if needed
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   // Allow store slugs (any path that doesn't match protected/public routes)
-  // These are dynamic store front pages like /my-store, /awesome-shop, etc.
   if (!isProtectedRoute && !isPublicRoute) {
-    // This could be a store slug - allow it
     return supabaseResponse
   }
 
@@ -70,13 +100,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder files
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'
   ]
 }
