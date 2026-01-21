@@ -357,7 +357,8 @@ export async function getStoreCategories(storeId: string): Promise<string[]> {
  */
 function transformStoreData(data: Record<string, unknown>): Store {
   const blueprint = data.blueprint as Store['blueprint'] | null
-  
+  const brandColors = data.brand_colors as { primary?: string; secondary?: string } | null
+
   return {
     id: data.id as string,
     owner_id: data.owner_id as string,
@@ -368,8 +369,9 @@ function transformStoreData(data: Record<string, unknown>): Store {
     logo_url: data.logo_url as string || blueprint?.branding?.logo_url || undefined,
     blueprint: blueprint || {} as Store['blueprint'],
     brand_colors: {
-      primary: blueprint?.branding?.colors?.primary || DEFAULT_BRAND_COLORS.primary,
-      secondary: blueprint?.branding?.colors?.secondary || DEFAULT_BRAND_COLORS.secondary
+      // Priority: brand_colors column > blueprint > default
+      primary: brandColors?.primary || blueprint?.branding?.colors?.primary || DEFAULT_BRAND_COLORS.primary,
+      secondary: brandColors?.secondary || blueprint?.branding?.colors?.secondary || DEFAULT_BRAND_COLORS.secondary
     },
     typography: {
       heading_font: blueprint?.branding?.typography?.heading_font || DEFAULT_TYPOGRAPHY.heading_font,

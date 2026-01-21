@@ -144,6 +144,7 @@ export default function SettingsPage() {
           contact_phone: formData.contact_phone,
           whatsapp_number: formData.whatsapp_number,
           instagram_handle: formData.instagram_handle,
+          logo_url: store.logo_url,
           brand_colors: {
             primary: formData.primary_color,
             secondary: store.brand_colors?.secondary || '#6B7280'

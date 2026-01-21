@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { vercelAI } from '@/lib/ai/vercel-ai-service'
 
@@ -36,10 +37,10 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verify ownership
+    // Verify ownership and get slug for revalidation
     const { data: store, error: storeError } = await supabase
       .from('stores')
-      .select('id')
+      .select('id, slug')
       .eq('id', storeId)
       .eq('owner_id', user.id)
       .single()
@@ -126,6 +127,15 @@ export async function POST(request: Request) {
     if (updateError) {
       console.error('[Dashboard Logo Upload] Failed to update store:', updateError)
       // Don't fail the request, logo is uploaded
+    }
+
+    // Revalidate storefront pages
+    try {
+      revalidatePath(`/${store.slug}`)
+      revalidatePath(`/${store.slug}/about`)
+      revalidatePath(`/${store.slug}/products`)
+    } catch (revalidateError) {
+      console.warn('Revalidation failed (non-blocking):', revalidateError)
     }
 
     console.log('[Dashboard Logo Upload] Success! URL:', urlData.publicUrl)
