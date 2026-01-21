@@ -3,15 +3,106 @@
 import { useCallback, useState, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import Image from 'next/image'
-import { X, Upload, GripVertical, ImageIcon, Sparkles, Loader2, AlertTriangle, CheckCircle } from 'lucide-react'
+import { X, Upload, GripVertical, ImageIcon, Sparkles, Loader2, AlertTriangle, CheckCircle, FileWarning, Minimize2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger
 } from '@/components/ui/tooltip'
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+
+// Client-side image compression utility
+async function compressImage(file: File, maxSizeMB: number = 4): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image()
+    img.src = URL.createObjectURL(file)
+
+    img.onload = () => {
+      URL.revokeObjectURL(img.src)
+
+      // Calculate new dimensions (max 2000px on longest side for quality)
+      let { width, height } = img
+      const maxDimension = 2000
+
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = (height / width) * maxDimension
+          width = maxDimension
+        } else {
+          width = (width / height) * maxDimension
+          height = maxDimension
+        }
+      }
+
+      // Create canvas and compress
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'))
+        return
+      }
+
+      // Use better image rendering
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
+      ctx.drawImage(img, 0, 0, width, height)
+
+      // Start with high quality and reduce until under size limit
+      let quality = 0.9
+      const minQuality = 0.5
+      const targetSize = maxSizeMB * 1024 * 1024
+
+      const tryCompress = () => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Failed to compress image'))
+              return
+            }
+
+            if (blob.size <= targetSize || quality <= minQuality) {
+              // Create new file with compressed data
+              const compressedFile = new File(
+                [blob],
+                file.name.replace(/\.[^.]+$/, '.jpg'),
+                { type: 'image/jpeg' }
+              )
+              resolve(compressedFile)
+            } else {
+              // Reduce quality and try again
+              quality -= 0.1
+              tryCompress()
+            }
+          },
+          'image/jpeg',
+          quality
+        )
+      }
+
+      tryCompress()
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src)
+      reject(new Error('Failed to load image'))
+    }
+  })
+}
 
 interface ImageUploaderProps {
   images: File[]
@@ -44,6 +135,11 @@ interface ImageAnalysis {
   error?: string
 }
 
+interface OversizedFile {
+  file: File
+  sizeMB: number
+}
+
 export default function ImageUploader({
   images,
   onImagesChange,
@@ -55,6 +151,10 @@ export default function ImageUploader({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [analysisMap, setAnalysisMap] = useState<Map<string, ImageAnalysis>>(new Map())
   const [enhancingIndex, setEnhancingIndex] = useState<number | null>(null)
+  const [oversizedFiles, setOversizedFiles] = useState<OversizedFile[]>([])
+  const [showOversizedDialog, setShowOversizedDialog] = useState(false)
+  const [isCompressing, setIsCompressing] = useState(false)
+  const [pendingValidFiles, setPendingValidFiles] = useState<File[]>([])
 
   // Generate previews when images change
   useEffect(() => {
@@ -232,10 +332,77 @@ export default function ImageUploader({
       acceptedFiles = acceptedFiles.slice(0, allowedCount)
     }
 
-    if (acceptedFiles.length > 0) {
-      onImagesChange([...images, ...acceptedFiles])
+    if (acceptedFiles.length === 0) return
+
+    // Check for oversized files
+    const validFiles: File[] = []
+    const oversized: OversizedFile[] = []
+
+    acceptedFiles.forEach(file => {
+      if (file.size > MAX_FILE_SIZE) {
+        oversized.push({
+          file,
+          sizeMB: Math.round((file.size / (1024 * 1024)) * 10) / 10
+        })
+      } else {
+        validFiles.push(file)
+      }
+    })
+
+    // Add valid files immediately
+    if (validFiles.length > 0) {
+      setPendingValidFiles(validFiles)
+    }
+
+    // Show dialog for oversized files
+    if (oversized.length > 0) {
+      setOversizedFiles(oversized)
+      setShowOversizedDialog(true)
+      // If we also have valid files, add them
+      if (validFiles.length > 0) {
+        onImagesChange([...images, ...validFiles])
+        setPendingValidFiles([])
+      }
+    } else if (validFiles.length > 0) {
+      // No oversized files, just add valid ones
+      onImagesChange([...images, ...validFiles])
+      setPendingValidFiles([])
     }
   }, [images, maxImages, onImagesChange])
+
+  // Handle compressing oversized files
+  const handleCompressFiles = async () => {
+    setIsCompressing(true)
+    try {
+      const compressedFiles: File[] = []
+
+      for (const { file } of oversizedFiles) {
+        try {
+          const compressed = await compressImage(file, 4) // Compress to under 4MB
+          compressedFiles.push(compressed)
+        } catch (err) {
+          console.error(`Failed to compress ${file.name}:`, err)
+        }
+      }
+
+      if (compressedFiles.length > 0) {
+        onImagesChange([...images, ...compressedFiles])
+      }
+
+      setShowOversizedDialog(false)
+      setOversizedFiles([])
+    } catch (error) {
+      console.error('Compression failed:', error)
+    } finally {
+      setIsCompressing(false)
+    }
+  }
+
+  // Handle skipping oversized files
+  const handleSkipOversized = () => {
+    setShowOversizedDialog(false)
+    setOversizedFiles([])
+  }
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
@@ -282,6 +449,71 @@ export default function ImageUploader({
 
   return (
     <TooltipProvider>
+      {/* Oversized File Dialog */}
+      <Dialog open={showOversizedDialog} onOpenChange={setShowOversizedDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <FileWarning className="w-5 h-5" />
+              Image Too Large
+            </DialogTitle>
+            <DialogDescription>
+              {oversizedFiles.length === 1 ? (
+                <>
+                  Your image <span className="font-medium">{oversizedFiles[0]?.file.name}</span> is{' '}
+                  <span className="font-medium text-amber-600">{oversizedFiles[0]?.sizeMB}MB</span>.
+                  Images must be less than 5MB.
+                </>
+              ) : (
+                <>
+                  {oversizedFiles.length} images are too large (over 5MB each).
+                  Please compress them or use smaller images.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* List oversized files */}
+          {oversizedFiles.length > 1 && (
+            <div className="max-h-32 overflow-y-auto space-y-1 text-sm">
+              {oversizedFiles.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center py-1 px-2 bg-muted rounded">
+                  <span className="truncate flex-1 mr-2">{item.file.name}</span>
+                  <span className="text-amber-600 font-medium">{item.sizeMB}MB</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={handleSkipOversized}
+              disabled={isCompressing}
+            >
+              Skip {oversizedFiles.length > 1 ? 'These Images' : 'This Image'}
+            </Button>
+            <Button
+              onClick={handleCompressFiles}
+              disabled={isCompressing}
+              className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+            >
+              {isCompressing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Compressing...
+                </>
+              ) : (
+                <>
+                  <Minimize2 className="w-4 h-4 mr-2" />
+                  Compress {oversizedFiles.length > 1 ? 'Images' : 'Image'}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="space-y-4">
         {/* Image Preview Grid */}
         {previews.length > 0 && (
@@ -462,7 +694,7 @@ export default function ImageUploader({
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    JPG, PNG or WebP (max 10MB each) • {images.length}/{maxImages} uploaded
+                    JPG, PNG or WebP (max 5MB each) • {images.length}/{maxImages} uploaded
                   </p>
                 </>
               )}

@@ -1,7 +1,22 @@
 -- Migration: 011_shiprocket_shipping
 -- Description: Add Shiprocket integration columns to orders table
+-- Safe to re-run
 
--- Add Shiprocket-specific columns to orders table
+-- ============================================
+-- CLEANUP (for re-running)
+-- ============================================
+
+-- Drop table first (CASCADE handles policies, triggers, indexes)
+DROP TABLE IF EXISTS shipment_events CASCADE;
+
+-- Drop indexes on orders table
+DROP INDEX IF EXISTS idx_orders_shiprocket_order_id;
+DROP INDEX IF EXISTS idx_orders_shiprocket_shipment_id;
+DROP INDEX IF EXISTS idx_orders_awb_code;
+
+-- ============================================
+-- ALTER ORDERS TABLE
+-- ============================================
 ALTER TABLE orders
 ADD COLUMN IF NOT EXISTS shiprocket_order_id INTEGER,
 ADD COLUMN IF NOT EXISTS shiprocket_shipment_id INTEGER,
@@ -13,12 +28,16 @@ ADD COLUMN IF NOT EXISTS pickup_token VARCHAR(100),
 ADD COLUMN IF NOT EXISTS estimated_delivery_date DATE,
 ADD COLUMN IF NOT EXISTS shipping_provider VARCHAR(50) DEFAULT 'manual';
 
--- Create index for Shiprocket lookups
-CREATE INDEX IF NOT EXISTS idx_orders_shiprocket_order_id ON orders(shiprocket_order_id);
-CREATE INDEX IF NOT EXISTS idx_orders_shiprocket_shipment_id ON orders(shiprocket_shipment_id);
-CREATE INDEX IF NOT EXISTS idx_orders_awb_code ON orders(awb_code);
+-- ============================================
+-- INDEXES FOR ORDERS
+-- ============================================
+CREATE INDEX idx_orders_shiprocket_order_id ON orders(shiprocket_order_id);
+CREATE INDEX idx_orders_shiprocket_shipment_id ON orders(shiprocket_shipment_id);
+CREATE INDEX idx_orders_awb_code ON orders(awb_code);
 
--- Add shipping_settings JSONB column to stores for pickup location config
+-- ============================================
+-- ALTER STORES TABLE
+-- ============================================
 ALTER TABLE stores
 ADD COLUMN IF NOT EXISTS shipping_settings JSONB DEFAULT '{
   "pickup_location": "Primary",
@@ -32,9 +51,11 @@ ADD COLUMN IF NOT EXISTS shipping_settings JSONB DEFAULT '{
   "auto_schedule_pickup": false
 }'::jsonb;
 
--- Create shipment_events table for tracking history
-CREATE TABLE IF NOT EXISTS shipment_events (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+-- ============================================
+-- SHIPMENT EVENTS TABLE
+-- ============================================
+CREATE TABLE shipment_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   awb_code VARCHAR(100),
   event_date TIMESTAMPTZ NOT NULL,
@@ -44,15 +65,15 @@ CREATE TABLE IF NOT EXISTS shipment_events (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Create index for shipment events
-CREATE INDEX IF NOT EXISTS idx_shipment_events_order_id ON shipment_events(order_id);
-CREATE INDEX IF NOT EXISTS idx_shipment_events_awb_code ON shipment_events(awb_code);
-CREATE INDEX IF NOT EXISTS idx_shipment_events_event_date ON shipment_events(event_date DESC);
+-- Indexes for shipment events
+CREATE INDEX idx_shipment_events_order_id ON shipment_events(order_id);
+CREATE INDEX idx_shipment_events_awb_code ON shipment_events(awb_code);
+CREATE INDEX idx_shipment_events_event_date ON shipment_events(event_date DESC);
 
--- Enable RLS on shipment_events
+-- Enable RLS
 ALTER TABLE shipment_events ENABLE ROW LEVEL SECURITY;
 
--- Store owners can view shipment events for their orders
+-- Store owners can view shipment events
 CREATE POLICY "Store owners can view shipment events"
   ON shipment_events FOR SELECT
   USING (

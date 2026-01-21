@@ -10,18 +10,18 @@ export default function PlayfulBrightFooter() {
   const currentYear = new Date().getFullYear()
   
   return (
-    <footer style={{ backgroundColor: 'var(--color-primary)' }} className="text-white">
+    <footer style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-contrast)' }}>
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand */}
           <div>
-            <h3 
+            <h3
               className="text-2xl font-bold mb-4"
               style={{ fontFamily: 'var(--font-heading)' }}
             >
               {store.name} ✨
             </h3>
-            <p className="text-white/80 mb-6">
+            <p className="opacity-80 mb-6">
               {store.description || `Bringing joy through amazing products!`}
             </p>
             <div className="flex space-x-3">
@@ -52,10 +52,10 @@ export default function PlayfulBrightFooter() {
           <div>
             <h4 className="font-bold mb-4 text-lg">Quick Links</h4>
             <ul className="space-y-3">
-              <li><Link href={baseUrl} className="text-white/80 hover:text-white transition-colors">🏠 Home</Link></li>
-              <li><Link href={`${baseUrl}/products`} className="text-white/80 hover:text-white transition-colors">🛍️ Shop</Link></li>
-              <li><Link href={`${baseUrl}/about`} className="text-white/80 hover:text-white transition-colors">💫 About</Link></li>
-              <li><Link href={`${baseUrl}/contact`} className="text-white/80 hover:text-white transition-colors">📧 Contact</Link></li>
+              <li><Link href={baseUrl} className="opacity-80 hover:opacity-100 transition-opacity">🏠 Home</Link></li>
+              <li><Link href={`${baseUrl}/products`} className="opacity-80 hover:opacity-100 transition-opacity">🛍️ Shop</Link></li>
+              <li><Link href={`${baseUrl}/about`} className="opacity-80 hover:opacity-100 transition-opacity">💫 About</Link></li>
+              <li><Link href={`${baseUrl}/contact`} className="opacity-80 hover:opacity-100 transition-opacity">📧 Contact</Link></li>
             </ul>
           </div>
           
@@ -65,7 +65,7 @@ export default function PlayfulBrightFooter() {
             <ul className="space-y-3">
               {store.contact_email && (
                 <li>
-                  <a href={`mailto:${store.contact_email}`} className="flex items-center space-x-2 text-white/80 hover:text-white">
+                  <a href={`mailto:${store.contact_email}`} className="flex items-center space-x-2 opacity-80 hover:opacity-100">
                     <Mail className="w-4 h-4" />
                     <span>{store.contact_email}</span>
                   </a>
@@ -73,7 +73,7 @@ export default function PlayfulBrightFooter() {
               )}
               {store.contact_phone && (
                 <li>
-                  <a href={`tel:${store.contact_phone}`} className="flex items-center space-x-2 text-white/80 hover:text-white">
+                  <a href={`tel:${store.contact_phone}`} className="flex items-center space-x-2 opacity-80 hover:opacity-100">
                     <Phone className="w-4 h-4" />
                     <span>+91 {store.contact_phone}</span>
                   </a>
@@ -83,7 +83,7 @@ export default function PlayfulBrightFooter() {
           </div>
         </div>
         
-        <div className="mt-12 pt-8 border-t border-white/20 text-center text-white/60 text-sm">
+        <div className="mt-12 pt-8 border-t border-current/20 text-center opacity-60 text-sm">
           <p className="flex items-center justify-center">
             Made with <Heart className="w-4 h-4 mx-1 text-red-400 fill-current" /> by {store.name} &copy; {currentYear}
           </p>

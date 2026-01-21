@@ -46,8 +46,8 @@ export default function ClassicElegantHeader({ onMenuClick }: ClassicElegantHead
                 />
               ) : (
                 <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-white font-serif text-xl"
-                  style={{ backgroundColor: 'var(--color-primary)' }}
+                  className="w-12 h-12 rounded-full flex items-center justify-center font-serif text-xl"
+                  style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-contrast)' }}
                 >
                   {store.name.charAt(0)}
                 </div>

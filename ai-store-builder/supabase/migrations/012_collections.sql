@@ -1,9 +1,24 @@
--- Collections System Migration
--- Groups products into curated collections like "Summer Sale", "Bestsellers", "New Arrivals"
+-- Migration: 012_collections
+-- Description: Collections system for grouping products
+-- Safe to re-run
 
--- Collections table
-CREATE TABLE IF NOT EXISTS collections (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+-- ============================================
+-- CLEANUP (for re-running)
+-- ============================================
+
+-- Drop tables first (CASCADE handles policies, triggers, indexes)
+DROP TABLE IF EXISTS collection_products CASCADE;
+DROP TABLE IF EXISTS collections CASCADE;
+
+-- Drop functions
+DROP FUNCTION IF EXISTS update_collection_updated_at() CASCADE;
+DROP FUNCTION IF EXISTS generate_collection_slug(TEXT, UUID) CASCADE;
+
+-- ============================================
+-- COLLECTIONS TABLE
+-- ============================================
+CREATE TABLE collections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
 
   title VARCHAR(255) NOT NULL,
@@ -26,9 +41,11 @@ CREATE TABLE IF NOT EXISTS collections (
   CONSTRAINT unique_collection_slug UNIQUE (store_id, slug)
 );
 
--- Collection products junction table
-CREATE TABLE IF NOT EXISTS collection_products (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+-- ============================================
+-- COLLECTION PRODUCTS TABLE
+-- ============================================
+CREATE TABLE collection_products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   collection_id UUID NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
   product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   position INTEGER DEFAULT 0,
@@ -37,33 +54,37 @@ CREATE TABLE IF NOT EXISTS collection_products (
   CONSTRAINT unique_collection_product UNIQUE (collection_id, product_id)
 );
 
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_collections_store_id ON collections(store_id);
-CREATE INDEX IF NOT EXISTS idx_collections_slug ON collections(slug);
-CREATE INDEX IF NOT EXISTS idx_collections_featured ON collections(featured) WHERE featured = true;
-CREATE INDEX IF NOT EXISTS idx_collection_products_collection_id ON collection_products(collection_id);
-CREATE INDEX IF NOT EXISTS idx_collection_products_product_id ON collection_products(product_id);
+-- ============================================
+-- INDEXES
+-- ============================================
+CREATE INDEX idx_collections_store_id ON collections(store_id);
+CREATE INDEX idx_collections_slug ON collections(slug);
+CREATE INDEX idx_collections_featured ON collections(featured) WHERE featured = true;
+CREATE INDEX idx_collection_products_collection_id ON collection_products(collection_id);
+CREATE INDEX idx_collection_products_product_id ON collection_products(product_id);
 
--- Enable RLS
+-- ============================================
+-- ROW LEVEL SECURITY
+-- ============================================
 ALTER TABLE collections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE collection_products ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for collections
 CREATE POLICY "Users can view their own collections"
   ON collections FOR SELECT
-  USING (store_id IN (SELECT id FROM stores WHERE user_id = auth.uid()));
+  USING (store_id IN (SELECT id FROM stores WHERE owner_id = auth.uid()));
 
 CREATE POLICY "Users can create collections for their store"
   ON collections FOR INSERT
-  WITH CHECK (store_id IN (SELECT id FROM stores WHERE user_id = auth.uid()));
+  WITH CHECK (store_id IN (SELECT id FROM stores WHERE owner_id = auth.uid()));
 
 CREATE POLICY "Users can update their own collections"
   ON collections FOR UPDATE
-  USING (store_id IN (SELECT id FROM stores WHERE user_id = auth.uid()));
+  USING (store_id IN (SELECT id FROM stores WHERE owner_id = auth.uid()));
 
 CREATE POLICY "Users can delete their own collections"
   ON collections FOR DELETE
-  USING (store_id IN (SELECT id FROM stores WHERE user_id = auth.uid()));
+  USING (store_id IN (SELECT id FROM stores WHERE owner_id = auth.uid()));
 
 -- Public can view visible collections
 CREATE POLICY "Public can view visible collections"
@@ -75,13 +96,17 @@ CREATE POLICY "Users can manage collection products"
   ON collection_products FOR ALL
   USING (collection_id IN (
     SELECT id FROM collections WHERE store_id IN (
-      SELECT id FROM stores WHERE user_id = auth.uid()
+      SELECT id FROM stores WHERE owner_id = auth.uid()
     )
   ));
 
 CREATE POLICY "Public can view collection products"
   ON collection_products FOR SELECT
   USING (collection_id IN (SELECT id FROM collections WHERE visible = true));
+
+-- ============================================
+-- FUNCTIONS & TRIGGERS
+-- ============================================
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_collection_updated_at()
@@ -93,7 +118,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to auto-update updated_at
-DROP TRIGGER IF EXISTS trigger_update_collection_timestamp ON collections;
 CREATE TRIGGER trigger_update_collection_timestamp
   BEFORE UPDATE ON collections
   FOR EACH ROW

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -258,7 +257,8 @@ export default function SecuritySettingsPage() {
                     Use Google Authenticator, Authy, or similar app
                   </p>
                   <div className="inline-block p-4 bg-white rounded-lg border">
-                    <Image
+                    {/* Using img instead of next/image for base64 data URLs */}
+                    <img
                       src={setupData.qrCode}
                       alt="2FA QR Code"
                       width={200}

@@ -47,6 +47,37 @@ export async function POST(request: Request) {
       )
     }
 
+    // Check for demo products and delete them when adding first real product
+    try {
+      const { data: demoProducts } = await supabase
+        .from('products')
+        .select('id')
+        .eq('store_id', storeId)
+        .eq('is_demo', true)
+
+      if (demoProducts && demoProducts.length > 0) {
+        const demoProductIds = demoProducts.map(p => p.id)
+        console.log(`[Upload] Removing ${demoProductIds.length} demo products from store ${storeId}`)
+
+        // Delete product images first
+        await supabase
+          .from('product_images')
+          .delete()
+          .in('product_id', demoProductIds)
+
+        // Delete demo products
+        await supabase
+          .from('products')
+          .delete()
+          .in('id', demoProductIds)
+
+        console.log('[Upload] Demo products removed successfully')
+      }
+    } catch (demoCleanupError) {
+      console.error('[Upload] Failed to cleanup demo products (non-blocking):', demoCleanupError)
+      // Don't fail the upload - continue with real product creation
+    }
+
     // Extract and validate images
     const images: File[] = []
     formData.getAll('images').forEach(item => {

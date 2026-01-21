@@ -383,6 +383,7 @@ function transformStoreData(data: Record<string, unknown>): Store {
     facebook_url: data.facebook_url as string || undefined,
     settings: mergeSettings(data.settings as StoreSettings | null, blueprint?.settings),
     marketing_pixels: data.marketing_pixels as Store['marketing_pixels'] || undefined,
+    policies: data.policies as Store['policies'] || undefined,
     status: data.status as Store['status'],
     created_at: data.created_at as string,
     updated_at: data.updated_at as string

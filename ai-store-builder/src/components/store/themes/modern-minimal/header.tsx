@@ -44,8 +44,8 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
                 />
               ) : (
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg"
-                  style={{ backgroundColor: 'var(--color-primary)' }}
+                  className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg"
+                  style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-contrast)' }}
                 >
                   {store.name.charAt(0)}
                 </div>

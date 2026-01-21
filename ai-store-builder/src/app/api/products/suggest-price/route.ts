@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { google } from '@ai-sdk/google'
+import { getTextModel } from '@/lib/ai/provider'
 import { generateObject } from 'ai'
 import { z } from 'zod'
 
@@ -33,6 +33,8 @@ export async function POST(request: Request) {
             )
         }
 
+        console.log('[SuggestPrice] Generating price for:', title, category)
+
         // Use Gemini to suggest price
         const prompt = `You are a pricing expert for Indian e-commerce. Based on the product details below, suggest an optimal selling price in Indian Rupees (INR).
 
@@ -50,7 +52,7 @@ ${description ? `- Description: ${description.substring(0, 500)}` : ''}
 Provide a realistic price range for Indian consumers. Most products should be priced between ₹100 and ₹50,000.`
 
         const result = await generateObject({
-            model: google('gemini-2.0-flash'),
+            model: getTextModel(),
             schema: priceSchema,
             prompt
         })
@@ -63,9 +65,10 @@ Provide a realistic price range for Indian consumers. Most products should be pr
         })
 
     } catch (error) {
-        console.error('Price suggestion error:', error)
+        console.error('[SuggestPrice] Error:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Failed to generate price suggestion'
         return NextResponse.json(
-            { success: false, error: 'Failed to generate price suggestion' },
+            { success: false, error: errorMessage },
             { status: 500 }
         )
     }

@@ -215,6 +215,83 @@ Focus on what you can clearly see. If uncertain, omit rather than guess.`,
   }
 
   /**
+   * Analyze MULTIPLE product images together for better accuracy
+   * Combines information from all images to generate comprehensive product details
+   */
+  async analyzeMultipleProductImages(
+    images: Array<{ buffer: Buffer; mimeType: string }>
+  ): Promise<ProductAnalysis> {
+    this.logProvider('analyzeMultipleProductImages')
+
+    if (images.length === 0) {
+      throw new Error('At least one image is required')
+    }
+
+    // If only one image, use single image analysis
+    if (images.length === 1) {
+      return this.analyzeProductImage(images[0])
+    }
+
+    try {
+      // Prepare all images for the API
+      const imageContents = images.map(img => {
+        const base64 = img.buffer.toString('base64')
+        return {
+          type: 'image' as const,
+          image: base64,
+          mimeType: img.mimeType
+        }
+      })
+
+      const { object } = await generateObject({
+        model: getVisionModel(),
+        schema: productAnalysisSchema,
+        system: PRODUCT_ANALYSIS_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              ...imageContents,
+              {
+                type: 'text',
+                text: `You are analyzing ${images.length} images of the SAME product. These images show different angles, details, or packaging of one product.
+
+IMPORTANT: Combine information from ALL ${images.length} images to create a comprehensive product listing.
+
+Extract and combine:
+1. Product title (SEO-friendly, 3-7 words) - based on what you see across all images
+2. Description (2-3 compelling sentences) - combine details visible in different images
+3. Categories and tags - comprehensive list based on all images
+4. Visible attributes (color, material, style, pattern, size, etc.) - combine from all images
+5. Any text visible in ANY of the images (OCR from labels, packaging, tags)
+6. Overall image quality assessment
+
+Be thorough - different images may show:
+- Different angles of the product
+- Close-ups of details (fabric, texture, embroidery)
+- Product packaging with text/labels
+- Size/care labels
+- Brand tags
+
+Combine ALL visible information into one comprehensive analysis.`,
+              },
+            ],
+          },
+        ],
+      })
+
+      console.log(`[VercelAI] Multi-image analysis complete (${images.length} images). Confidence: ${object.confidence}`)
+      return object
+    } catch (error) {
+      console.error('[VercelAI] Multi-image analysis failed:', error)
+
+      // Fallback to analyzing just the first image
+      console.log('[VercelAI] Falling back to single image analysis')
+      return this.analyzeProductImage(images[0])
+    }
+  }
+
+  /**
    * Enhanced product analysis with price suggestion and SEO
    */
   async analyzeProductImageEnhanced(

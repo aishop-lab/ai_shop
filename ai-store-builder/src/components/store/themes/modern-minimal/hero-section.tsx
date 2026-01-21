@@ -63,8 +63,8 @@ export default function HeroSection() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href={`${baseUrl}/products`}
-              className="inline-flex items-center px-8 py-4 text-lg font-semibold text-white rounded-lg transition-all hover:scale-105 hover:shadow-lg"
-              style={{ backgroundColor: 'var(--color-primary)' }}
+              className="inline-flex items-center px-8 py-4 text-lg font-semibold rounded-lg transition-all hover:scale-105 hover:shadow-lg"
+              style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-contrast)' }}
             >
               Shop Now
               <ArrowRight className="ml-2 w-5 h-5" />

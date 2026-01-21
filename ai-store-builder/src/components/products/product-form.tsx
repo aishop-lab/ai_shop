@@ -87,6 +87,7 @@ export default function ProductForm({
   const [variants, setVariants] = useState<VariantInput[]>([])
   const [isGeneratingVariants, setIsGeneratingVariants] = useState(false)
   const [existingImages, setExistingImages] = useState<ProductImage[]>([])
+  const [lastAnalyzedCount, setLastAnalyzedCount] = useState(0) // Track when we last analyzed
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -107,12 +108,14 @@ export default function ProductForm({
     }
   })
 
-  // Auto-extract when images uploaded and title is empty
+  // Auto-extract when images are added (re-analyze ALL images together)
   useEffect(() => {
-    if (images.length > 0 && !form.getValues('title') && mode === 'create') {
+    // Only trigger in create mode and when new images are added
+    if (mode === 'create' && images.length > 0 && images.length > lastAnalyzedCount && images.length <= 10) {
       extractProductInfo()
+      setLastAnalyzedCount(images.length)
     }
-  }, [images.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [images.length, mode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const extractProductInfo = async () => {
     if (images.length === 0) return
@@ -122,25 +125,42 @@ export default function ProductForm({
     setAiApplied(false)
 
     try {
-      // Convert first image to base64
-      const file = images[0]
-      const arrayBuffer = await file.arrayBuffer()
-      const base64 = Buffer.from(arrayBuffer).toString('base64')
-      const dataUrl = `data:${file.type};base64,${base64}`
-
-      // Use enhanced extraction API
-      const response = await fetch('/api/products/extract-enhanced', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageBase64: dataUrl,
-          mimeType: file.type,
-          enhanceImage: true,
-          removeBackground: true,
-          runAIAnalysis: true,
-          includeOCR: true
-        })
+      // Convert ALL images to base64 for multi-image analysis
+      const imageDataPromises = images.map(async (file) => {
+        const arrayBuffer = await file.arrayBuffer()
+        const base64 = Buffer.from(arrayBuffer).toString('base64')
+        return {
+          base64: `data:${file.type};base64,${base64}`,
+          mimeType: file.type
+        }
       })
+      const imageDataArray = await Promise.all(imageDataPromises)
+
+      // Use multi-image extraction API if multiple images, otherwise enhanced single
+      const response = images.length > 1
+        ? await fetch('/api/products/extract-multi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              images: imageDataArray,
+              enhanceImage: true,
+              removeBackground: true,
+              runAIAnalysis: true,
+              includeOCR: true
+            })
+          })
+        : await fetch('/api/products/extract-enhanced', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              imageBase64: imageDataArray[0].base64,
+              mimeType: imageDataArray[0].mimeType,
+              enhanceImage: true,
+              removeBackground: true,
+              runAIAnalysis: true,
+              includeOCR: true
+            })
+          })
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -186,13 +206,17 @@ export default function ProductForm({
             setAiApplied(true)
 
             toast({
-              title: 'AI Auto-Applied!',
-              description: `High confidence (${Math.round(suggestions.confidence * 100)}%) - suggestions have been applied. Review and adjust as needed.`
+              title: images.length > 1 ? 'AI Updated from All Images!' : 'AI Auto-Applied!',
+              description: images.length > 1
+                ? `Analyzed ${images.length} images with ${Math.round(suggestions.confidence * 100)}% confidence. Review and adjust as needed.`
+                : `High confidence (${Math.round(suggestions.confidence * 100)}%) - suggestions have been applied. Review and adjust as needed.`
             })
           } else {
             toast({
-              title: 'AI Suggestions Ready',
-              description: 'Review the suggestions and apply them to your product'
+              title: images.length > 1 ? 'AI Analyzed All Images' : 'AI Suggestions Ready',
+              description: images.length > 1
+                ? `Combined info from ${images.length} images. Review and apply the suggestions.`
+                : 'Review the suggestions and apply them to your product'
             })
           }
         }
@@ -401,8 +425,18 @@ export default function ProductForm({
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Upload failed')
+        // Handle non-JSON responses (like 413 Request Entity Too Large)
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Upload failed')
+        } else {
+          // Handle plain text error responses
+          if (response.status === 413) {
+            throw new Error('Images are too large. Please use smaller images (max 5MB each).')
+          }
+          throw new Error(`Upload failed: ${response.statusText || 'Unknown error'}`)
+        }
       }
 
       toast({
@@ -447,7 +481,7 @@ export default function ProductForm({
             <CardHeader>
               <CardTitle>Product Images</CardTitle>
               <CardDescription>
-                Upload up to 10 images. First image will be the primary.
+                Upload up to 10 images. AI will analyze all images together to extract product details.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -455,8 +489,13 @@ export default function ProductForm({
                 images={images}
                 onImagesChange={setImages}
                 maxImages={10}
-                disabled={isLoading}
+                disabled={isLoading || isExtracting}
               />
+              {images.length > 0 && !isExtracting && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {images.length} image{images.length > 1 ? 's' : ''} uploaded. Add more images to improve AI analysis.
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -470,10 +509,12 @@ export default function ProductForm({
                   </div>
                   <div>
                     <CardTitle className="text-lg text-purple-900 dark:text-purple-100">
-                      AI Processing Image
+                      AI Analyzing {images.length} Image{images.length > 1 ? 's' : ''}
                     </CardTitle>
                     <CardDescription className="text-purple-700 dark:text-purple-400">
-                      Enhancing, analyzing, and extracting product info
+                      {images.length > 1
+                        ? 'Combining information from all images to generate product details'
+                        : 'Enhancing, analyzing, and extracting product info'}
                     </CardDescription>
                   </div>
                 </div>

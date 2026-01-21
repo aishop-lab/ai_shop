@@ -21,8 +21,10 @@ import {
   ArrowLeft,
   FileText,
   Database,
-  Shield
+  Shield,
+  AlertTriangle
 } from 'lucide-react'
+import { RebuildStoreDialog } from '@/components/dashboard/rebuild-store-dialog'
 import { ColorAccessibilityChecker } from '@/components/ui/color-accessibility-checker'
 import { LogoEditor } from '@/components/dashboard/logo-editor'
 
@@ -575,6 +577,31 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Danger Zone */}
+      <Card className="border-destructive/50 mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            Danger Zone
+          </CardTitle>
+          <CardDescription>
+            Irreversible actions that affect your entire store
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg border border-destructive/30 bg-destructive/5">
+            <div>
+              <h4 className="font-medium mb-1">Rebuild Store from Scratch</h4>
+              <p className="text-sm text-muted-foreground">
+                Delete your current store and start fresh with the onboarding wizard.
+                All products, orders, and settings will be permanently deleted.
+              </p>
+            </div>
+            <RebuildStoreDialog storeName={store.name} storeSlug={store.slug} />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

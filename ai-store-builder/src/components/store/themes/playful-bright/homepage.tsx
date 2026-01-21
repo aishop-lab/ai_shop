@@ -52,8 +52,8 @@ export default function PlayfulBrightHomepage({ data }: HomepageProps) {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href={`${baseUrl}/products`}
-              className="inline-flex items-center px-8 py-4 text-lg font-bold text-white rounded-2xl shadow-lg transition-all hover:scale-105 hover:shadow-xl"
-              style={{ backgroundColor: 'var(--color-primary)' }}
+              className="inline-flex items-center px-8 py-4 text-lg font-bold rounded-2xl shadow-lg transition-all hover:scale-105 hover:shadow-xl"
+              style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-contrast)' }}
             >
               Start Shopping
               <ArrowRight className="ml-2 w-5 h-5" />
@@ -104,11 +104,11 @@ export default function PlayfulBrightHomepage({ data }: HomepageProps) {
       
       {/* Fun CTA Section */}
       <section className="py-16" style={{ backgroundColor: 'var(--color-secondary)' }}>
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 text-center" style={{ color: 'var(--color-secondary-contrast)' }}>
           <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>
             Ready to find something awesome? 🚀
           </h2>
-          <p className="text-lg mb-8 text-white/80">
+          <p className="text-lg mb-8 opacity-80">
             Join thousands of happy customers!
           </p>
           <Link

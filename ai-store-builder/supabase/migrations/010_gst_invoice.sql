@@ -1,5 +1,6 @@
 -- Migration: 010_gst_invoice
 -- Description: Add GST-related fields for invoice generation
+-- Safe to re-run
 
 -- Add GST fields to stores table
 ALTER TABLE stores
@@ -15,8 +16,13 @@ ADD COLUMN IF NOT EXISTS hsn_code VARCHAR(8) DEFAULT '6204';
 ALTER TABLE orders
 ADD COLUMN IF NOT EXISTS invoice_number VARCHAR(50);
 
--- Create sequence for invoice numbers
-CREATE SEQUENCE IF NOT EXISTS invoice_number_seq START 1;
+-- Create sequence for invoice numbers (if not exists)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_sequences WHERE schemaname = 'public' AND sequencename = 'invoice_number_seq') THEN
+    CREATE SEQUENCE invoice_number_seq START 1;
+  END IF;
+END $$;
 
 -- Function to generate invoice number
 CREATE OR REPLACE FUNCTION generate_invoice_number()

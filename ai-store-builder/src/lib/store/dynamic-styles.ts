@@ -74,12 +74,15 @@ export function generateStyleVars(brand: BrandStyles): StyleVariables {
     '--color-primary-dark': adjustColor(primary, -15),
     '--color-primary-light': createTint(primary, 0.9), // Light tint for backgrounds
     '--color-primary-lighter': createTint(primary, 0.95), // Even lighter tint
+    '--color-primary-contrast': getContrastColor(primary), // Black or white for text on primary bg
     '--color-secondary': secondary,
     '--color-secondary-dark': adjustColor(secondary, -15),
     '--color-secondary-light': createTint(secondary, 0.9),
+    '--color-secondary-contrast': getContrastColor(secondary), // Black or white for text on secondary bg
     '--color-accent': accent,
     '--color-accent-dark': adjustColor(accent, -15),
     '--color-accent-light': createTint(accent, 0.9),
+    '--color-accent-contrast': getContrastColor(accent), // Black or white for text on accent bg
     '--font-heading': `"${brand.typography.heading_font}", system-ui, sans-serif`,
     '--font-body': `"${brand.typography.body_font}", system-ui, sans-serif`,
   }
@@ -92,24 +95,26 @@ export function generateStyleVars(brand: BrandStyles): StyleVariables {
 export function getBrandClasses(brand: BrandStyles): BrandClasses {
   const primary = brand.colors.primary || '#3B82F6'
   const secondary = brand.colors.secondary || '#6B7280'
-  
+  const primaryContrast = getContrastColor(primary)
+  const secondaryContrast = getContrastColor(secondary)
+
   return {
-    // Buttons
-    buttonPrimary: `bg-[${primary}] hover:bg-[${adjustColor(primary, -15)}] text-white font-medium transition-colors`,
-    buttonSecondary: `bg-[${secondary}] hover:bg-[${adjustColor(secondary, -15)}] text-white font-medium transition-colors`,
-    buttonOutline: `border-2 border-[${primary}] text-[${primary}] hover:bg-[${primary}] hover:text-white font-medium transition-colors`,
-    
+    // Buttons - use contrast color for text readability
+    buttonPrimary: `bg-[${primary}] hover:bg-[${adjustColor(primary, -15)}] text-[${primaryContrast}] font-medium transition-colors`,
+    buttonSecondary: `bg-[${secondary}] hover:bg-[${adjustColor(secondary, -15)}] text-[${secondaryContrast}] font-medium transition-colors`,
+    buttonOutline: `border-2 border-[${primary}] text-[${primary}] hover:bg-[${primary}] hover:text-[${primaryContrast}] font-medium transition-colors`,
+
     // Links
     linkPrimary: `text-[${primary}] hover:text-[${adjustColor(primary, -15)}] hover:underline transition-colors`,
-    
+
     // Typography
     headingFont: `font-[var(--font-heading)]`,
     bodyFont: `font-[var(--font-body)]`,
-    
+
     // Backgrounds
     bgPrimary: `bg-[${primary}]`,
     bgSecondary: `bg-[${secondary}]`,
-    
+
     // Text
     textPrimary: `text-[${primary}]`,
     textSecondary: `text-[${secondary}]`

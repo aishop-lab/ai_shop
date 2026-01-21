@@ -14,18 +14,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user's store with all settings
-    const { data: store, error: storeError } = await supabase
+    // Get user's store with all settings (use limit instead of single for robustness)
+    const { data: stores, error: storeError } = await supabase
       .from('stores')
       .select('*')
       .eq('owner_id', user.id)
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
 
-    if (storeError && storeError.code !== 'PGRST116') {
+    if (storeError) {
       console.error('Error fetching store:', storeError)
       return NextResponse.json({ error: 'Failed to fetch store' }, { status: 500 })
     }
 
+    const store = stores?.[0] || null
     return NextResponse.json({ store })
 
   } catch (error) {
@@ -52,13 +54,20 @@ export async function PATCH(request: Request) {
     const body = await request.json()
 
     // Get user's store first
-    const { data: existingStore, error: fetchError } = await supabase
+    const { data: stores, error: fetchError } = await supabase
       .from('stores')
       .select('id')
       .eq('owner_id', user.id)
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
 
-    if (fetchError || !existingStore) {
+    if (fetchError) {
+      console.error('Error fetching store:', fetchError)
+      return NextResponse.json({ error: 'Failed to fetch store' }, { status: 500 })
+    }
+
+    const existingStore = stores?.[0]
+    if (!existingStore) {
       return NextResponse.json({ error: 'Store not found' }, { status: 404 })
     }
 

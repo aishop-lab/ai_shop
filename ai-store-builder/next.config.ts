@@ -15,6 +15,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Increase body size limit for image uploads (default is 4.5MB)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+  },
 };
 
 export default nextConfig;

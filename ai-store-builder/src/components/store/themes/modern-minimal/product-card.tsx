@@ -81,8 +81,8 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
             )}
             {product.featured && (
               <span
-                className="px-2 py-1 text-xs font-semibold text-white rounded"
-                style={{ backgroundColor: 'var(--color-primary)' }}
+                className="px-2 py-1 text-xs font-semibold rounded"
+                style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-contrast)' }}
               >
                 Featured
               </span>
@@ -171,7 +171,7 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
                 }`}
               style={{
                 backgroundColor: inCart ? undefined : 'var(--color-primary)',
-                color: 'white'
+                color: inCart ? undefined : 'var(--color-primary-contrast)'
               }}
               aria-label={inCart ? 'Added to cart' : 'Add to cart'}
             >

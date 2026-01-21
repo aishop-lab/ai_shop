@@ -41,8 +41,8 @@ export default function PlayfulBrightHeader({ onMenuClick }: PlayfulBrightHeader
                 />
               ) : (
                 <div
-                  className="w-11 h-11 rounded-2xl flex items-center justify-center text-white font-bold text-lg rotate-3"
-                  style={{ backgroundColor: 'var(--color-primary)' }}
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-lg rotate-3"
+                  style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-contrast)' }}
                 >
                   <Sparkles className="w-6 h-6" />
                 </div>
