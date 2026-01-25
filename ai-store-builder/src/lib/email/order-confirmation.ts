@@ -14,6 +14,20 @@ const resend = process.env.RESEND_API_KEY
 const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
+// Production domain configuration for subdomain URLs
+const PRODUCTION_DOMAIN = process.env.NEXT_PUBLIC_PRODUCTION_DOMAIN || 'storeforge.site'
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+
+/**
+ * Get the full URL for a store (used in email links)
+ */
+function getStoreUrl(storeSlug: string): string {
+  if (IS_PRODUCTION) {
+    return `https://${storeSlug}.${PRODUCTION_DOMAIN}`
+  }
+  return `${baseUrl}/${storeSlug}`
+}
+
 interface OrderWithStore extends Order {
   store?: {
     name: string

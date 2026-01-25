@@ -5,6 +5,33 @@ import type { Store, Product, PaginatedProducts, StoreSettings } from '@/lib/typ
 import { DEFAULT_STORE_SETTINGS, DEFAULT_BRAND_COLORS, DEFAULT_TYPOGRAPHY } from '@/lib/types/store'
 import type { ProductWithVariants, ProductVariantOption, ProductVariant } from '@/lib/types/variant'
 
+// Production domain configuration
+const PRODUCTION_DOMAIN = process.env.NEXT_PUBLIC_PRODUCTION_DOMAIN || 'storeforge.site'
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+
+/**
+ * Get the full URL for a store
+ * In production: https://{slug}.storeforge.site
+ * In development: http://localhost:3000/{slug}
+ */
+export function getStoreUrl(slug: string): string {
+  if (IS_PRODUCTION) {
+    return `https://${slug}.${PRODUCTION_DOMAIN}`
+  }
+  return `${BASE_URL}/${slug}`
+}
+
+/**
+ * Get just the display hostname for a store (without protocol)
+ */
+export function getStoreHostname(slug: string): string {
+  if (IS_PRODUCTION) {
+    return `${slug}.${PRODUCTION_DOMAIN}`
+  }
+  return `localhost:3000/${slug}`
+}
+
 /**
  * Get store by slug
  * Only returns active stores

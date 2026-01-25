@@ -3,8 +3,22 @@
 import type { Metadata } from 'next'
 import type { Store, Product } from '@/lib/types/store'
 
-// Base URL for the application
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://mystore.in'
+// Production domain configuration
+const PRODUCTION_DOMAIN = process.env.NEXT_PUBLIC_PRODUCTION_DOMAIN || 'storeforge.site'
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+
+/**
+ * Get the full URL for a store
+ * In production: https://{slug}.storeforge.site
+ * In development: http://localhost:3000/{slug}
+ */
+function getStoreUrl(slug: string): string {
+  if (IS_PRODUCTION) {
+    return `https://${slug}.${PRODUCTION_DOMAIN}`
+  }
+  return `${BASE_URL}/${slug}`
+}
 
 /**
  * Generate store meta tags for Next.js Metadata API
@@ -25,8 +39,8 @@ export function generateStoreMeta(store: Store): Metadata {
     'shop',
     'buy online'
   ].filter(Boolean)
-  
-  const url = `${BASE_URL}/${store.slug}`
+
+  const url = getStoreUrl(store.slug)
   
   return {
     title,
@@ -95,7 +109,7 @@ export function generateProductMeta(product: Product, store: Store): Metadata {
     `Buy ${product.title} from ${store.name}. ${product.compare_at_price ? 'Special price!' : ''}`
   
   const productImage = product.images?.[0]?.url
-  const url = `${BASE_URL}/${store.slug}/products/${product.id}`
+  const url = `${getStoreUrl(store.slug)}/products/${product.id}`
   
   const keywords = [
     product.title,
@@ -152,7 +166,7 @@ export function generateStoreStructuredData(store: Store): object {
     '@type': 'Store',
     name: store.name,
     description: store.description,
-    url: `${BASE_URL}/${store.slug}`,
+    url: getStoreUrl(store.slug),
     logo: store.logo_url,
     image: store.logo_url,
     telephone: store.contact_phone,
@@ -181,7 +195,7 @@ export function generateProductStructuredData(product: Product, store: Store): o
     name: product.title,
     description: product.description,
     image: productImage,
-    url: `${BASE_URL}/${store.slug}/products/${product.id}`,
+    url: `${getStoreUrl(store.slug)}/products/${product.id}`,
     sku: product.sku,
     brand: {
       '@type': 'Brand',
@@ -199,7 +213,7 @@ export function generateProductStructuredData(product: Product, store: Store): o
         name: store.name
       },
       priceValidUntil: getNextYearDate(),
-      url: `${BASE_URL}/${store.slug}/products/${product.id}`,
+      url: `${getStoreUrl(store.slug)}/products/${product.id}`,
       ...(product.compare_at_price && {
         discount: calculateDiscount(product.compare_at_price, product.price)
       })
@@ -241,7 +255,7 @@ export function generateOrganizationStructuredData(store: Store): object {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: store.name,
-    url: `${BASE_URL}/${store.slug}`,
+    url: getStoreUrl(store.slug),
     logo: store.logo_url,
     contactPoint: {
       '@type': 'ContactPoint',
@@ -312,14 +326,16 @@ function calculateDiscount(originalPrice: number, salePrice: number): string {
  * Generate robots.txt content for store
  */
 export function generateRobotsTxt(storeSlug: string): string {
+  const storeUrl = getStoreUrl(storeSlug)
   return `
 User-agent: *
-Allow: /${storeSlug}/
-Allow: /${storeSlug}/products/
-Disallow: /${storeSlug}/cart
-Disallow: /${storeSlug}/checkout
+Allow: /
+Allow: /products/
+Disallow: /cart
+Disallow: /checkout
+Disallow: /order-confirmation
 
-Sitemap: ${BASE_URL}/${storeSlug}/sitemap.xml
+Sitemap: ${storeUrl}/sitemap.xml
 `.trim()
 }
 
@@ -334,7 +350,7 @@ type SitemapUrl = {
 }
 
 export function generateSitemapUrls(store: Store, products: Product[]): SitemapUrl[] {
-  const baseUrl = `${BASE_URL}/${store.slug}`
+  const baseUrl = getStoreUrl(store.slug)
 
   const urls: SitemapUrl[] = [
     // Homepage

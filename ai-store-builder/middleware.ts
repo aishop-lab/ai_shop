@@ -4,12 +4,56 @@ import { NextResponse, type NextRequest } from 'next/server'
 const protectedRoutes = ['/dashboard', '/onboarding']
 const authRoutes = ['/sign-in', '/sign-up']
 
+// Production domain for subdomain routing
+const PRODUCTION_DOMAIN = 'storeforge.site'
+
+/**
+ * Extract store slug from subdomain if present
+ * e.g., mystore.storeforge.site -> mystore
+ */
+function extractStoreSlug(hostname: string): string | null {
+  // Handle localhost development
+  if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+    return null
+  }
+
+  // Check for subdomain pattern: {slug}.storeforge.site
+  const subdomainMatch = hostname.match(new RegExp(`^([^.]+)\\.${PRODUCTION_DOMAIN.replace('.', '\\.')}$`))
+
+  if (subdomainMatch && subdomainMatch[1]) {
+    const subdomain = subdomainMatch[1].toLowerCase()
+    // Ignore www and app subdomains
+    if (subdomain === 'www' || subdomain === 'app') {
+      return null
+    }
+    return subdomain
+  }
+
+  return null
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const hostname = request.headers.get('host') || ''
 
-  // Skip for static files
-  if (pathname.startsWith('/_next') || pathname.includes('.')) {
+  // Skip for static files and API routes
+  if (pathname.startsWith('/_next') || pathname.includes('.') || pathname.startsWith('/api')) {
     return NextResponse.next()
+  }
+
+  // === SUBDOMAIN ROUTING ===
+  const storeSlug = extractStoreSlug(hostname)
+
+  if (storeSlug) {
+    // Subdomain detected - rewrite to store route
+    // e.g., mystore.storeforge.site/products -> /mystore/products
+    const url = request.nextUrl.clone()
+
+    // If already on a store path, don't double-rewrite
+    if (!pathname.startsWith(`/${storeSlug}`)) {
+      url.pathname = pathname === '/' ? `/${storeSlug}` : `/${storeSlug}${pathname}`
+      return NextResponse.rewrite(url)
+    }
   }
 
   let response = NextResponse.next({ request })
