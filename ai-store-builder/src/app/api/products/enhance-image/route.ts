@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { enhanceProductImage, isRemoveBgConfigured } from '@/lib/image/enhance'
 import { vercelAI } from '@/lib/ai/vercel-ai-service'
 
 export const maxDuration = 60 // Allow up to 60 seconds for image processing
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     const formData = await request.formData()
     const imageFile = formData.get('image') as File | null
     const imageUrl = formData.get('image_url') as string | null
-    const options = formData.get('options') as string | null
+    const optionsStr = formData.get('options') as string | null
 
     let imageBuffer: Buffer
 
@@ -42,80 +43,135 @@ export async function POST(request: Request) {
     }
 
     // Parse enhancement options
-    const enhanceOptions = options ? JSON.parse(options) : {}
+    const options = optionsStr ? JSON.parse(optionsStr) : {}
 
-    console.log('[EnhanceImage] Processing image, options:', enhanceOptions)
+    console.log('[EnhanceImage] Processing image, size:', imageBuffer.length, 'options:', options)
 
-    // Analyze the image to provide recommendations
-    console.log('[EnhanceImage] Analyzing image for recommendations')
+    // Check if Remove.bg is configured
+    if (!isRemoveBgConfigured()) {
+      console.log('[EnhanceImage] Remove.bg not configured, returning recommendations')
 
-    try {
-      const analysisResult = await vercelAI.analyzeProductImage({
-        buffer: imageBuffer,
-        mimeType: 'image/jpeg'
-      })
+      // Fallback to AI recommendations
+      try {
+        const analysisResult = await vercelAI.analyzeProductImage({
+          buffer: imageBuffer,
+          mimeType: 'image/jpeg'
+        })
 
-      const quality = analysisResult.image_quality
-      const recommendations: string[] = []
+        const quality = analysisResult.image_quality
+        const recommendations: string[] = []
 
-      if (quality?.brightness === 'dark') {
-        recommendations.push('Image appears dark - retake with better lighting or near a window')
-      } else if (quality?.brightness === 'bright') {
-        recommendations.push('Image is overexposed - reduce lighting or use diffused/soft light')
-      }
-
-      if (quality?.is_blurry) {
-        recommendations.push('Image appears blurry - hold camera steady, tap to focus, or use a tripod')
-      }
-
-      if (quality?.has_complex_background) {
-        recommendations.push('Use a plain white/neutral background for cleaner product shots')
-      }
-
-      // Add general tips
-      recommendations.push('Take photos in natural daylight for best results')
-      recommendations.push('Keep the product centered and fill 70-80% of the frame')
-
-      if ((quality?.score || 5) >= 7) {
-        recommendations.unshift('Your image quality is good! Minor improvements suggested below:')
-      }
-
-      return NextResponse.json({
-        success: true,
-        enhanced: false,
-        message: 'Image analyzed. Automatic enhancement is coming soon. Follow these tips for better product photos:',
-        recommendations,
-        quality_score: quality?.score || 5,
-        quality_details: {
-          brightness: quality?.brightness || 'normal',
-          is_blurry: quality?.is_blurry || false,
-          has_complex_background: quality?.has_complex_background || false
+        if (quality?.brightness === 'dark') {
+          recommendations.push('Image appears dark - retake with better lighting')
+        } else if (quality?.brightness === 'bright') {
+          recommendations.push('Image is overexposed - use softer lighting')
         }
-      })
-    } catch (analysisError) {
-      console.error('[EnhanceImage] Analysis failed:', analysisError)
-      return NextResponse.json({
-        success: true,
-        enhanced: false,
-        message: 'Tips for better product photos:',
-        recommendations: [
-          'Use natural daylight or soft, diffused lighting',
-          'Place product on a plain white or neutral background',
-          'Keep the camera steady and tap to focus',
-          'Center the product and fill 70-80% of the frame',
-          'Take multiple angles for best results'
-        ],
-        quality_score: 5
-      })
+
+        if (quality?.is_blurry) {
+          recommendations.push('Image is blurry - hold camera steady and tap to focus')
+        }
+
+        if (quality?.has_complex_background) {
+          recommendations.push('Busy background detected - use a plain white background')
+        }
+
+        recommendations.push('Set REMOVE_BG_API_KEY in environment to enable auto-enhancement')
+
+        return NextResponse.json({
+          success: false,
+          enhanced: false,
+          error: 'Enhancement service not configured',
+          message: 'Add REMOVE_BG_API_KEY to enable automatic background removal',
+          recommendations,
+          quality_score: quality?.score || 5,
+          setup_instructions: {
+            step1: 'Sign up at https://www.remove.bg/api',
+            step2: 'Get your API key',
+            step3: 'Add REMOVE_BG_API_KEY=your_key to .env.local',
+            step4: 'Restart the development server'
+          }
+        }, { status: 503 })
+      } catch {
+        return NextResponse.json({
+          success: false,
+          error: 'Enhancement service not configured',
+          setup_instructions: {
+            step1: 'Sign up at https://www.remove.bg/api',
+            step2: 'Add REMOVE_BG_API_KEY to .env.local'
+          }
+        }, { status: 503 })
+      }
     }
 
+    // Run the enhancement pipeline
+    console.log('[EnhanceImage] Running enhancement pipeline...')
+
+    const result = await enhanceProductImage(imageBuffer, {
+      removeBackground: options.removeBackground ?? true,
+      autoRotate: options.autoRotate ?? true,
+      fixLighting: options.fixLighting ?? true,
+      centerAndPad: options.centerAndPad ?? true,
+      sharpen: options.sharpen ?? true,
+      backgroundColor: options.backgroundColor || '#FFFFFF',
+      outputSize: options.outputSize || 1024,
+      outputFormat: options.outputFormat || 'png',
+      quality: options.quality || 90,
+    })
+
+    if (!result.success || !result.enhancedBuffer) {
+      console.error('[EnhanceImage] Enhancement failed:', result.error)
+      return NextResponse.json({
+        success: false,
+        error: result.error || 'Enhancement failed',
+        transformations_attempted: result.transformationsApplied,
+      }, { status: 500 })
+    }
+
+    // Upload enhanced image to Supabase Storage
+    const timestamp = Date.now()
+    const extension = result.mimeType?.split('/')[1] || 'png'
+    const fileName = `enhanced_${timestamp}.${extension}`
+    const filePath = `${user.id}/${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(filePath, result.enhancedBuffer, {
+        contentType: result.mimeType || 'image/png',
+        upsert: true
+      })
+
+    if (uploadError) {
+      console.error('[EnhanceImage] Upload error:', uploadError)
+      return NextResponse.json(
+        { error: 'Failed to upload enhanced image' },
+        { status: 500 }
+      )
+    }
+
+    // Get public URL
+    const {
+      data: { publicUrl }
+    } = supabase.storage.from('product-images').getPublicUrl(filePath)
+
+    console.log('[EnhanceImage] Enhancement complete!')
+    console.log('[EnhanceImage] Transformations:', result.transformationsApplied)
+    console.log('[EnhanceImage] URL:', publicUrl)
+
+    return NextResponse.json({
+      success: true,
+      enhanced: true,
+      enhanced_url: publicUrl,
+      transformations_applied: result.transformationsApplied,
+      details: result.details,
+      original_size: imageBuffer.length,
+      enhanced_size: result.enhancedBuffer.length,
+    })
   } catch (error) {
     console.error('[EnhanceImage] Error:', error)
     return NextResponse.json(
       {
         success: false,
         error: error instanceof Error ? error.message : 'Enhancement failed',
-        details: 'An unexpected error occurred during image enhancement.'
       },
       { status: 500 }
     )
@@ -123,7 +179,7 @@ export async function POST(request: Request) {
 }
 
 /**
- * Analyze image quality without enhancing
+ * GET: Check enhancement service status and analyze image quality
  */
 export async function GET(request: Request) {
   try {
@@ -139,11 +195,22 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const imageUrl = searchParams.get('image_url')
 
-    if (!imageUrl) {
-      return NextResponse.json({ error: 'image_url is required' }, { status: 400 })
+    // Check service status
+    const serviceStatus = {
+      remove_bg_configured: isRemoveBgConfigured(),
+      sharp_available: true, // Sharp is always available as a dependency
     }
 
-    // Fetch image
+    // If no image URL, just return service status
+    if (!imageUrl) {
+      return NextResponse.json({
+        success: true,
+        service_status: serviceStatus,
+        enhancement_available: serviceStatus.remove_bg_configured,
+      })
+    }
+
+    // Fetch and analyze image
     const response = await fetch(imageUrl)
     if (!response.ok) {
       return NextResponse.json({ error: 'Failed to fetch image' }, { status: 400 })
@@ -151,54 +218,41 @@ export async function GET(request: Request) {
     const arrayBuffer = await response.arrayBuffer()
     const imageBuffer = Buffer.from(arrayBuffer)
 
-    // Get vision analysis first (uses existing AI service)
-    let visionAnalysis
+    // Get AI analysis
     try {
       const analysisResult = await vercelAI.analyzeProductImage({
         buffer: imageBuffer,
-        mimeType: 'image/png'
+        mimeType: 'image/jpeg'
       })
-      visionAnalysis = {
-        brightness: (analysisResult.image_quality?.brightness === 'dark' ? 'dark' : 'normal') as 'dark' | 'normal' | 'bright',
-        isBlurry: analysisResult.image_quality?.is_blurry || false,
-        score: analysisResult.image_quality?.score || 5,
-        hasComplexBackground: analysisResult.image_quality?.has_complex_background ?? true
-      }
-    } catch {
-      // If vision analysis fails, use defaults
-      visionAnalysis = undefined
-    }
 
-    // Analyze quality
-    const quality = await vertexImagen.analyzeImageQuality(imageBuffer, visionAnalysis)
+      const quality = analysisResult.image_quality
 
-    // Determine if enhancement is recommended
-    const needsEnhancement =
-      quality.hasBackgroundIssues ||
-      quality.hasLightingIssues ||
-      quality.hasCompositionIssues ||
-      quality.isBlurry
-
-    // Check if enhancement service is available
-    const enhancementAvailable = await vertexImagen.isAvailable()
-
-    return NextResponse.json({
-      success: true,
-      quality: {
-        score: quality.overallScore,
-        needs_enhancement: needsEnhancement,
-        enhancement_available: enhancementAvailable,
-        issues: {
-          background: quality.hasBackgroundIssues,
-          lighting: quality.hasLightingIssues,
-          composition: quality.hasCompositionIssues,
-          blurry: quality.isBlurry
+      return NextResponse.json({
+        success: true,
+        service_status: serviceStatus,
+        enhancement_available: serviceStatus.remove_bg_configured,
+        quality: {
+          score: quality?.score || 5,
+          brightness: quality?.brightness || 'normal',
+          is_blurry: quality?.is_blurry || false,
+          has_complex_background: quality?.has_complex_background || true,
+          recommended_actions: quality?.recommended_actions || [],
         },
-        recommendations: quality.recommendations
-      }
-    })
+        recommendations: {
+          needs_background_removal: quality?.has_complex_background || true,
+          needs_lighting_fix: quality?.brightness !== 'normal',
+          needs_sharpening: quality?.is_blurry || false,
+        },
+      })
+    } catch {
+      return NextResponse.json({
+        success: true,
+        service_status: serviceStatus,
+        enhancement_available: serviceStatus.remove_bg_configured,
+      })
+    }
   } catch (error) {
-    console.error('[AnalyzeImage] Error:', error)
+    console.error('[EnhanceImage] GET Error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Analysis failed' },
       { status: 500 }
