@@ -138,8 +138,8 @@ class VertexImagenService {
   }
 
   /**
-   * Edit an image using Imagen
-   * Uses image generation with reference for product image editing
+   * Edit an image using Imagen 2 (imagegeneration@006)
+   * Uses the edit endpoint for actual image modification
    */
   async editImage(
     imageBuffer: Buffer,
@@ -151,27 +151,73 @@ class VertexImagenService {
     try {
       const base64Image = imageBuffer.toString('base64')
 
-      // Use imagegeneration endpoint with the image as reference
+      // Use Imagen 2 edit endpoint
       const requestBody: Record<string, unknown> = {
         instances: [
           {
             prompt: editPrompt,
-            referenceImages: [
-              {
-                referenceId: 1,
-                referenceImage: {
-                  bytesBase64Encoded: base64Image
-                },
-                referenceType: 'STYLE_CLASS'
-              }
-            ]
+            image: {
+              bytesBase64Encoded: base64Image
+            }
+          }
+        ],
+        parameters: {
+          sampleCount: 1,
+          editMode: 'inpainting-insert', // or 'inpainting-remove', 'outpainting'
+          editConfig: {
+            editType: 'inpainting-insert'
+          }
+        }
+      }
+
+      // If mask is provided, add it
+      if (options.maskBuffer) {
+        const base64Mask = options.maskBuffer.toString('base64')
+        ;(requestBody.instances as Array<Record<string, unknown>>)[0].mask = {
+          bytesBase64Encoded: base64Mask
+        }
+      }
+
+      const response = await this.makeRequest(
+        '/publishers/google/models/imagegeneration@006:predict',
+        requestBody
+      ) as { predictions?: Array<{ bytesBase64Encoded?: string; mimeType?: string }> }
+
+      if (response.predictions && response.predictions[0]?.bytesBase64Encoded) {
+        return {
+          buffer: Buffer.from(response.predictions[0].bytesBase64Encoded, 'base64'),
+          mimeType: response.predictions[0].mimeType || 'image/png'
+        }
+      }
+
+      return null
+    } catch (error) {
+      console.error('[VertexImagen] Edit image failed:', error)
+      return null
+    }
+  }
+
+  /**
+   * Generate enhanced product image using Imagen 3
+   * Creates a new professional product photo inspired by the original
+   */
+  async generateEnhancedImage(
+    imageBuffer: Buffer,
+    prompt: string
+  ): Promise<{ buffer: Buffer; mimeType: string } | null> {
+    try {
+      // For Imagen 3, we generate a new image based on a detailed prompt
+      // This won't preserve the exact product but creates a professional version
+      const requestBody: Record<string, unknown> = {
+        instances: [
+          {
+            prompt: prompt
           }
         ],
         parameters: {
           sampleCount: 1,
           aspectRatio: '1:1',
-          safetySetting: 'block_some',
-          personGeneration: 'allow_adult'
+          safetySetting: 'block_some'
         }
       }
 
@@ -189,7 +235,7 @@ class VertexImagenService {
 
       return null
     } catch (error) {
-      console.error('[VertexImagen] Edit image failed:', error)
+      console.error('[VertexImagen] Generate enhanced image failed:', error)
       return null
     }
   }
@@ -217,72 +263,23 @@ class VertexImagenService {
 
   /**
    * Comprehensive product image enhancement
-   * Combines multiple enhancements based on detected issues
+   * Currently returns recommendations - full enhancement requires additional API setup
    */
   async enhanceProductImage(
     imageBuffer: Buffer,
     options: ImagenEnhanceOptions = {}
   ): Promise<ImagenEnhanceResult> {
-    const {
-      removeBackground = true,
-      fixLighting = true,
-      improveComposition = true,
-      backgroundColor = '#FFFFFF'
-    } = options
+    // Note: Vertex AI Imagen image editing requires specific API setup (masks, etc.)
+    // For now, return that enhancement is not available
+    // The AI analysis provides recommendations that users can follow
 
-    const enhancementsApplied: string[] = []
-    let currentBuffer = imageBuffer
+    console.log('[VertexImagen] Image enhancement API requires additional setup')
+    console.log('[VertexImagen] Returning not-available status with recommendations')
 
-    try {
-      // Build comprehensive enhancement prompt
-      const promptParts: string[] = []
-
-      if (removeBackground) {
-        promptParts.push('Remove the background and replace it with a clean, pure white background')
-        enhancementsApplied.push('background_removal')
-      }
-
-      if (fixLighting) {
-        promptParts.push('Ensure professional, even studio lighting with no harsh shadows')
-        enhancementsApplied.push('lighting_correction')
-      }
-
-      if (improveComposition) {
-        promptParts.push('Center the product nicely in frame with appropriate padding')
-        enhancementsApplied.push('composition_improvement')
-      }
-
-      promptParts.push('Make this a professional e-commerce product photo')
-      promptParts.push('Keep the product exactly as is - do not modify, replace, or change the product itself in any way')
-      promptParts.push('Only improve the presentation: background, lighting, and positioning')
-
-      const fullPrompt = promptParts.join('. ') + '.'
-
-      console.log('[VertexImagen] Enhancing with prompt:', fullPrompt.substring(0, 100) + '...')
-
-      const result = await this.editImage(currentBuffer, fullPrompt)
-
-      if (result) {
-        return {
-          success: true,
-          enhancedImage: result.buffer,
-          mimeType: result.mimeType,
-          enhancementsApplied
-        }
-      }
-
-      return {
-        success: false,
-        enhancementsApplied: [],
-        error: 'Image enhancement returned no result'
-      }
-    } catch (error) {
-      console.error('[VertexImagen] Enhancement failed:', error)
-      return {
-        success: false,
-        enhancementsApplied: [],
-        error: error instanceof Error ? error.message : 'Enhancement failed'
-      }
+    return {
+      success: false,
+      enhancementsApplied: [],
+      error: 'IMAGE_ENHANCEMENT_NOT_CONFIGURED'
     }
   }
 

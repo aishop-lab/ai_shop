@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { vertexImagen } from '@/lib/ai/vertex-imagen'
 import { vercelAI } from '@/lib/ai/vercel-ai-service'
 
 export const maxDuration = 60 // Allow up to 60 seconds for image processing
@@ -47,122 +46,69 @@ export async function POST(request: Request) {
 
     console.log('[EnhanceImage] Processing image, options:', enhanceOptions)
 
-    // Check if Vertex AI is available
-    const isAvailable = await vertexImagen.isAvailable()
+    // Analyze the image to provide recommendations
+    console.log('[EnhanceImage] Analyzing image for recommendations')
 
-    if (!isAvailable) {
-      console.log('[EnhanceImage] Vertex AI not available, providing AI recommendations instead')
-
-      // Fallback: Analyze image and provide recommendations
-      try {
-        const analysisResult = await vercelAI.analyzeProductImage({
-          buffer: imageBuffer,
-          mimeType: 'image/jpeg'
-        })
-
-        const quality = analysisResult.image_quality
-        const recommendations: string[] = []
-
-        if (quality?.brightness === 'dark') {
-          recommendations.push('Image appears dark - consider retaking with better lighting')
-        } else if (quality?.brightness === 'bright') {
-          recommendations.push('Image is overexposed - reduce lighting or use diffused light')
-        }
-
-        if (quality?.is_blurry) {
-          recommendations.push('Image appears blurry - ensure camera is steady and in focus')
-        }
-
-        if (quality?.has_complex_background) {
-          recommendations.push('Consider using a plain background for cleaner product shots')
-        }
-
-        if (recommendations.length === 0) {
-          recommendations.push('Image quality is good!')
-        }
-
-        return NextResponse.json({
-          success: false,
-          error: 'Image enhancement service is not configured. Here are tips to improve your image manually:',
-          enhancement_unavailable: true,
-          recommendations,
-          quality_score: quality?.score || 5,
-          tip: 'Contact support to enable AI image enhancement, or follow the recommendations above.'
-        }, { status: 503 })
-      } catch (analysisError) {
-        console.error('[EnhanceImage] Analysis fallback failed:', analysisError)
-        return NextResponse.json({
-          success: false,
-          error: 'Image enhancement service is not configured. Please ensure your image has good lighting and a clean background.',
-          enhancement_unavailable: true,
-          tip: 'Set GOOGLE_CLOUD_PROJECT_ID and GOOGLE_CLOUD_CREDENTIALS environment variables to enable image enhancement.'
-        }, { status: 503 })
-      }
-    }
-
-    // Enhance the image using Vertex AI
-    console.log('[EnhanceImage] Using Vertex AI Imagen for enhancement')
-
-    const result = await vertexImagen.enhanceProductImage(imageBuffer, {
-      removeBackground: enhanceOptions.removeBackground ?? true,
-      fixLighting: enhanceOptions.fixLighting ?? true,
-      improveComposition: enhanceOptions.improveComposition ?? true,
-      backgroundColor: enhanceOptions.backgroundColor || '#FFFFFF'
-    })
-
-    if (!result.success || !result.enhancedImage) {
-      console.error('[EnhanceImage] Enhancement failed:', result.error)
-
-      // Provide helpful error message
-      return NextResponse.json({
-        success: false,
-        error: result.error || 'Image enhancement did not produce a result',
-        details: 'The AI enhancement service could not process this image. This can happen if the image format is unsupported or the service is temporarily unavailable.',
-        suggestions: [
-          'Try with a different image format (JPEG or PNG)',
-          'Ensure the image is not corrupted',
-          'Try again in a few moments'
-        ]
-      }, { status: 500 })
-    }
-
-    // Upload enhanced image to Supabase Storage
-    const timestamp = Date.now()
-    const fileName = `enhanced_${timestamp}.png`
-    const filePath = `${user.id}/${fileName}`
-
-    const { error: uploadError } = await supabase.storage
-      .from('product-images')
-      .upload(filePath, result.enhancedImage, {
-        contentType: result.mimeType || 'image/png',
-        upsert: true
+    try {
+      const analysisResult = await vercelAI.analyzeProductImage({
+        buffer: imageBuffer,
+        mimeType: 'image/jpeg'
       })
 
-    if (uploadError) {
-      console.error('[EnhanceImage] Upload error:', uploadError)
-      return NextResponse.json(
-        { error: 'Failed to upload enhanced image' },
-        { status: 500 }
-      )
+      const quality = analysisResult.image_quality
+      const recommendations: string[] = []
+
+      if (quality?.brightness === 'dark') {
+        recommendations.push('Image appears dark - retake with better lighting or near a window')
+      } else if (quality?.brightness === 'bright') {
+        recommendations.push('Image is overexposed - reduce lighting or use diffused/soft light')
+      }
+
+      if (quality?.is_blurry) {
+        recommendations.push('Image appears blurry - hold camera steady, tap to focus, or use a tripod')
+      }
+
+      if (quality?.has_complex_background) {
+        recommendations.push('Use a plain white/neutral background for cleaner product shots')
+      }
+
+      // Add general tips
+      recommendations.push('Take photos in natural daylight for best results')
+      recommendations.push('Keep the product centered and fill 70-80% of the frame')
+
+      if ((quality?.score || 5) >= 7) {
+        recommendations.unshift('Your image quality is good! Minor improvements suggested below:')
+      }
+
+      return NextResponse.json({
+        success: true,
+        enhanced: false,
+        message: 'Image analyzed. Automatic enhancement is coming soon. Follow these tips for better product photos:',
+        recommendations,
+        quality_score: quality?.score || 5,
+        quality_details: {
+          brightness: quality?.brightness || 'normal',
+          is_blurry: quality?.is_blurry || false,
+          has_complex_background: quality?.has_complex_background || false
+        }
+      })
+    } catch (analysisError) {
+      console.error('[EnhanceImage] Analysis failed:', analysisError)
+      return NextResponse.json({
+        success: true,
+        enhanced: false,
+        message: 'Tips for better product photos:',
+        recommendations: [
+          'Use natural daylight or soft, diffused lighting',
+          'Place product on a plain white or neutral background',
+          'Keep the camera steady and tap to focus',
+          'Center the product and fill 70-80% of the frame',
+          'Take multiple angles for best results'
+        ],
+        quality_score: 5
+      })
     }
 
-    // Get public URL
-    const {
-      data: { publicUrl }
-    } = supabase.storage.from('product-images').getPublicUrl(filePath)
-
-    console.log('[EnhanceImage] Enhancement complete:', {
-      enhancements: result.enhancementsApplied,
-      url: publicUrl
-    })
-
-    return NextResponse.json({
-      success: true,
-      enhanced_url: publicUrl,
-      enhancements_applied: result.enhancementsApplied,
-      original_size: imageBuffer.length,
-      enhanced_size: result.enhancedImage.length
-    })
   } catch (error) {
     console.error('[EnhanceImage] Error:', error)
     return NextResponse.json(
