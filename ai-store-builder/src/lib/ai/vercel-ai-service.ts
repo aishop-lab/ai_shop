@@ -37,6 +37,38 @@ import {
 // Re-export confidence thresholds
 export const AUTO_APPLY_THRESHOLD = CONFIDENCE_THRESHOLDS.AUTO_CONFIRM
 
+// Helper to convert attributes array to record (Gemini returns array, codebase uses record)
+function attributesArrayToRecord(attributes: Array<{ name: string; value: string }> | Record<string, string>): Record<string, string> {
+  if (!attributes) return {}
+  // If already a record, return as-is
+  if (!Array.isArray(attributes)) return attributes
+  // Convert array to record
+  return attributes.reduce((acc, attr) => {
+    if (attr.name && attr.value) {
+      acc[attr.name] = attr.value
+    }
+    return acc
+  }, {} as Record<string, string>)
+}
+
+// Type for product analysis with record attributes (what codebase expects)
+export interface ProductAnalysisResult {
+  title: string
+  description: string
+  categories: string[]
+  tags: string[]
+  attributes: Record<string, string>
+  ocr_text: string[]
+  image_quality: {
+    score: number
+    is_blurry: boolean
+    brightness: 'dark' | 'normal' | 'bright'
+    has_complex_background: boolean
+    recommended_actions: Array<'enhance' | 'remove_background' | 'crop' | 'none'>
+  }
+  confidence: number
+}
+
 // ============================================
 // SYSTEM PROMPTS
 // ============================================
@@ -145,7 +177,7 @@ If the description clearly indicates a category, set confidence above 0.85.`,
    */
   async analyzeProductImage(
     imageData: { buffer: Buffer; mimeType: string } | { url: string }
-  ): Promise<ProductAnalysis> {
+  ): Promise<ProductAnalysisResult> {
     this.logProvider('analyzeProductImage')
     
     try {
@@ -190,7 +222,12 @@ Focus on what you can clearly see. If uncertain, omit rather than guess.`,
       })
 
       console.log(`[VercelAI] Product analysis complete. Confidence: ${object.confidence}`)
-      return object
+
+      // Convert attributes array to record for codebase compatibility
+      return {
+        ...object,
+        attributes: attributesArrayToRecord(object.attributes as Array<{ name: string; value: string }>)
+      } as ProductAnalysisResult
     } catch (error) {
       console.error('[VercelAI] Product analysis failed:', error)
 
@@ -220,7 +257,7 @@ Focus on what you can clearly see. If uncertain, omit rather than guess.`,
    */
   async analyzeMultipleProductImages(
     images: Array<{ buffer: Buffer; mimeType: string }>
-  ): Promise<ProductAnalysis> {
+  ): Promise<ProductAnalysisResult> {
     this.logProvider('analyzeMultipleProductImages')
 
     if (images.length === 0) {
@@ -281,7 +318,12 @@ Combine ALL visible information into one comprehensive analysis.`,
       })
 
       console.log(`[VercelAI] Multi-image analysis complete (${images.length} images). Confidence: ${object.confidence}`)
-      return object
+
+      // Convert attributes array to record for codebase compatibility
+      return {
+        ...object,
+        attributes: attributesArrayToRecord(object.attributes as Array<{ name: string; value: string }>)
+      } as ProductAnalysisResult
     } catch (error) {
       console.error('[VercelAI] Multi-image analysis failed:', error)
 
@@ -297,7 +339,7 @@ Combine ALL visible information into one comprehensive analysis.`,
    */
   async analyzeMultipleProductImagesWithPrimarySelection(
     images: Array<{ buffer: Buffer; mimeType: string }>
-  ): Promise<{ analysis: ProductAnalysis; suggestedPrimaryIndex: number }> {
+  ): Promise<{ analysis: ProductAnalysisResult; suggestedPrimaryIndex: number }> {
     this.logProvider('analyzeMultipleProductImagesWithPrimarySelection')
 
     if (images.length === 0) {
@@ -373,8 +415,12 @@ Be thorough in analysis and thoughtful in primary selection.`,
 
       console.log(`[VercelAI] Multi-image + primary selection complete. Primary: ${object.primary_image_index}, Reason: ${object.primary_selection_reason}`)
 
+      // Convert attributes array to record for codebase compatibility
       return {
-        analysis: object.product_analysis,
+        analysis: {
+          ...object.product_analysis,
+          attributes: attributesArrayToRecord(object.product_analysis.attributes as Array<{ name: string; value: string }>)
+        } as ProductAnalysisResult,
         suggestedPrimaryIndex: Math.min(object.primary_image_index, images.length - 1)
       }
     } catch (error) {
@@ -459,7 +505,12 @@ Be specific and detailed.`,
       })
 
       console.log(`[VercelAI] Enhanced product analysis complete. Confidence: ${object.confidence}`)
-      return object
+
+      // Convert attributes array to record for codebase compatibility
+      return {
+        ...object,
+        attributes: attributesArrayToRecord(object.attributes as Array<{ name: string; value: string }>)
+      } as EnhancedProductAnalysis
     } catch (error) {
       console.error('[VercelAI] Enhanced product analysis failed:', error)
 

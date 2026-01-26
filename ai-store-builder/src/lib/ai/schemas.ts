@@ -52,12 +52,18 @@ export const imageQualitySchema = z.object({
   recommended_actions: z.array(z.enum(['enhance', 'remove_background', 'crop', 'none'])).describe('Recommended image improvements'),
 })
 
+// Attribute schema for Gemini compatibility (can't use empty record type)
+export const productAttributeSchema = z.object({
+  name: z.string().describe('Attribute name like color, material, style, size'),
+  value: z.string().describe('Attribute value'),
+})
+
 export const productAnalysisSchema = z.object({
   title: z.string().describe('SEO-friendly product title (3-7 words)'),
   description: z.string().describe('Compelling product description (2-3 sentences)'),
   categories: z.array(z.string()).describe('Product categories'),
   tags: z.array(z.string()).describe('Search tags for the product'),
-  attributes: z.record(z.string()).describe('Product attributes like color, material, style'),
+  attributes: z.array(productAttributeSchema).describe('Product attributes like color, material, style as name-value pairs'),
   ocr_text: z.array(z.string()).describe('Text extracted from the image via OCR'),
   image_quality: imageQualitySchema,
   confidence: z.number().min(0).max(1).describe('Confidence score for the analysis'),
@@ -214,7 +220,7 @@ export const enhancedProductAnalysisSchema = z.object({
   description: z.string().describe('Compelling product description (2-3 sentences)'),
   categories: z.array(z.string()).describe('Product categories'),
   tags: z.array(z.string()).describe('Search tags for the product'),
-  attributes: z.record(z.string()).describe('Product attributes like color, material, style'),
+  attributes: z.array(productAttributeSchema).describe('Product attributes like color, material, style as name-value pairs'),
   ocr_text: z.array(z.string()).describe('Text extracted from the image via OCR'),
   image_quality: imageQualitySchema,
   price_suggestion: z.object({
