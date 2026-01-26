@@ -1,6 +1,6 @@
 // Supabase Database Queries for Store Data
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { Store, Product, PaginatedProducts, StoreSettings } from '@/lib/types/store'
 import { DEFAULT_STORE_SETTINGS, DEFAULT_BRAND_COLORS, DEFAULT_TYPOGRAPHY } from '@/lib/types/store'
 import type { ProductWithVariants, ProductVariantOption, ProductVariant } from '@/lib/types/variant'
@@ -35,23 +35,25 @@ export function getStoreHostname(slug: string): string {
 /**
  * Get store by slug
  * Only returns active stores
+ * Uses admin client to bypass RLS for public storefront access
  */
 export async function getStore(slug: string): Promise<Store | null> {
   try {
-    const supabase = await createClient()
-    
+    // Use admin client for public storefront queries to bypass RLS
+    const supabase = await createAdminClient()
+
     const { data, error } = await supabase
       .from('stores')
       .select('*')
       .eq('slug', slug)
       .eq('status', 'active')
       .single()
-    
+
     if (error || !data) {
-      console.error('Error fetching store:', error?.message)
+      console.error('Error fetching store:', error?.message, 'slug:', slug)
       return null
     }
-    
+
     // Transform database record to Store type
     return transformStoreData(data)
   } catch (error) {
@@ -62,22 +64,23 @@ export async function getStore(slug: string): Promise<Store | null> {
 
 /**
  * Check if store exists and is accessible
+ * Uses admin client for public access
  */
 export async function storeExists(slug: string): Promise<boolean> {
   try {
-    const supabase = await createClient()
-    
+    const supabase = await createAdminClient()
+
     const { count, error } = await supabase
       .from('stores')
       .select('id', { count: 'exact', head: true })
       .eq('slug', slug)
       .eq('status', 'active')
-    
+
     if (error) {
       console.error('Store existence check failed:', error.message)
       return false
     }
-    
+
     return (count ?? 0) > 0
   } catch (error) {
     console.error('Store existence query failed:', error)
@@ -87,11 +90,12 @@ export async function storeExists(slug: string): Promise<boolean> {
 
 /**
  * Get featured products for store (max 8)
+ * Uses admin client for public storefront access
  */
 export async function getFeaturedProducts(storeId: string): Promise<Product[]> {
   try {
-    const supabase = await createClient()
-    
+    const supabase = await createAdminClient()
+
     const { data, error } = await supabase
       .from('products')
       .select(`
@@ -144,8 +148,8 @@ export async function getStoreProducts(
   } = options
 
   try {
-    const supabase = await createClient()
-    
+    const supabase = await createAdminClient()
+
     let query = supabase
       .from('products')
       .select(`
@@ -198,11 +202,12 @@ export async function getStoreProducts(
 
 /**
  * Get single product by ID
+ * Uses admin client for public storefront access
  */
 export async function getProduct(productId: string): Promise<Product | null> {
   try {
-    const supabase = await createClient()
-    
+    const supabase = await createAdminClient()
+
     const { data, error } = await supabase
       .from('products')
       .select(`
@@ -234,13 +239,14 @@ export async function getProduct(productId: string): Promise<Product | null> {
 /**
  * Get product by ID and verify it belongs to store
  * Includes variant data if the product has variants
+ * Uses admin client for public storefront access
  */
 export async function getProductForStore(
   storeId: string,
   productId: string
 ): Promise<Product | ProductWithVariants | null> {
   try {
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
 
     // Fetch base product with images
     const { data, error } = await supabase
@@ -351,11 +357,12 @@ export async function getProductForStore(
 
 /**
  * Get all unique categories from store products
+ * Uses admin client for public storefront access
  */
 export async function getStoreCategories(storeId: string): Promise<string[]> {
   try {
-    const supabase = await createClient()
-    
+    const supabase = await createAdminClient()
+
     const { data, error } = await supabase
       .from('products')
       .select('categories')
