@@ -1,26 +1,68 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, Mail, Phone, Instagram, MessageCircle } from 'lucide-react'
+import { ArrowRight, Mail, Phone, Instagram, MessageCircle, Leaf, Heart, Shield, Truck, Star, Check, Gift, Clock, Sparkles, Award } from 'lucide-react'
 import { useStore } from '@/lib/contexts/store-context'
+
+// Icon mapping for values
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  leaf: Leaf,
+  heart: Heart,
+  shield: Shield,
+  truck: Truck,
+  star: Star,
+  check: Check,
+  gift: Gift,
+  clock: Clock,
+  sparkles: Sparkles,
+  award: Award,
+}
 
 export default function StoreAboutPage() {
   const { store } = useStore()
   const baseUrl = `/${store.slug}`
-  
+
+  // Get AI-generated content with fallbacks
+  const aiContent = store.blueprint?.ai_content
+  const aboutContent = aiContent?.about_us
+
+  // AI content fields with fallbacks
+  const headline = aboutContent?.headline || `About ${store.name}`
+  const story = aboutContent?.story || `Welcome to ${store.name}. We are passionate about bringing you the finest quality products in ${store.blueprint?.category?.niche || 'our category'}. Our mission is to provide exceptional value while delivering an outstanding shopping experience. Every product in our collection is carefully curated to meet the highest standards of quality and craftsmanship. We believe that shopping should be a pleasure, not a chore, which is why we've designed our store to be simple, beautiful, and easy to navigate.`
+  const mission = aboutContent?.mission
+
+  // AI values or defaults
+  const values = aboutContent?.values || [
+    { title: 'Quality First', description: 'We never compromise on quality. Every product meets our rigorous standards.', icon: 'check' },
+    { title: 'Fast Delivery', description: 'Quick and reliable shipping to get your products to you as fast as possible.', icon: 'truck' },
+    { title: 'Customer Love', description: 'Your satisfaction is our priority. We\'re here to help every step of the way.', icon: 'heart' },
+  ]
+
   return (
     <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
       {/* Hero */}
       <div className="text-center mb-16">
-        <h1 
+        <h1
           className="text-4xl md:text-5xl font-bold mb-6"
           style={{ fontFamily: 'var(--font-heading)' }}
         >
-          About{' '}
-          <span style={{ color: 'var(--color-primary)' }}>{store.name}</span>
+          {headline.includes(store.name) ? (
+            headline.split(store.name).map((part, i, arr) => (
+              <span key={i}>
+                {part}
+                {i < arr.length - 1 && (
+                  <span style={{ color: 'var(--color-primary)' }}>{store.name}</span>
+                )}
+              </span>
+            ))
+          ) : (
+            <>
+              {headline}
+            </>
+          )}
         </h1>
         {store.tagline && (
-          <p 
+          <p
             className="text-xl text-gray-600 max-w-2xl mx-auto"
             style={{ fontFamily: 'var(--font-body)' }}
           >
@@ -28,94 +70,87 @@ export default function StoreAboutPage() {
           </p>
         )}
       </div>
-      
-      {/* Story */}
+
+      {/* Story Section - Full AI story */}
       <div className="max-w-3xl mx-auto mb-16">
-        <h2 
+        <h2
           className="text-2xl font-bold mb-6"
           style={{ fontFamily: 'var(--font-heading)' }}
         >
           Our Story
         </h2>
-        <div 
+        <div
           className="prose prose-lg max-w-none text-gray-600"
           style={{ fontFamily: 'var(--font-body)' }}
         >
-          <p className="leading-relaxed">
-            {store.description || `Welcome to ${store.name}. We are passionate about bringing you the finest quality products in ${store.blueprint?.category?.niche || 'our category'}. Our mission is to provide exceptional value while delivering an outstanding shopping experience.`}
-          </p>
-          <p className="leading-relaxed mt-4">
-            Every product in our collection is carefully curated to meet the highest standards of quality and craftsmanship. We believe that shopping should be a pleasure, not a chore, which is why we&apos;ve designed our store to be simple, beautiful, and easy to navigate.
-          </p>
+          {story.split('\n\n').map((paragraph, index) => (
+            <p key={index} className="leading-relaxed mb-4">
+              {paragraph}
+            </p>
+          ))}
         </div>
+
+        {/* Mission Statement */}
+        {mission && (
+          <div
+            className="mt-8 p-6 rounded-lg border-l-4"
+            style={{
+              backgroundColor: 'var(--color-primary-light)',
+              borderLeftColor: 'var(--color-primary)'
+            }}
+          >
+            <p
+              className="text-lg font-medium italic"
+              style={{ color: 'var(--color-primary-dark)' }}
+            >
+              &ldquo;{mission}&rdquo;
+            </p>
+          </div>
+        )}
       </div>
-      
-      {/* Values */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-        <div className="text-center p-8 rounded-lg bg-gray-50">
-          <div 
-            className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: 'var(--color-primary-light)' }}
-          >
-            <svg className="w-8 h-8" style={{ color: 'var(--color-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h3 
-            className="text-xl font-bold mb-2"
+
+      {/* Values Section - AI generated */}
+      {values.length > 0 && (
+        <div className="mb-16">
+          <h2
+            className="text-2xl font-bold mb-8 text-center"
             style={{ fontFamily: 'var(--font-heading)' }}
           >
-            Quality First
-          </h3>
-          <p className="text-gray-600">
-            We never compromise on quality. Every product meets our rigorous standards.
-          </p>
-        </div>
-        
-        <div className="text-center p-8 rounded-lg bg-gray-50">
-          <div 
-            className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: 'var(--color-primary-light)' }}
-          >
-            <svg className="w-8 h-8" style={{ color: 'var(--color-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            Our Values
+          </h2>
+          <div className={`grid grid-cols-1 gap-8 ${values.length === 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}>
+            {values.map((value, index) => {
+              const IconComponent = iconMap[value.icon] || Star
+              return (
+                <div key={index} className="text-center p-8 rounded-lg bg-gray-50">
+                  <div
+                    className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: 'var(--color-primary-light)' }}
+                  >
+                    <IconComponent
+                      className="w-8 h-8"
+                      style={{ color: 'var(--color-primary)' }}
+                    />
+                  </div>
+                  <h3
+                    className="text-xl font-bold mb-2"
+                    style={{ fontFamily: 'var(--font-heading)' }}
+                  >
+                    {value.title}
+                  </h3>
+                  <p className="text-gray-600">
+                    {value.description}
+                  </p>
+                </div>
+              )
+            })}
           </div>
-          <h3 
-            className="text-xl font-bold mb-2"
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
-            Fast Delivery
-          </h3>
-          <p className="text-gray-600">
-            Quick and reliable shipping to get your products to you as fast as possible.
-          </p>
         </div>
-        
-        <div className="text-center p-8 rounded-lg bg-gray-50">
-          <div 
-            className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: 'var(--color-primary-light)' }}
-          >
-            <svg className="w-8 h-8" style={{ color: 'var(--color-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-          </div>
-          <h3 
-            className="text-xl font-bold mb-2"
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
-            Customer Love
-          </h3>
-          <p className="text-gray-600">
-            Your satisfaction is our priority. We&apos;re here to help every step of the way.
-          </p>
-        </div>
-      </div>
-      
+      )}
+
       {/* Contact Info */}
       <div className="text-center p-12 rounded-lg" style={{ backgroundColor: 'var(--color-primary-light)' }}>
-        <h2 
+        <h2
           className="text-2xl font-bold mb-6"
           style={{ fontFamily: 'var(--font-heading)' }}
         >
@@ -151,11 +186,22 @@ export default function StoreAboutPage() {
               <span>@{store.instagram_handle}</span>
             </a>
           )}
+          {store.whatsapp_number && (
+            <a
+              href={`https://wa.me/91${store.whatsapp_number}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-gray-700 hover:text-green-600"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span>WhatsApp Us</span>
+            </a>
+          )}
         </div>
         <Link
           href={`${baseUrl}/contact`}
-          className="inline-flex items-center px-6 py-3 rounded-lg font-semibold text-white"
-          style={{ backgroundColor: 'var(--color-primary)' }}
+          className="inline-flex items-center px-6 py-3 rounded-lg font-semibold"
+          style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-contrast)' }}
         >
           Contact Us
           <ArrowRight className="ml-2 w-4 h-4" />

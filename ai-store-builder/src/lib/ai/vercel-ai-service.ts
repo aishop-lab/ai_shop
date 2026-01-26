@@ -473,25 +473,42 @@ Be specific and detailed.`,
     brandVoice: 'warm' | 'professional' | 'playful' = 'warm'
   ): Promise<AboutUsContent> {
     this.logProvider('generateAboutUs')
-    
+
     try {
       const { object } = await generateObject({
         model: getTextModel(),
         schema: aboutUsSchema,
         system: STORE_CONTENT_SYSTEM_PROMPT,
-        prompt: `Write a compelling "About Us" page for ${storeName}.
+        prompt: `Write structured "About Us" content for ${storeName}.
 
 Brand Description: ${brandDescription}
 Category: ${category}
 Tone: ${brandVoice}, authentic, professional
 
-Requirements:
-- Headline: Catchy, memorable (max 10 words)
-- Story: 150-200 words about the brand journey, craftsmanship, and values
-- Mission: 1-2 sentences about what the brand stands for
-- Values: 3-5 brand values with brief descriptions
-- CTA: Encourage visitors to explore or shop
+STRICT REQUIREMENTS - Follow character limits exactly:
 
+1. HEADLINE: Maximum 10 words. Catchy, memorable. Example: "Crafted with Love, Delivered with Care"
+
+2. SHORT_DESCRIPTION: Maximum 30 words. Brief brand summary for footer and SEO meta description. Must be standalone and complete.
+
+3. MEDIUM_DESCRIPTION: Maximum 80 words. Key brand story points for homepage preview. Should make readers want to learn more.
+
+4. STORY: 150-250 words. Full brand story for the About page ONLY. Include:
+   - Origin story (why the brand started)
+   - What makes products special
+   - Craftsmanship and quality
+   - Connection to customers
+
+5. MISSION: Maximum 30 words. Clear mission statement.
+
+6. VALUES: Exactly 4 values with:
+   - title: 2-3 words (e.g., "100% Natural")
+   - description: max 15 words
+   - icon: choose from leaf, heart, shield, truck, star, check, gift, clock, sparkles, award
+
+7. CTA: Call to action text and link
+
+CRITICAL: Each field must be UNIQUE content. Do not repeat the same phrases across fields.
 Make it personal, authentic, and relatable to Indian customers.`,
       })
 
@@ -501,12 +518,15 @@ Make it personal, authentic, and relatable to Indian customers.`,
 
       return {
         headline: `Welcome to ${storeName}`,
-        story: `At ${storeName}, we are passionate about bringing you the finest ${category.toLowerCase()} products. Our journey began with a simple vision - to create something special that combines quality craftsmanship with modern design. Every product in our collection is carefully selected to ensure it meets our high standards.`,
+        short_description: `${storeName} offers premium ${category.toLowerCase()} products crafted with care and delivered with love.`,
+        medium_description: `At ${storeName}, we are passionate about bringing you the finest ${category.toLowerCase()} products. Every item in our collection is carefully curated to ensure quality and satisfaction.`,
+        story: `At ${storeName}, we are passionate about bringing you the finest ${category.toLowerCase()} products. Our journey began with a simple vision - to create something special that combines quality craftsmanship with modern design. Every product in our collection is carefully selected to ensure it meets our high standards. We believe in the power of quality products to bring joy to everyday life.`,
         mission: `Our mission is to provide high-quality products that bring joy to our customers while supporting traditional craftsmanship.`,
         values: [
-          { title: 'Quality', description: 'We never compromise on quality' },
-          { title: 'Authenticity', description: 'Every product tells a story' },
-          { title: 'Customer First', description: 'Your satisfaction is our priority' },
+          { title: 'Quality First', description: 'We never compromise on quality', icon: 'star' as const },
+          { title: 'Authenticity', description: 'Every product tells a story', icon: 'heart' as const },
+          { title: 'Customer Care', description: 'Your satisfaction is our priority', icon: 'shield' as const },
+          { title: 'Fast Delivery', description: 'Quick and reliable shipping', icon: 'truck' as const },
         ],
         cta: { text: 'Explore Our Collection', action: '/products' },
       }
@@ -570,7 +590,7 @@ Use clear, simple language.`,
     category: string
   ): Promise<HomepageSections> {
     this.logProvider('generateHomepageSections')
-    
+
     try {
       const { object } = await generateObject({
         model: getTextModel(),
@@ -581,14 +601,28 @@ Use clear, simple language.`,
 Brand: ${brandDescription}
 Category: ${category}
 
-Generate:
-1. Hero section with compelling headline and subheadline
-2. 3-4 featured category names that make sense for this brand
-3. 3-4 value propositions (use icons: truck, shield, clock, heart, gift, star)
-4. 2-3 placeholder testimonials that sound authentic
+STRICT REQUIREMENTS:
 
-Make the content compelling and action-oriented.
-Headlines should be punchy and memorable.`,
+1. HERO SECTION:
+   - headline: Maximum 8 words. Welcome message or brand statement. NO description here!
+     Examples: "Welcome to ${storeName}", "Discover Premium ${category}"
+   - subheadline: Maximum 15 words. Expands on headline.
+   - cta_text: Button text like "Shop Now" or "Explore Collection"
+
+2. TRUST BADGES: Exactly 3-4 badges for hero section. Each badge has:
+   - icon: check, truck, shield, clock, heart, star, gift, or award
+   - title: 2-4 words like "Quality Products", "Fast Delivery", "Secure Payments", "Easy Returns"
+
+3. FEATURED CATEGORIES: 3-5 category names relevant to this brand.
+
+4. VALUE PROPOSITIONS: 3-4 value props with:
+   - icon: truck, shield, clock, heart, star, gift, award, leaf, check, sparkles
+   - title: 2-4 words
+   - description: Maximum 10 words
+
+5. TESTIMONIALS: 2-3 realistic placeholder testimonials with name and location.
+
+Make content compelling and action-oriented. NO long descriptions in hero.`,
       })
 
       return object
@@ -597,15 +631,20 @@ Headlines should be punchy and memorable.`,
 
       return {
         hero: {
-          headline: `Discover ${storeName}`,
+          headline: `Welcome to ${storeName}`,
           subheadline: `Premium ${category.toLowerCase()} crafted with care`,
           cta_text: 'Shop Now',
         },
         featured_categories: ['New Arrivals', 'Best Sellers', 'Collections'],
+        trust_badges: [
+          { icon: 'check' as const, title: 'Quality Products' },
+          { icon: 'truck' as const, title: 'Fast Delivery' },
+          { icon: 'shield' as const, title: 'Secure Payments' },
+        ],
         value_propositions: [
-          { icon: 'truck', title: 'Free Shipping', description: 'On orders above ₹999' },
-          { icon: 'shield', title: 'Secure Payments', description: '100% secure checkout' },
-          { icon: 'clock', title: 'Fast Delivery', description: '3-5 business days' },
+          { icon: 'truck' as const, title: 'Free Shipping', description: 'On orders above ₹999' },
+          { icon: 'shield' as const, title: 'Secure Payments', description: '100% secure checkout' },
+          { icon: 'clock' as const, title: 'Fast Delivery', description: '3-5 business days' },
         ],
         social_proof: {
           testimonials: [

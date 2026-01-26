@@ -22,7 +22,7 @@ export default function PlayfulBrightFooter() {
               {store.name} ✨
             </h3>
             <p className="opacity-80 mb-6">
-              {store.description || `Bringing joy through amazing products!`}
+              {store.blueprint?.ai_content?.about_us?.short_description || store.tagline || `Bringing joy through amazing products!`}
             </p>
             <div className="flex space-x-3">
               {store.instagram_handle && (

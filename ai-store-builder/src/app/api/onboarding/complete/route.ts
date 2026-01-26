@@ -83,16 +83,17 @@ export async function POST(request: Request) {
       // Don't fail the whole request - policies can be regenerated later
     }
 
-    // Generate AI personalized content (About Us story and tagline)
+    // Generate AI personalized content (About Us, Homepage sections)
     try {
       const blueprint = store.blueprint as {
         identity?: { description?: string; tagline?: string }
-        category?: { primary?: string; niche?: string }
+        category?: { primary?: string; niche?: string; business_type?: string }
         branding?: { brand_vibe?: string }
       } | null
 
       const brandDescription = blueprint?.identity?.description || store.description || ''
       const category = blueprint?.category?.primary || blueprint?.category?.niche || 'General'
+      const businessType = blueprint?.category?.business_type || category
       const brandVibe = (blueprint?.branding?.brand_vibe as 'warm' | 'professional' | 'playful') || 'warm'
 
       console.log(`[Complete] Generating AI content for store: ${store.name}`)
@@ -105,26 +106,46 @@ export async function POST(request: Request) {
         brandVibe
       )
 
-      // Build a rich description from the About Us content
-      const richDescription = `${aboutUs.story}\n\n${aboutUs.mission}`
+      // Generate Homepage sections
+      const homepage = await vercelAI.generateHomepageSections(
+        store.name,
+        brandDescription,
+        category
+      )
+
+      // Build a simple description from the About Us short_description
+      const simpleDescription = aboutUs.short_description || aboutUs.mission || `Quality ${category} for everyone`
 
       // Generate a tagline if not provided
       let tagline = store.tagline || blueprint?.identity?.tagline
       if (!tagline) {
-        // Use the headline from About Us as tagline, or create a simple one
-        tagline = aboutUs.headline || `Quality ${category} for everyone`
+        // Use the homepage hero subheadline or create a simple one
+        tagline = homepage.hero?.subheadline || aboutUs.headline || `Quality ${category} for everyone`
+      }
+
+      // Build AI content object for blueprint
+      const aiContent = {
+        about_us: aboutUs,
+        homepage: homepage
+      }
+
+      // Update blueprint with AI content
+      const updatedBlueprint = {
+        ...blueprint,
+        ai_content: aiContent
       }
 
       // Update store with AI-generated content
       await supabase
         .from('stores')
         .update({
-          description: richDescription,
+          blueprint: updatedBlueprint,
+          description: simpleDescription,
           tagline: tagline
         })
         .eq('id', store_id)
 
-      console.log('[Complete] AI content generated and saved successfully')
+      console.log('[Complete] AI content generated and saved to blueprint successfully')
     } catch (aiError) {
       console.error('[Complete] AI content generation failed (non-blocking):', aiError)
       // Don't fail the whole request - store works without AI content

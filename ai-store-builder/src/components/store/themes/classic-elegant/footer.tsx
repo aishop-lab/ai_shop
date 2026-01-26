@@ -22,7 +22,7 @@ export default function ClassicElegantFooter() {
               {store.name}
             </h3>
             <p className="text-gray-600 mb-6 leading-relaxed max-w-md">
-              {store.description || `Experience timeless elegance with our curated collection.`}
+              {store.blueprint?.ai_content?.about_us?.short_description || store.tagline || `Experience timeless elegance with our curated collection.`}
             </p>
             <div className="flex space-x-4">
               {store.instagram_handle && (

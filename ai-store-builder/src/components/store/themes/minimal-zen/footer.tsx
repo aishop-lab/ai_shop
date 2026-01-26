@@ -21,7 +21,7 @@ export default function MinimalZenFooter() {
               {store.name}
             </h3>
             <p className="text-sm text-gray-500 leading-relaxed">
-              {store.tagline || store.description?.slice(0, 100) || 'Quality products, thoughtfully curated.'}
+              {store.blueprint?.ai_content?.about_us?.short_description || store.tagline || 'Quality products, thoughtfully curated.'}
             </p>
           </div>
           

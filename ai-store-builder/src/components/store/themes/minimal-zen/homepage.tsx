@@ -88,7 +88,7 @@ export default function MinimalZenHomepage({ data }: HomepageProps) {
           <div className="max-w-2xl">
             <p className="text-xs uppercase tracking-[0.2em] text-gray-400 mb-4">About</p>
             <p className="text-lg text-gray-600 leading-relaxed mb-8">
-              {store.description || `We believe in the power of simplicity. Every product we offer is carefully selected to bring peace and functionality to your everyday life.`}
+              {store.blueprint?.ai_content?.about_us?.medium_description || `We believe in the power of simplicity. Every product we offer is carefully selected to bring peace and functionality to your everyday life.`}
             </p>
             <Link
               href={`${baseUrl}/about`}

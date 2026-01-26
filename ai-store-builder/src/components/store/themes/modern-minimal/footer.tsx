@@ -25,7 +25,7 @@ export default function ModernMinimalFooter() {
               className="text-gray-400 mb-6 max-w-md"
               style={{ fontFamily: 'var(--font-body)' }}
             >
-              {store.description || store.tagline || `Welcome to ${store.name}. Quality products delivered with care.`}
+              {store.blueprint?.ai_content?.about_us?.short_description || store.tagline || `Welcome to ${store.name}. Quality products delivered with care.`}
             </p>
 
             {/* Social Links */}

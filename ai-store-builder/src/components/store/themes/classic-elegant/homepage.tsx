@@ -99,7 +99,7 @@ export default function ClassicElegantHomepage({ data }: HomepageProps) {
               About {store.name}
             </h2>
             <p className="text-lg text-gray-600 leading-relaxed mb-10">
-              {store.description || `We believe in the beauty of simplicity and the elegance of quality craftsmanship. Each piece in our collection is carefully selected to bring timeless sophistication to your life.`}
+              {store.blueprint?.ai_content?.about_us?.medium_description || `We believe in the beauty of simplicity and the elegance of quality craftsmanship. Each piece in our collection is carefully selected to bring timeless sophistication to your life.`}
             </p>
             <Link
               href={`${baseUrl}/about`}

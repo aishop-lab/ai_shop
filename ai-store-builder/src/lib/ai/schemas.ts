@@ -128,13 +128,16 @@ export type StreamingDescription = z.infer<typeof streamingDescriptionSchema>
 
 // About Us page content
 export const aboutUsSchema = z.object({
-  headline: z.string().describe('Compelling headline for the about page'),
-  story: z.string().describe('Brand story (150-250 words)'),
-  mission: z.string().describe('Mission statement (1-2 sentences)'),
+  headline: z.string().describe('Compelling headline for the about page (max 10 words)'),
+  story: z.string().describe('Full brand story for About page ONLY (150-250 words)'),
+  mission: z.string().describe('Mission statement (1-2 sentences, max 30 words)'),
+  short_description: z.string().describe('Brief brand summary for footer/meta (max 30 words)'),
+  medium_description: z.string().describe('Preview description for homepage about section (max 80 words)'),
   values: z.array(z.object({
-    title: z.string(),
-    description: z.string(),
-  })).describe('3-5 brand values'),
+    title: z.string().describe('Value name (2-3 words)'),
+    description: z.string().describe('Value description (max 15 words)'),
+    icon: z.enum(['leaf', 'heart', 'shield', 'truck', 'star', 'check', 'gift', 'clock', 'sparkles', 'award']).describe('Icon name'),
+  })).min(3).max(5).describe('3-5 brand values with icons'),
   cta: z.object({
     text: z.string(),
     action: z.string(),
@@ -156,16 +159,20 @@ export type PoliciesContent = z.infer<typeof policiesSchema>
 // Homepage sections
 export const homepageSectionsSchema = z.object({
   hero: z.object({
-    headline: z.string().describe('Hero headline'),
-    subheadline: z.string().describe('Hero subheadline'),
+    headline: z.string().describe('Hero headline (max 8 words) - Welcome message or brand statement'),
+    subheadline: z.string().describe('Hero subheadline (max 15 words) - Expands on headline'),
     cta_text: z.string().describe('CTA button text'),
   }),
-  featured_categories: z.array(z.string()).describe('3-4 featured category names'),
+  featured_categories: z.array(z.string()).min(3).max(5).describe('3-5 featured category names'),
+  trust_badges: z.array(z.object({
+    icon: z.enum(['check', 'truck', 'shield', 'clock', 'heart', 'star', 'gift', 'award']).describe('Icon name'),
+    title: z.string().describe('Badge title (2-4 words)'),
+  })).min(3).max(4).describe('3-4 trust badges for hero section'),
   value_propositions: z.array(z.object({
-    icon: z.string().describe('Icon name (truck, shield, clock, heart)'),
-    title: z.string(),
-    description: z.string(),
-  })).describe('3-4 value propositions'),
+    icon: z.enum(['truck', 'shield', 'clock', 'heart', 'star', 'gift', 'award', 'leaf', 'check', 'sparkles']).describe('Icon name'),
+    title: z.string().describe('Title (2-4 words)'),
+    description: z.string().describe('Description (max 10 words)'),
+  })).min(3).max(4).describe('3-4 value propositions'),
   social_proof: z.object({
     testimonials: z.array(z.object({
       quote: z.string(),

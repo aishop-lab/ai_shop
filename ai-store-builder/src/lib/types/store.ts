@@ -58,6 +58,65 @@ export interface Store {
   updated_at: string
 }
 
+// AI-generated content types
+export interface AIContentAboutUs {
+  headline: string
+  story: string
+  mission: string
+  short_description: string
+  medium_description: string
+  values: Array<{
+    title: string
+    description: string
+    icon: string
+  }>
+  cta: {
+    text: string
+    action: string
+  }
+}
+
+export interface AIContentHomepage {
+  hero: {
+    headline: string
+    subheadline: string
+    cta_text: string
+  }
+  featured_categories: string[]
+  trust_badges: Array<{
+    icon: string
+    title: string
+  }>
+  value_propositions: Array<{
+    icon: string
+    title: string
+    description: string
+  }>
+  social_proof: {
+    testimonials: Array<{
+      quote: string
+      author: string
+      location?: string
+    }>
+  }
+}
+
+export interface AIContent {
+  about_us: AIContentAboutUs
+  homepage: AIContentHomepage
+  policies?: {
+    return_policy: string
+    shipping_policy: string
+    privacy_policy: string
+    terms_of_service: string
+  }
+  faqs?: Array<{
+    question: string
+    answer: string
+    category?: string
+  }>
+}
+
 export interface StoreBlueprint {
   version: string
   identity: {
@@ -118,6 +177,8 @@ export interface StoreBlueprint {
       stripe_enabled: boolean
     }
   }
+  // AI-generated content
+  ai_content?: AIContent
 }
 
 export interface Product {
