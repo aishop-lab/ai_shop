@@ -22,9 +22,10 @@ import {
 } from '@/components/ui/tooltip'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const TARGET_COMPRESSED_SIZE = 4.8 * 1024 * 1024 // 4.8MB - compress to just under limit
 
 // Client-side image compression utility
-async function compressImage(file: File, maxSizeMB: number = 4): Promise<File> {
+async function compressImage(file: File, maxSizeMB: number = 4.8): Promise<File> {
   return new Promise((resolve, reject) => {
     const img = new window.Image()
     img.src = URL.createObjectURL(file)
@@ -62,9 +63,10 @@ async function compressImage(file: File, maxSizeMB: number = 4): Promise<File> {
       ctx.imageSmoothingQuality = 'high'
       ctx.drawImage(img, 0, 0, width, height)
 
-      // Start with high quality and reduce until under size limit
-      let quality = 0.9
-      const minQuality = 0.5
+      // Start with high quality and reduce gradually until under size limit
+      // Use higher quality settings to avoid over-compression
+      let quality = 0.95
+      const minQuality = 0.7 // Don't go below 70% quality
       const targetSize = maxSizeMB * 1024 * 1024
 
       const tryCompress = () => {
@@ -82,10 +84,11 @@ async function compressImage(file: File, maxSizeMB: number = 4): Promise<File> {
                 file.name.replace(/\.[^.]+$/, '.jpg'),
                 { type: 'image/jpeg' }
               )
+              console.log(`[Compress] Final size: ${(blob.size / 1024 / 1024).toFixed(2)}MB at quality ${quality.toFixed(2)}`)
               resolve(compressedFile)
             } else {
-              // Reduce quality and try again
-              quality -= 0.1
+              // Reduce quality gradually (5% steps for finer control)
+              quality -= 0.05
               tryCompress()
             }
           },
@@ -388,7 +391,7 @@ export default function ImageUploader({
 
       for (const { file } of oversizedFiles) {
         try {
-          const compressed = await compressImage(file, 4) // Compress to under 4MB
+          const compressed = await compressImage(file, 4.8) // Compress to just under 5MB limit
           compressedFiles.push(compressed)
         } catch (err) {
           console.error(`Failed to compress ${file.name}:`, err)
