@@ -72,8 +72,9 @@ export function ShippingActions({ order, onUpdate }: ShippingActionsProps) {
   const [trackingLoading, setTrackingLoading] = useState(false)
 
   const hasShipment = !!order.shiprocket_shipment_id || !!order.awb_code
+  // Use order_status (mapped from fulfillment_status by API) - valid values: unfulfilled, processing, packed
   const canCreateShipment =
-    ['confirmed', 'processing'].includes(order.order_status) && !hasShipment
+    ['unfulfilled', 'processing', 'packed', 'confirmed'].includes(order.order_status) && !hasShipment
 
   // Generate shipping label
   const handleGenerateLabel = async () => {

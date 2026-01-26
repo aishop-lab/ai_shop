@@ -194,7 +194,7 @@ export interface Product {
   quantity: number
   track_quantity: boolean
   featured: boolean
-  status: 'draft' | 'published'
+  status: 'draft' | 'active' | 'published'
   images: ProductImage[]
   categories?: string[]
   tags?: string[]

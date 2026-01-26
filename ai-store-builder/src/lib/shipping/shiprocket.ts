@@ -551,14 +551,14 @@ export function mapShiprocketStatus(shiprocketStatus: string): string {
     'LABEL GENERATED': 'processing',
     'PICKUP SCHEDULED': 'processing',
     'PICKUP QUEUED': 'processing',
-    'MANIFESTED': 'processing',
+    'MANIFESTED': 'packed',
     'SHIPPED': 'shipped',
     'IN TRANSIT': 'shipped',
-    'OUT FOR DELIVERY': 'shipped',
+    'OUT FOR DELIVERY': 'out_for_delivery',
     'DELIVERED': 'delivered',
     'CANCELED': 'cancelled',
-    'RTO INITIATED': 'cancelled',
-    'RTO DELIVERED': 'cancelled',
+    'RTO INITIATED': 'returned',
+    'RTO DELIVERED': 'returned',
     'LOST': 'cancelled',
     'DAMAGED': 'cancelled'
   }

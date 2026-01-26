@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       .update({
         pickup_scheduled_date: new Date(pickup_date).toISOString(),
         pickup_token: pickupResponse.pickup_token_number,
-        order_status: 'processing'
+        fulfillment_status: 'processing'
       })
       .eq('id', order_id)
 

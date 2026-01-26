@@ -1,7 +1,7 @@
 // Reviews API for specific product - GET (fetch reviews) and POST (submit review)
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +23,10 @@ export async function GET(request: Request, { params }: RouteParams) {
         const page = parseInt(searchParams.get('page') || '1')
         const limit = 20
 
-        const supabase = await createClient()
+        // Use admin client to bypass RLS for public review fetching
+        // This avoids the "permission denied for table users" error
+        // We manually filter to only show approved reviews for security
+        const supabase = await createAdminClient()
 
         // Build base query for reviews
         let reviewsQuery = supabase

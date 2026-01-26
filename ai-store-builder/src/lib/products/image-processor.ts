@@ -129,10 +129,11 @@ export async function uploadProductImages(
         .from('product_images')
         .insert({
           product_id: productId,
-          url: originalUrl,
+          original_url: originalUrl,
           thumbnail_url: thumbnailUrl,
           position: i,
-          alt_text: `${file.name.split('.')[0] || 'Product image'} ${i + 1}`
+          alt_text: `${file.name.split('.')[0] || 'Product image'} ${i + 1}`,
+          is_primary: i === 0
         })
         .select()
         .single()
@@ -147,7 +148,7 @@ export async function uploadProductImages(
       images.push({
         id: imageData.id,
         product_id: imageData.product_id,
-        url: imageData.url,
+        url: imageData.original_url,
         thumbnail_url: imageData.thumbnail_url,
         position: imageData.position,
         alt_text: imageData.alt_text
@@ -196,10 +197,11 @@ export async function uploadProductImageFromUrl(
     .from('product_images')
     .insert({
       product_id: productId,
-      url: originalUrl,
+      original_url: originalUrl,
       thumbnail_url: thumbnailUrl,
       position,
-      alt_text: `Product image ${position + 1}`
+      alt_text: `Product image ${position + 1}`,
+      is_primary: position === 0
     })
     .select()
     .single()
@@ -213,7 +215,7 @@ export async function uploadProductImageFromUrl(
   return {
     id: imageData.id,
     product_id: imageData.product_id,
-    url: imageData.url,
+    url: imageData.original_url,
     thumbnail_url: imageData.thumbnail_url,
     position: imageData.position,
     alt_text: imageData.alt_text
@@ -245,8 +247,8 @@ export async function deleteProductImages(productId: string): Promise<void> {
   const pathsToDelete: string[] = []
   for (const image of images) {
     // Extract path from full URL
-    const urlParts = image.url.split(`/${BUCKET_NAME}/`)
-    if (urlParts[1]) {
+    const urlParts = (image.original_url || image.url)?.split(`/${BUCKET_NAME}/`)
+    if (urlParts?.[1]) {
       pathsToDelete.push(urlParts[1])
     }
 
@@ -300,8 +302,8 @@ export async function deleteProductImage(imageId: string): Promise<void> {
 
   // Extract storage paths
   const pathsToDelete: string[] = []
-  const urlParts = image.url.split(`/${BUCKET_NAME}/`)
-  if (urlParts[1]) {
+  const urlParts = (image.original_url || image.url)?.split(`/${BUCKET_NAME}/`)
+  if (urlParts?.[1]) {
     pathsToDelete.push(urlParts[1])
   }
 
@@ -366,13 +368,13 @@ export async function getFirstProductImageUrl(productId: string): Promise<string
 
   const { data } = await supabase
     .from('product_images')
-    .select('url')
+    .select('original_url')
     .eq('product_id', productId)
     .order('position', { ascending: true })
     .limit(1)
     .single()
 
-  return data?.url || null
+  return data?.original_url || null
 }
 
 // ============================================

@@ -19,16 +19,17 @@ interface RouteParams {
   params: Promise<{ orderId: string }>
 }
 
-// Validation schema for order updates
+// Validation schema for order updates - uses database fulfillment_status values
 const orderUpdateSchema = z.object({
   order_status: z.enum([
-    'pending',
-    'confirmed',
+    'unfulfilled',
     'processing',
+    'packed',
     'shipped',
+    'out_for_delivery',
     'delivered',
-    'cancelled',
-    'refunded'
+    'returned',
+    'cancelled'
   ]).optional(),
   tracking_number: z.string().optional(),
   courier_name: z.string().optional(),
@@ -58,7 +59,25 @@ export async function GET(
       throw error
     }
 
-    return NextResponse.json({ order })
+    // Map database column names to Order type expected by frontend
+    const mappedOrder = {
+      ...order,
+      customer_email: order.email,
+      customer_phone: order.phone,
+      shipping_cost: order.shipping_amount,
+      total_amount: order.total,
+      order_status: order.fulfillment_status,
+      order_items: Array.isArray(order.order_items)
+        ? order.order_items.map((item: Record<string, unknown>) => ({
+            ...item,
+            product_title: item.title,
+            product_image: item.image_url,
+            total_price: item.total,
+          }))
+        : [],
+    }
+
+    return NextResponse.json({ order: mappedOrder })
 
   } catch (error) {
     console.error('Order fetch error:', error)
@@ -89,9 +108,10 @@ export async function PATCH(
     const { order_status, tracking_number, courier_name, notes } = validationResult.data
 
     // Get current order to check status transition validity
+    // Database column is 'fulfillment_status', not 'order_status'
     const { data: currentOrder, error: fetchError } = await supabase
       .from('orders')
-      .select('order_status, payment_status')
+      .select('fulfillment_status, payment_status')
       .eq('id', orderId)
       .single()
 
@@ -109,18 +129,19 @@ export async function PATCH(
 
     if (order_status) {
       // Validate status transitions
-      const validTransitions = getValidStatusTransitions(currentOrder.order_status)
+      const validTransitions = getValidStatusTransitions(currentOrder.fulfillment_status)
       if (!validTransitions.includes(order_status)) {
         return NextResponse.json(
           {
-            error: `Invalid status transition from ${currentOrder.order_status} to ${order_status}`,
+            error: `Invalid status transition from ${currentOrder.fulfillment_status} to ${order_status}`,
             validTransitions
           },
           { status: 400 }
         )
       }
 
-      updates.order_status = order_status
+      // Database column is 'fulfillment_status'
+      updates.fulfillment_status = order_status
 
       // Set timestamps based on status
       switch (order_status) {
@@ -192,7 +213,7 @@ export async function PATCH(
             order_id: orderId,
             store_id: order.store_id,
             razorpay_refund_id: refundResult.id,
-            amount: order.total_amount,
+            amount: order.total,
             reason: 'Order cancelled by seller',
             status: 'processed',
             refund_type: 'full',
@@ -267,10 +288,10 @@ export async function DELETE(
       )
     }
 
-    // Can only cancel pending, confirmed, or processing orders
-    if (!['pending', 'confirmed', 'processing'].includes(order.order_status)) {
+    // Can only cancel unfulfilled, processing, or packed orders (using fulfillment_status column)
+    if (!['unfulfilled', 'processing', 'packed'].includes(order.fulfillment_status)) {
       return NextResponse.json(
-        { error: `Cannot cancel order with status: ${order.order_status}` },
+        { error: `Cannot cancel order with status: ${order.fulfillment_status}` },
         { status: 400 }
       )
     }
@@ -293,7 +314,7 @@ export async function DELETE(
           order_id: orderId,
           store_id: order.store_id,
           razorpay_refund_id: refundResult.id,
-          amount: order.total_amount,
+          amount: order.total,
           reason: 'Order cancelled by seller',
           status: 'processed',
           refund_type: 'full',
@@ -308,11 +329,11 @@ export async function DELETE(
       }
     }
 
-    // Update order status
+    // Update order status (database column is 'fulfillment_status')
     const { error: updateError } = await supabase
       .from('orders')
       .update({
-        order_status: 'cancelled',
+        fulfillment_status: 'cancelled',
         payment_status: newPaymentStatus,
         cancelled_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -368,16 +389,17 @@ export async function DELETE(
   }
 }
 
-// Helper function to get valid status transitions
+// Helper function to get valid status transitions (using database fulfillment_status values)
 function getValidStatusTransitions(currentStatus: string): string[] {
   const transitions: Record<string, string[]> = {
-    pending: ['confirmed', 'cancelled'],
-    confirmed: ['processing', 'shipped', 'cancelled'],
-    processing: ['shipped', 'cancelled'],
-    shipped: ['delivered', 'cancelled'],
-    delivered: ['refunded'],
-    cancelled: [],
-    refunded: []
+    unfulfilled: ['processing', 'packed', 'shipped', 'cancelled'],
+    processing: ['packed', 'shipped', 'cancelled'],
+    packed: ['shipped', 'cancelled'],
+    shipped: ['out_for_delivery', 'delivered', 'returned', 'cancelled'],
+    out_for_delivery: ['delivered', 'returned'],
+    delivered: ['returned'],
+    returned: [],
+    cancelled: []
   }
 
   return transitions[currentStatus] || []

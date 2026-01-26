@@ -102,14 +102,14 @@ export async function getFeaturedProducts(storeId: string): Promise<Product[]> {
         *,
         product_images (
           id,
-          url,
+          original_url,
           thumbnail_url,
           position,
           alt_text
         )
       `)
       .eq('store_id', storeId)
-      .eq('status', 'published')
+      .eq('status', 'active')
       .eq('featured', true)
       .order('created_at', { ascending: false })
       .limit(8)
@@ -153,20 +153,41 @@ export async function getStoreProducts(
     let query = supabase
       .from('products')
       .select(`
-        *,
+        id,
+        store_id,
+        title,
+        description,
+        price,
+        compare_at_price,
+        cost_per_item,
+        sku,
+        barcode,
+        quantity,
+        track_quantity,
+        featured,
+        status,
+        categories,
+        tags,
+        weight,
+        requires_shipping,
+        has_variants,
+        created_at,
+        updated_at,
         product_images (
           id,
-          url,
+          original_url,
           thumbnail_url,
           position,
           alt_text
         )
       `, { count: 'exact' })
       .eq('store_id', storeId)
-      .eq('status', 'published')
-    
+      .eq('status', 'active')
+
     // Filter by category if provided
+    // Use containment operator for JSONB arrays
     if (category) {
+      // Use the @> operator via filter to check if categories array contains the category
       query = query.contains('categories', [category])
     }
     
@@ -214,14 +235,14 @@ export async function getProduct(productId: string): Promise<Product | null> {
         *,
         product_images (
           id,
-          url,
+          original_url,
           thumbnail_url,
           position,
           alt_text
         )
       `)
       .eq('id', productId)
-      .eq('status', 'published')
+      .eq('status', 'active')
       .single()
     
     if (error || !data) {
@@ -255,7 +276,7 @@ export async function getProductForStore(
         *,
         product_images (
           id,
-          url,
+          original_url,
           thumbnail_url,
           position,
           alt_text
@@ -263,7 +284,7 @@ export async function getProductForStore(
       `)
       .eq('id', productId)
       .eq('store_id', storeId)
-      .eq('status', 'published')
+      .eq('status', 'active')
       .single()
 
     if (error || !data) {
@@ -367,7 +388,7 @@ export async function getStoreCategories(storeId: string): Promise<string[]> {
       .from('products')
       .select('categories')
       .eq('store_id', storeId)
-      .eq('status', 'published')
+      .eq('status', 'active')
     
     if (error || !data) {
       return []
@@ -435,7 +456,7 @@ function transformProductData(data: Record<string, unknown>): Product {
     .map(img => ({
       id: img.id as string,
       product_id: img.product_id as string,
-      url: img.url as string,
+      url: (img.original_url || img.url) as string,
       thumbnail_url: img.thumbnail_url as string | undefined,
       position: img.position as number,
       alt_text: img.alt_text as string | undefined

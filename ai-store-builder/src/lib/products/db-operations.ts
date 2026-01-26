@@ -4,6 +4,17 @@ import { createClient } from '@/lib/supabase/server'
 import type { Product, ProductImage } from '@/lib/types/store'
 import type { ProductInput, ProductUpdate } from './validation'
 
+/**
+ * Generate a URL-friendly handle from title
+ */
+function generateHandle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 100) + '-' + Date.now().toString(36)
+}
+
 export interface ProductWithImages extends Product {
   images: ProductImage[]
 }
@@ -29,8 +40,9 @@ export async function createProduct(
     .insert({
       store_id: storeId,
       title: productData.title,
+      handle: generateHandle(productData.title),
       description: productData.description,
-      price: productData.price,
+      price: productData.price ?? 0,
       compare_at_price: productData.compare_at_price || null,
       cost_per_item: productData.cost_per_item || null,
       sku: productData.sku || null,
@@ -115,7 +127,7 @@ export async function getProductById(productId: string): Promise<ProductWithImag
       *,
       product_images (
         id,
-        url,
+        original_url,
         thumbnail_url,
         position,
         alt_text
@@ -150,7 +162,7 @@ export async function getProductForStore(
       *,
       product_images (
         id,
-        url,
+        original_url,
         thumbnail_url,
         position,
         alt_text
@@ -216,14 +228,14 @@ export async function hardDeleteProduct(productId: string): Promise<void> {
 }
 
 /**
- * Publish a product (draft → published)
+ * Publish a product (draft → active)
  */
 export async function publishProduct(productId: string): Promise<Product> {
-  return updateProduct(productId, { status: 'published' })
+  return updateProduct(productId, { status: 'active' })
 }
 
 /**
- * Unpublish a product (published → draft)
+ * Unpublish a product (active → draft)
  */
 export async function unpublishProduct(productId: string): Promise<Product> {
   return updateProduct(productId, { status: 'draft' })
@@ -270,7 +282,7 @@ export async function getStoreProducts(
       *,
       product_images (
         id,
-        url,
+        original_url,
         thumbnail_url,
         position,
         alt_text
@@ -469,7 +481,7 @@ function transformProductData(data: Record<string, unknown>): Product {
     quantity: data.quantity as number || 0,
     track_quantity: data.track_quantity as boolean ?? true,
     featured: data.featured as boolean ?? false,
-    status: data.status as 'draft' | 'published',
+    status: data.status as 'draft' | 'active' | 'published',
     images: [],
     categories: data.categories as string[] || [],
     tags: data.tags as string[] || [],
@@ -483,13 +495,13 @@ function transformProductData(data: Record<string, unknown>): Product {
 
 function transformProductWithImages(data: Record<string, unknown>): ProductWithImages {
   const product = transformProductData(data)
-  
+
   const images = (data.product_images as Record<string, unknown>[] || [])
     .sort((a, b) => (a.position as number || 0) - (b.position as number || 0))
     .map(img => ({
       id: img.id as string,
       product_id: img.product_id as string,
-      url: img.url as string,
+      url: (img.original_url || img.url) as string,
       thumbnail_url: img.thumbnail_url as string | undefined,
       position: img.position as number,
       alt_text: img.alt_text as string | undefined

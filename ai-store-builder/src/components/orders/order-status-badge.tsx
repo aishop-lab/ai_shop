@@ -1,12 +1,18 @@
 import { cn } from '@/lib/utils'
 
-type OrderStatus = 
-  | 'pending' 
-  | 'confirmed' 
-  | 'processing' 
-  | 'shipped' 
-  | 'delivered' 
-  | 'cancelled' 
+// Database fulfillment_status values
+type OrderStatus =
+  | 'unfulfilled'
+  | 'processing'
+  | 'packed'
+  | 'shipped'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'returned'
+  | 'cancelled'
+  // Legacy values for backwards compatibility
+  | 'pending'
+  | 'confirmed'
   | 'refunded'
 
 type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded'
@@ -17,12 +23,18 @@ interface StatusConfig {
 }
 
 const orderStatusConfig: Record<OrderStatus, StatusConfig> = {
+  // Database status values
+  unfulfilled: { color: 'bg-yellow-100 text-yellow-800', label: 'New Order' },
+  processing: { color: 'bg-purple-100 text-purple-800', label: 'Processing' },
+  packed: { color: 'bg-blue-100 text-blue-800', label: 'Packed' },
+  shipped: { color: 'bg-indigo-100 text-indigo-800', label: 'Shipped' },
+  out_for_delivery: { color: 'bg-cyan-100 text-cyan-800', label: 'Out for Delivery' },
+  delivered: { color: 'bg-green-100 text-green-800', label: 'Delivered' },
+  returned: { color: 'bg-orange-100 text-orange-800', label: 'Returned' },
+  cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' },
+  // Legacy status values
   pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
   confirmed: { color: 'bg-blue-100 text-blue-800', label: 'Confirmed' },
-  processing: { color: 'bg-purple-100 text-purple-800', label: 'Processing' },
-  shipped: { color: 'bg-indigo-100 text-indigo-800', label: 'Shipped' },
-  delivered: { color: 'bg-green-100 text-green-800', label: 'Delivered' },
-  cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' },
   refunded: { color: 'bg-gray-100 text-gray-800', label: 'Refunded' }
 }
 

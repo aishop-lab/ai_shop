@@ -4,6 +4,7 @@ import { completeOnboardingSchema } from '@/lib/validations/onboarding'
 import { getDemoProducts, getDemoProductImageUrl } from '@/lib/products/demo-products'
 import { vercelAI } from '@/lib/ai/vercel-ai-service'
 import { sendWelcomeMerchantEmail } from '@/lib/email/merchant-notifications'
+import { generateStorePolicies } from '@/lib/store/policies'
 
 export async function POST(request: Request) {
   try {
@@ -71,13 +72,12 @@ export async function POST(request: Request) {
 
     // Generate legal policies for the store
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-      await fetch(`${baseUrl}/api/onboarding/generate-policies`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ store_id })
-      })
-      console.log('[Complete] Legal policies generated for store:', store_id)
+      const policyResult = await generateStorePolicies(supabase, store_id)
+      if (policyResult.success) {
+        console.log('[Complete] Legal policies generated for store:', store_id)
+      } else {
+        console.error('[Complete] Policy generation failed:', policyResult.error)
+      }
     } catch (policyError) {
       console.error('[Complete] Policy generation failed (non-blocking):', policyError)
       // Don't fail the whole request - policies can be regenerated later

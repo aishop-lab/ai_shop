@@ -60,7 +60,7 @@ export default function StoreThankYouPage() {
   
   const fetchOrderDetails = async () => {
     try {
-      const response = await fetch(`/api/orders/${orderNumber}`)
+      const response = await fetch(`/api/orders/lookup/${orderNumber}`)
       if (response.ok) {
         const data = await response.json()
         setOrder(data.order)

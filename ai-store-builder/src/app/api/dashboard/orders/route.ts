@@ -31,9 +31,9 @@ export async function GET(request: NextRequest): Promise<NextResponse<OrdersList
       .select('*, order_items(*)', { count: 'exact' })
       .eq('store_id', storeId)
 
-    // Filter by order status
+    // Filter by order status (database column is 'fulfillment_status')
     if (status && status !== 'all') {
-      query = query.eq('order_status', status)
+      query = query.eq('fulfillment_status', status)
     }
 
     // Filter by payment status
@@ -41,10 +41,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<OrdersList
       query = query.eq('payment_status', paymentStatus)
     }
 
-    // Search by order number or customer name/email
+    // Search by order number or customer name/email (database columns: customer_name, email)
     if (search) {
       query = query.or(
-        `order_number.ilike.%${search}%,customer_name.ilike.%${search}%,customer_email.ilike.%${search}%`
+        `order_number.ilike.%${search}%,customer_name.ilike.%${search}%,email.ilike.%${search}%`
       )
     }
 
@@ -61,8 +61,28 @@ export async function GET(request: NextRequest): Promise<NextResponse<OrdersList
 
     if (error) throw error
 
+    // Map database column names to Order type expected by frontend
+    const mappedOrders = (orders || []).map((order: Record<string, unknown>) => ({
+      ...order,
+      // Map database columns to Order type names
+      customer_email: order.email,
+      customer_phone: order.phone,
+      shipping_cost: order.shipping_amount,
+      total_amount: order.total,
+      order_status: order.fulfillment_status,
+      // Map order_items columns if present
+      order_items: Array.isArray(order.order_items)
+        ? order.order_items.map((item: Record<string, unknown>) => ({
+            ...item,
+            product_title: item.title,
+            product_image: item.image_url,
+            total_price: item.total,
+          }))
+        : [],
+    }))
+
     return NextResponse.json({
-      orders: orders || [],
+      orders: mappedOrders,
       total: count || 0,
       page,
       totalPages: Math.ceil((count || 0) / limit)

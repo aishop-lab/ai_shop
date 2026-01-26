@@ -52,7 +52,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [categoryFilter, setCategoryFilter] = useState<string>('')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('created_at')
   const [sortOrder, setSortOrder] = useState<string>('desc')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -100,7 +100,7 @@ export default function ProductsPage() {
       if (searchQuery) {
         params.append('search', searchQuery)
       }
-      if (categoryFilter) {
+      if (categoryFilter && categoryFilter !== 'all') {
         params.append('category', categoryFilter)
       }
 
@@ -123,7 +123,7 @@ export default function ProductsPage() {
     } finally {
       setLoading(false)
     }
-  }, [storeId, page, statusFilter, searchQuery, categoryFilter, sortBy, sortOrder, toast])
+  }, [storeId, page, statusFilter, searchQuery, categoryFilter, sortBy, sortOrder]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchProducts()
@@ -244,7 +244,7 @@ export default function ProductsPage() {
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
               {categories.map((cat) => (
                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>
               ))}
@@ -312,11 +312,11 @@ export default function ProductsPage() {
           <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No products yet</h3>
           <p className="text-muted-foreground mb-4">
-            {searchQuery || statusFilter !== 'all' || categoryFilter
+            {searchQuery || statusFilter !== 'all' || categoryFilter !== 'all'
               ? 'No products match your filters'
               : 'Start by adding your first product'}
           </p>
-          {!searchQuery && statusFilter === 'all' && !categoryFilter && (
+          {!searchQuery && statusFilter === 'all' && categoryFilter === 'all' && (
             <Link href="/dashboard/products/new">
               <Button>
                 <Plus className="w-4 h-4 mr-2" />

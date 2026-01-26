@@ -35,7 +35,7 @@ export default function StoreOrdersPage() {
     setSearched(true)
     
     try {
-      const response = await fetch(`/api/orders/${searchQuery.trim()}`)
+      const response = await fetch(`/api/orders/lookup/${searchQuery.trim()}`)
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -132,8 +132,9 @@ export default function StoreOrdersPage() {
           <div className="p-6 border-b">
             <h3 className="font-semibold mb-4">Order Progress</h3>
             <div className="flex items-center justify-between">
-              {['confirmed', 'processing', 'shipped', 'delivered'].map((step, index) => {
-                const statusOrder = ['pending', 'confirmed', 'processing', 'shipped', 'delivered']
+              {['processing', 'packed', 'shipped', 'delivered'].map((step, index) => {
+                // Database status order: unfulfilled → processing → packed → shipped → out_for_delivery → delivered
+                const statusOrder = ['unfulfilled', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered']
                 const currentIndex = statusOrder.indexOf(order.order_status)
                 const stepIndex = statusOrder.indexOf(step)
                 const isCompleted = stepIndex <= currentIndex

@@ -77,10 +77,10 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check order status - must be confirmed or processing
-    if (!['confirmed', 'processing'].includes(order.order_status)) {
+    // Check order status - must be unfulfilled, processing, or packed (database column is fulfillment_status)
+    if (!['unfulfilled', 'processing', 'packed'].includes(order.fulfillment_status)) {
       return NextResponse.json(
-        { success: false, error: `Cannot create shipment for order with status: ${order.order_status}` },
+        { success: false, error: `Cannot create shipment for order with status: ${order.fulfillment_status}` },
         { status: 400 }
       )
     }
@@ -147,15 +147,19 @@ export async function POST(request: Request) {
       )
     }
 
-    // Build Shiprocket order
+    // Build Shiprocket order (map database columns to expected format)
     const shiprocketOrderData = buildShiprocketOrder(
       {
         order_number: order.order_number,
         customer_name: order.customer_name,
-        customer_email: order.customer_email,
-        customer_phone: order.customer_phone,
+        customer_email: order.email,  // Database column is 'email'
+        customer_phone: order.phone,  // Database column is 'phone'
         shipping_address: order.shipping_address,
-        order_items: order.order_items,
+        order_items: (order.order_items || []).map((item: Record<string, unknown>) => ({
+          product_title: item.title,  // Database column is 'title'
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+        })),
         payment_method: order.payment_method,
         subtotal: order.subtotal,
         created_at: order.created_at
@@ -206,7 +210,7 @@ export async function POST(request: Request) {
         label_url: labelUrl,
         estimated_delivery_date: estimatedDeliveryDate.toISOString().split('T')[0],
         shipping_provider: 'shiprocket',
-        order_status: 'processing'
+        fulfillment_status: 'processing'  // Database column is 'fulfillment_status'
       })
       .eq('id', order_id)
 

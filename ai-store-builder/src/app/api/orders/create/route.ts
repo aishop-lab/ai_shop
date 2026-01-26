@@ -5,6 +5,7 @@ import { validateCartItems } from '@/lib/cart/validation'
 import { calculateCartTotal } from '@/lib/cart/calculations'
 import { createRazorpayOrder } from '@/lib/payment/razorpay'
 import { reserveInventory } from '@/lib/orders/inventory'
+import { sendOrderConfirmationEmail } from '@/lib/email/order-confirmation'
 import type { StoreSettings } from '@/lib/types/store'
 import type { CreateOrderResponse, ShippingAddress } from '@/lib/types/order'
 
@@ -151,17 +152,18 @@ export async function POST(
       order_number: orderNumber,
       store_id,
       customer_name: customer_details.name,
-      customer_email: customer_details.email,
-      customer_phone: customer_details.phone,
+      email: customer_details.email,
+      phone: customer_details.phone,
       shipping_address: shipping_address as ShippingAddress,
       subtotal: totals.subtotal,
-      shipping_cost: totals.shipping,
+      shipping_amount: totals.shipping,
       tax_amount: totals.tax,
       discount_amount: totals.discount,
-      total_amount: totals.total,
+      total: totals.total,
       payment_method,
       payment_status: 'pending',
-      order_status: 'pending',
+      fulfillment_status: 'unfulfilled',
+      is_cod: payment_method === 'cod',
       created_at: new Date().toISOString(),
     })
 
@@ -186,11 +188,11 @@ export async function POST(
         variant_id: item.variant_id || null,
         variant_attributes: item.variant_attributes || null,
         variant_sku: item.variant?.sku || null,
-        product_title: item.product.title,
-        product_image: imageUrl,
+        title: item.product.title,
+        image_url: imageUrl,
         quantity: item.quantity,
-        unit_price: item.price, // Uses effective price (variant or product)
-        total_price: item.price * item.quantity,
+        unit_price: item.price,
+        total: item.price * item.quantity,
       }
     })
 
@@ -240,14 +242,52 @@ export async function POST(
       }
     }
 
-    // 10. For COD orders, mark as confirmed immediately
+    // 10. For COD orders, mark as processing and send confirmation email
     if (payment_method === 'cod') {
       await supabase
         .from('orders')
         .update({
-          order_status: 'confirmed',
+          fulfillment_status: 'processing',
         })
         .eq('id', orderId)
+
+      // Send order confirmation email for COD orders
+      try {
+        await sendOrderConfirmationEmail({
+          id: orderId,
+          order_number: orderNumber,
+          store_id,
+          customer_name: customer_details.name,
+          email: customer_details.email,  // Database column name
+          phone: customer_details.phone,  // Database column name
+          shipping_address: shipping_address as ShippingAddress,
+          subtotal: totals.subtotal,
+          shipping_amount: totals.shipping,  // Database column name
+          tax_amount: totals.tax,
+          discount_amount: totals.discount,
+          total: totals.total,  // Database column name
+          payment_method,
+          payment_status: 'pending',
+          fulfillment_status: 'processing',
+          created_at: new Date().toISOString(),
+          order_items: orderItems.map(item => ({
+            id: crypto.randomUUID(),
+            order_id: orderId,
+            product_id: item.product_id,
+            variant_id: item.variant_id,
+            title: item.title,  // Database column name
+            image_url: item.image_url,  // Database column name
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total: item.total,  // Database column name
+          })),
+          store: { name: store.name },
+        } as Record<string, unknown>)
+        console.log('COD order confirmation email sent for:', orderNumber)
+      } catch (emailError) {
+        console.error('Failed to send COD order confirmation email:', emailError)
+        // Don't fail the order if email fails
+      }
     }
 
     // 11. Return order details
@@ -256,7 +296,7 @@ export async function POST(
       order: {
         id: orderId,
         order_number: orderNumber,
-        total_amount: totals.total,
+        total: totals.total,
         razorpay_order_id: razorpayOrder?.id,
         razorpay_key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
       },

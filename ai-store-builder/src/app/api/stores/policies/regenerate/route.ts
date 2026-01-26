@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { generateStorePolicies } from '@/lib/store/policies'
 
 // POST - Regenerate all policies for a store
 export async function POST() {
@@ -23,16 +24,11 @@ export async function POST() {
             return NextResponse.json({ error: 'Store not found' }, { status: 404 })
         }
 
-        // Call the generate policies endpoint
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-        const response = await fetch(`${baseUrl}/api/onboarding/generate-policies`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ store_id: store.id })
-        })
+        // Generate policies directly
+        const result = await generateStorePolicies(supabase, store.id)
 
-        if (!response.ok) {
-            return NextResponse.json({ error: 'Failed to regenerate policies' }, { status: 500 })
+        if (!result.success) {
+            return NextResponse.json({ error: result.error || 'Failed to regenerate policies' }, { status: 500 })
         }
 
         return NextResponse.json({ success: true, message: 'Policies regenerated' })

@@ -74,7 +74,7 @@ export async function validateCartItems(
       updated_at,
       product_images (
         id,
-        url,
+        original_url,
         thumbnail_url,
         position,
         alt_text
@@ -151,7 +151,7 @@ export async function validateCartItems(
         compare_at_price: p.compare_at_price || undefined,
         quantity: p.quantity || 0,
         track_quantity: p.track_quantity ?? true,
-        status: p.status as 'draft' | 'published',
+        status: p.status as 'draft' | 'active' | 'published',
         sku: p.sku || undefined,
         weight: p.weight || undefined,
         requires_shipping: p.requires_shipping ?? true,
@@ -163,10 +163,10 @@ export async function validateCartItems(
         updated_at: p.updated_at,
         images: (p.product_images || [])
           .sort((a: { position: number }, b: { position: number }) => a.position - b.position)
-          .map((img: { id: string; url: string; thumbnail_url?: string; position: number; alt_text?: string }) => ({
+          .map((img: { id: string; original_url?: string; url?: string; thumbnail_url?: string; position: number; alt_text?: string }) => ({
             id: img.id,
             product_id: p.id,
-            url: img.url,
+            url: img.original_url || img.url || '',
             thumbnail_url: img.thumbnail_url,
             position: img.position,
             alt_text: img.alt_text
@@ -194,8 +194,8 @@ export async function validateCartItems(
       continue
     }
 
-    // Check if product is published
-    if (product.status !== 'published') {
+    // Check if product is published/active
+    if (product.status !== 'active' && product.status !== 'published') {
       errors.push(`Product ${product.title} is not available`)
       continue
     }
@@ -346,7 +346,7 @@ export async function checkInventory(
     const product = productMap.get(item.product_id)
     const variant = item.variant_id ? variantMap.get(item.variant_id) : undefined
 
-    if (!product || product.status !== 'published') {
+    if (!product || (product.status !== 'active' && product.status !== 'published')) {
       return {
         product_id: item.product_id,
         variant_id: item.variant_id,

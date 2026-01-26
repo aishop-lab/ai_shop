@@ -271,7 +271,7 @@ export async function POST(request: Request) {
       price: productData.price as number || 0,
       categories: finalCategories,
       tags: finalTags,
-      status: productData.status as 'draft' | 'published' || 'draft'
+      status: productData.status === 'published' ? 'active' : (productData.status as 'draft' | 'active' || 'draft')
     }))
 
     // Return the product with images and AI suggestions

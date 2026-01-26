@@ -131,14 +131,15 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* Status tabs */}
+      {/* Status tabs - using database fulfillment_status values */}
       <Tabs value={status} onValueChange={(v) => { setStatus(v); setPage(1) }}>
         <TabsList className="flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="confirmed">Confirmed</TabsTrigger>
+          <TabsTrigger value="unfulfilled">New</TabsTrigger>
           <TabsTrigger value="processing">Processing</TabsTrigger>
+          <TabsTrigger value="packed">Packed</TabsTrigger>
           <TabsTrigger value="shipped">Shipped</TabsTrigger>
+          <TabsTrigger value="out_for_delivery">Out for Delivery</TabsTrigger>
           <TabsTrigger value="delivered">Delivered</TabsTrigger>
           <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
         </TabsList>

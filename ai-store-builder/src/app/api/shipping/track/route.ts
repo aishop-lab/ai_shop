@@ -40,7 +40,7 @@ export async function GET(request: Request) {
           shiprocket_shipment_id,
           tracking_number,
           courier_name,
-          order_status,
+          fulfillment_status,
           estimated_delivery_date
         `)
         .eq('id', orderId)
@@ -88,7 +88,7 @@ export async function GET(request: Request) {
         tracking: {
           awb_code: trackingCode,
           courier_name: order?.courier_name,
-          current_status: order?.order_status,
+          current_status: order?.fulfillment_status,
           estimated_delivery: order?.estimated_delivery_date,
           events: events || []
         }
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
         tracking: {
           awb_code: trackingCode,
           courier_name: order?.courier_name,
-          current_status: order?.order_status || 'processing',
+          current_status: order?.fulfillment_status || 'processing',
           estimated_delivery: order?.estimated_delivery_date,
           events: [],
           message: 'Tracking information not yet available'
@@ -121,11 +121,11 @@ export async function GET(request: Request) {
     const mappedStatus = mapShiprocketStatus(currentStatus)
 
     // Update order status if changed
-    if (order && mappedStatus !== order.order_status) {
+    if (order && mappedStatus !== order.fulfillment_status) {
       await supabase
         .from('orders')
         .update({
-          order_status: mappedStatus,
+          fulfillment_status: mappedStatus,
           ...(mappedStatus === 'delivered' ? { delivered_at: new Date().toISOString() } : {})
         })
         .eq('id', order.id)

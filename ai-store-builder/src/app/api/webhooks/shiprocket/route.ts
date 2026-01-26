@@ -73,7 +73,7 @@ export async function POST(request: Request) {
 
     // Build update object
     const updateData: Record<string, unknown> = {
-      order_status: mappedStatus
+      fulfillment_status: mappedStatus
     }
 
     // Add timestamp based on status

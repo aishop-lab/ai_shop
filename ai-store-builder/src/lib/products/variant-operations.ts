@@ -75,7 +75,7 @@ export async function getVariants(productId: string): Promise<ProductVariant[]> 
       *,
       image:product_images!image_id (
         id,
-        url,
+        original_url,
         thumbnail_url,
         alt_text
       )
@@ -103,7 +103,7 @@ export async function getVariantById(variantId: string): Promise<ProductVariant 
       *,
       image:product_images!image_id (
         id,
-        url,
+        original_url,
         thumbnail_url,
         alt_text
       )
@@ -135,7 +135,7 @@ export async function getProductWithVariants(
       *,
       product_images (
         id,
-        url,
+        original_url,
         thumbnail_url,
         position,
         alt_text
@@ -653,7 +653,7 @@ function transformVariant(data: Record<string, unknown>): ProductVariant {
     image: image ? {
       id: image.id as string,
       product_id: data.product_id as string,
-      url: image.url as string,
+      url: (image.original_url || image.url) as string,
       thumbnail_url: image.thumbnail_url as string | undefined,
       position: 0,
       alt_text: image.alt_text as string | undefined,
@@ -671,7 +671,7 @@ function transformProduct(data: Record<string, unknown>): Product {
     .map(img => ({
       id: img.id as string,
       product_id: data.id as string,
-      url: img.url as string,
+      url: (img.original_url || img.url) as string,
       thumbnail_url: img.thumbnail_url as string | undefined,
       position: img.position as number,
       alt_text: img.alt_text as string | undefined,

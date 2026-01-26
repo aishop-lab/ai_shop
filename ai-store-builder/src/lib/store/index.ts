@@ -68,6 +68,10 @@ export {
   POPULAR_FONTS
 } from './dynamic-styles'
 
+// Policies
+export { generateStorePolicies } from './policies'
+export type { StorePolicies } from './policies'
+
 // Theme system
 export { 
   THEME_REGISTRY, 

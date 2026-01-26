@@ -19,7 +19,7 @@ export const productInputSchema = z.object({
   requires_shipping: z.boolean().default(true),
   categories: z.array(z.string()).max(5, 'Maximum 5 categories').optional().default([]),
   tags: z.array(z.string()).max(20, 'Maximum 20 tags').optional().default([]),
-  status: z.enum(['draft', 'published']).default('draft'),
+  status: z.enum(['draft', 'active', 'published']).default('draft'),
   featured: z.boolean().default(false)
 })
 
@@ -41,7 +41,7 @@ export const productUploadSchema = z.object({
   requires_shipping: z.boolean().optional().default(true),
   categories: z.array(z.string()).max(5).optional(),
   tags: z.array(z.string()).max(20).optional(),
-  status: z.enum(['draft', 'published']).optional().default('draft')
+  status: z.enum(['draft', 'active', 'published']).optional().default('draft')
 })
 
 /**
@@ -61,7 +61,7 @@ export const productUpdateSchema = z.object({
   requires_shipping: z.boolean().optional(),
   categories: z.array(z.string()).max(5).optional(),
   tags: z.array(z.string()).max(20).optional(),
-  status: z.enum(['draft', 'published']).optional(),
+  status: z.enum(['draft', 'active', 'published']).optional(),
   featured: z.boolean().optional()
 })
 
@@ -95,7 +95,7 @@ export const productListQuerySchema = z.object({
   store_id: z.string().uuid(),
   page: z.string().optional().transform(val => val ? parseInt(val) : 1),
   limit: z.string().optional().transform(val => val ? Math.min(parseInt(val), 100) : 24),
-  status: z.enum(['draft', 'published', 'archived', 'all']).optional().default('all'),
+  status: z.enum(['draft', 'active', 'published', 'archived', 'all']).optional().default('all'),
   category: z.string().optional(),
   search: z.string().optional(),
   sort_by: z.enum(['created_at', 'price', 'title', 'quantity']).optional().default('created_at'),

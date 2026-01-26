@@ -105,8 +105,8 @@ export async function POST(
       .from('orders')
       .update({
         payment_status: 'paid',
-        order_status: 'confirmed',
-        razorpay_payment_id,
+        fulfillment_status: 'processing',
+        metadata: { razorpay_payment_id },
         paid_at: new Date().toISOString(),
       })
       .eq('id', order_id)
@@ -119,11 +119,12 @@ export async function POST(
       )
     }
 
-    // 6. Reduce inventory
+    // 6. Reduce inventory (variant-aware)
     const orderItems = (order.order_items || []) as OrderItem[]
     await reduceInventory(
       orderItems.map((item) => ({
         product_id: item.product_id,
+        variant_id: item.variant_id || undefined,
         quantity: item.quantity,
       }))
     )
