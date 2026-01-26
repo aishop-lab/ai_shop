@@ -1,30 +1,60 @@
 // Enhanced Product Image Extraction API
-// Runs full processing pipeline: enhance, OCR, background removal, AI analysis
+// Simplified version that uses vercel-ai-service for AI analysis
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { processProductImagePipeline, type PipelineOptions } from '@/lib/products/processing-pipeline'
-import { AUTO_APPLY_THRESHOLD } from '@/lib/ai/unified-ai-service'
+import { vercelAI, AUTO_APPLY_THRESHOLD } from '@/lib/ai/vercel-ai-service'
+import sharp from 'sharp'
 
 export const maxDuration = 60 // Allow up to 60 seconds for processing
 
+// Max image size for AI analysis
+const MAX_IMAGE_DIMENSION = 1024
+const MAX_IMAGE_SIZE_BYTES = 500 * 1024 // 500KB
+
 interface ExtractEnhancedRequest {
-  // Either provide image as base64 or URL
   imageBase64?: string
   imageUrl?: string
   mimeType?: string
-  // Processing options
   enhanceImage?: boolean
   removeBackground?: boolean
   runAIAnalysis?: boolean
   includeOCR?: boolean
 }
 
+/**
+ * Optimize image for AI analysis
+ */
+async function optimizeImage(buffer: Buffer): Promise<Buffer> {
+  try {
+    if (buffer.length <= MAX_IMAGE_SIZE_BYTES) {
+      return buffer
+    }
+
+    let sharpInstance = sharp(buffer)
+    const metadata = await sharpInstance.metadata()
+
+    if (metadata.width && metadata.height) {
+      const maxDim = Math.max(metadata.width, metadata.height)
+      if (maxDim > MAX_IMAGE_DIMENSION) {
+        sharpInstance = sharpInstance.resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, {
+          fit: 'inside',
+          withoutEnlargement: true
+        })
+      }
+    }
+
+    return await sharpInstance.jpeg({ quality: 80 }).toBuffer()
+  } catch (error) {
+    console.warn('[ExtractEnhanced] Image optimization failed:', error)
+    return buffer
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
 
-    // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
@@ -34,10 +64,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Parse request
     const body: ExtractEnhancedRequest = await request.json()
 
-    // Validate input
     if (!body.imageBase64 && !body.imageUrl) {
       return NextResponse.json(
         { success: false, error: 'Either imageBase64 or imageUrl is required' },
@@ -50,17 +78,14 @@ export async function POST(request: Request) {
     let mimeType = body.mimeType || 'image/jpeg'
 
     if (body.imageBase64) {
-      // Decode base64 image
-      const base64Data = body.imageBase64.replace(/^data:image\/\w+;base64,/, '')
+      const base64Data = body.imageBase64.replace(/^data:image\/[^;]+;base64,/, '')
       buffer = Buffer.from(base64Data, 'base64')
 
-      // Try to extract mime type from data URL
-      const mimeMatch = body.imageBase64.match(/^data:(image\/\w+);base64,/)
+      const mimeMatch = body.imageBase64.match(/^data:(image\/[^;]+);base64,/)
       if (mimeMatch) {
         mimeType = mimeMatch[1]
       }
     } else if (body.imageUrl) {
-      // Fetch image from URL
       const response = await fetch(body.imageUrl)
       if (!response.ok) {
         return NextResponse.json(
@@ -78,74 +103,85 @@ export async function POST(request: Request) {
       )
     }
 
-    // Configure pipeline options
-    const options: PipelineOptions = {
-      enhanceImage: body.enhanceImage !== false, // Default true
-      removeBackground: body.removeBackground !== false, // Default true
-      createThumbnails: true,
-      runAIAnalysis: body.runAIAnalysis !== false, // Default true
-      includeOCR: body.includeOCR !== false, // Default true
-      includeSafeSearch: true,
-      autoApplyHighConfidence: true
-    }
+    console.log(`[ExtractEnhanced] Processing image: ${(buffer.length / 1024).toFixed(1)}KB`)
 
-    console.log('[ExtractEnhanced] Starting pipeline with options:', options)
+    // Optimize image for AI
+    const optimizedBuffer = await optimizeImage(buffer)
+    console.log(`[ExtractEnhanced] Optimized to: ${(optimizedBuffer.length / 1024).toFixed(1)}KB`)
 
-    // Run the full processing pipeline
-    const result = await processProductImagePipeline(buffer, mimeType, options)
+    // Run AI analysis
+    const stages = [
+      { name: 'upload', status: 'completed' as const, message: 'Image received' },
+      { name: 'ai_analysis', status: 'processing' as const, message: 'Analyzing product...' }
+    ]
 
-    // Check safe search result
-    if (!result.safeSearchPassed) {
+    let aiResult
+    try {
+      aiResult = await vercelAI.analyzeProductImage({
+        buffer: optimizedBuffer,
+        mimeType
+      })
+
+      stages[1] = {
+        name: 'ai_analysis',
+        status: 'completed' as const,
+        message: `Confidence: ${(aiResult.confidence * 100).toFixed(0)}%`
+      }
+    } catch (aiError) {
+      console.error('[ExtractEnhanced] AI analysis failed:', aiError)
+
+      stages[1] = {
+        name: 'ai_analysis',
+        status: 'failed' as const,
+        message: aiError instanceof Error ? aiError.message : 'AI analysis failed'
+      }
+
       return NextResponse.json({
         success: false,
-        error: 'Image contains inappropriate content',
-        safeSearchDetails: result.safeSearchDetails
-      }, { status: 400 })
+        error: 'AI analysis failed. Please ensure GEMINI_API_KEY is configured.',
+        details: aiError instanceof Error ? aiError.message : 'Unknown error',
+        stages
+      }, { status: 500 })
     }
 
     // Build response
     const response = {
       success: true,
 
-      // Processing status
-      wasEnhanced: result.wasEnhanced,
-      enhancementsApplied: result.enhancementsApplied,
-      backgroundRemoved: result.backgroundRemoved,
+      // Processing status (no actual enhancement without Vertex AI)
+      wasEnhanced: false,
+      enhancementsApplied: [],
+      backgroundRemoved: false,
 
-      // Quality assessment
+      // Quality assessment from AI
       qualityAssessment: {
-        score: result.qualityAssessment.score,
-        brightness: result.qualityAssessment.brightness,
-        isBlurry: result.qualityAssessment.isBlurry,
-        recommendations: result.qualityAssessment.recommendations
+        score: aiResult.image_quality?.score || 7,
+        brightness: aiResult.image_quality?.brightness || 'normal',
+        isBlurry: aiResult.image_quality?.is_blurry || false,
+        recommendations: aiResult.image_quality?.recommended_actions || []
       },
 
-      // AI suggestions (if available)
-      aiSuggestions: result.aiSuggestions ? {
-        title: result.aiSuggestions.ai_suggested_title,
-        description: result.aiSuggestions.ai_suggested_description,
-        categories: result.aiSuggestions.ai_suggested_category,
-        tags: result.aiSuggestions.ai_suggested_tags,
-        attributes: result.aiSuggestions.ai_suggested_attributes,
-        confidence: result.aiSuggestions.confidence,
-        ocrText: result.aiSuggestions.ocr_text || [],
-        imageQuality: result.aiSuggestions.image_quality
-      } : null,
+      // AI suggestions
+      aiSuggestions: {
+        title: aiResult.title,
+        description: aiResult.description,
+        categories: aiResult.categories,
+        tags: aiResult.tags,
+        attributes: aiResult.attributes,
+        confidence: aiResult.confidence,
+        ocrText: aiResult.ocr_text || [],
+        imageQuality: aiResult.image_quality
+      },
 
       // Auto-apply recommendation
-      shouldAutoApply: result.shouldAutoApply,
+      shouldAutoApply: aiResult.confidence >= AUTO_APPLY_THRESHOLD,
       autoApplyThreshold: AUTO_APPLY_THRESHOLD,
 
-      // Processing stages for UI progress
-      stages: result.stages,
-
-      // Processed images as base64 (for preview before upload)
-      processedImages: {
-        enhanced: result.enhancedBuffer.toString('base64'),
-        thumbnail: result.thumbnailBuffer.toString('base64'),
-        mimeType: 'image/jpeg'
-      }
+      // Processing stages
+      stages
     }
+
+    console.log(`[ExtractEnhanced] Analysis complete. Title: "${aiResult.title}", Confidence: ${aiResult.confidence}`)
 
     return NextResponse.json(response)
   } catch (error) {

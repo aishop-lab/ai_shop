@@ -139,46 +139,43 @@ class VertexImagenService {
 
   /**
    * Edit an image using Imagen
-   * Uses the imageEditV2 endpoint for editing existing images
+   * Uses image generation with reference for product image editing
    */
   async editImage(
     imageBuffer: Buffer,
     editPrompt: string,
     options: {
       maskBuffer?: Buffer // Optional mask for targeted editing
-      editMode?: 'inpaint' | 'outpaint' | 'product-image'
     } = {}
   ): Promise<{ buffer: Buffer; mimeType: string } | null> {
     try {
       const base64Image = imageBuffer.toString('base64')
 
+      // Use imagegeneration endpoint with the image as reference
       const requestBody: Record<string, unknown> = {
         instances: [
           {
             prompt: editPrompt,
-            image: {
-              bytesBase64Encoded: base64Image
-            }
+            referenceImages: [
+              {
+                referenceImage: {
+                  bytesBase64Encoded: base64Image
+                },
+                referenceType: 1 // STYLE reference type
+              }
+            ]
           }
         ],
         parameters: {
           sampleCount: 1,
-          // Imagen 3 model for best quality
-          editMode: options.editMode || 'inpaint'
-        }
-      }
-
-      // Add mask if provided
-      if (options.maskBuffer) {
-        (requestBody.instances as Array<Record<string, unknown>>)[0].mask = {
-          image: {
-            bytesBase64Encoded: options.maskBuffer.toString('base64')
-          }
+          aspectRatio: '1:1',
+          safetySetting: 'block_some',
+          personGeneration: 'allow_adult'
         }
       }
 
       const response = await this.makeRequest(
-        '/publishers/google/models/imagen-3.0-fast-generate-001:predict',
+        '/publishers/google/models/imagen-3.0-generate-001:predict',
         requestBody
       ) as { predictions?: Array<{ bytesBase64Encoded?: string; mimeType?: string }> }
 
@@ -203,19 +200,18 @@ class VertexImagenService {
     imageBuffer: Buffer,
     backgroundColor: string = '#FFFFFF'
   ): Promise<{ buffer: Buffer; mimeType: string } | null> {
-    // Use edit with a prompt to remove background
-    const prompt = `Remove the background and place the product on a clean, solid ${backgroundColor === '#FFFFFF' ? 'white' : 'colored'} background. Keep the product exactly as is, only change the background to be a clean, professional e-commerce style solid color. Do not modify the product itself.`
+    const prompt = `Professional e-commerce product photo on a clean, solid ${backgroundColor === '#FFFFFF' ? 'white' : 'colored'} background. Remove the background and place the product centered with even studio lighting. Keep the product exactly as shown in the reference image.`
 
-    return this.editImage(imageBuffer, prompt, { editMode: 'product-image' })
+    return this.editImage(imageBuffer, prompt)
   }
 
   /**
    * Fix lighting issues in product image
    */
   async fixLighting(imageBuffer: Buffer): Promise<{ buffer: Buffer; mimeType: string } | null> {
-    const prompt = `Improve the lighting of this product photo to be bright, even, and professional. Remove shadows and dark areas. Make it look like a well-lit studio product photo. Keep the product and background exactly the same, only improve the lighting quality.`
+    const prompt = `Professional product photo with bright, even studio lighting. Remove shadows and dark areas. Keep the product and background exactly as shown but with improved professional lighting quality.`
 
-    return this.editImage(imageBuffer, prompt, { editMode: 'inpaint' })
+    return this.editImage(imageBuffer, prompt)
   }
 
   /**
@@ -263,9 +259,7 @@ class VertexImagenService {
 
       console.log('[VertexImagen] Enhancing with prompt:', fullPrompt.substring(0, 100) + '...')
 
-      const result = await this.editImage(currentBuffer, fullPrompt, {
-        editMode: 'product-image'
-      })
+      const result = await this.editImage(currentBuffer, fullPrompt)
 
       if (result) {
         return {
