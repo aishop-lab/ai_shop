@@ -158,10 +158,11 @@ class VertexImagenService {
             prompt: editPrompt,
             referenceImages: [
               {
+                referenceId: 1,
                 referenceImage: {
                   bytesBase64Encoded: base64Image
                 },
-                referenceType: 1 // STYLE reference type
+                referenceType: 'STYLE_CLASS'
               }
             ]
           }
