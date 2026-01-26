@@ -282,6 +282,16 @@ export default function ImageUploader({
       const data = await response.json()
 
       if (!response.ok || !data.success) {
+        // Handle enhancement not available with recommendations
+        if (data.enhancement_unavailable && data.recommendations) {
+          const tips = data.recommendations.join('\n• ')
+          throw new Error(`Enhancement not available.\n\nTips to improve your image:\n• ${tips}`)
+        }
+        // Handle other errors with suggestions
+        if (data.suggestions) {
+          const tips = data.suggestions.join('\n• ')
+          throw new Error(`${data.error}\n\nSuggestions:\n• ${tips}`)
+        }
         throw new Error(data.error || 'Enhancement failed')
       }
 

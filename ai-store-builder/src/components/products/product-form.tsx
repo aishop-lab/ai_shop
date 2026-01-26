@@ -176,6 +176,23 @@ export default function ProductForm({
         setBackgroundWasRemoved(data.backgroundRemoved || false)
         setQualityScore(data.qualityAssessment?.score || null)
 
+        // Handle AI-suggested primary image reordering
+        if (data.suggestedPrimaryIndex !== undefined && data.suggestedPrimaryIndex > 0 && images.length > 1) {
+          const suggestedIndex = data.suggestedPrimaryIndex
+          if (suggestedIndex < images.length) {
+            // Reorder images to put suggested primary first
+            const reorderedImages = [...images]
+            const [primaryImage] = reorderedImages.splice(suggestedIndex, 1)
+            reorderedImages.unshift(primaryImage)
+            setImages(reorderedImages)
+
+            toast({
+              title: 'Primary Image Updated',
+              description: `AI selected image ${suggestedIndex + 1} as the best front-facing product shot`
+            })
+          }
+        }
+
         if (data.aiSuggestions) {
           // Store OCR text
           setOcrText(data.aiSuggestions.ocrText || [])

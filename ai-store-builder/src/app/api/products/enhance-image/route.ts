@@ -16,15 +16,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if Vertex AI is available
-    const isAvailable = await vertexImagen.isAvailable()
-    if (!isAvailable) {
-      return NextResponse.json(
-        { error: 'Image enhancement service not configured' },
-        { status: 503 }
-      )
-    }
-
     const formData = await request.formData()
     const imageFile = formData.get('image') as File | null
     const imageUrl = formData.get('image_url') as string | null
@@ -56,7 +47,62 @@ export async function POST(request: Request) {
 
     console.log('[EnhanceImage] Processing image, options:', enhanceOptions)
 
-    // Enhance the image
+    // Check if Vertex AI is available
+    const isAvailable = await vertexImagen.isAvailable()
+
+    if (!isAvailable) {
+      console.log('[EnhanceImage] Vertex AI not available, providing AI recommendations instead')
+
+      // Fallback: Analyze image and provide recommendations
+      try {
+        const analysisResult = await vercelAI.analyzeProductImage({
+          buffer: imageBuffer,
+          mimeType: 'image/jpeg'
+        })
+
+        const quality = analysisResult.image_quality
+        const recommendations: string[] = []
+
+        if (quality?.brightness === 'dark') {
+          recommendations.push('Image appears dark - consider retaking with better lighting')
+        } else if (quality?.brightness === 'bright') {
+          recommendations.push('Image is overexposed - reduce lighting or use diffused light')
+        }
+
+        if (quality?.is_blurry) {
+          recommendations.push('Image appears blurry - ensure camera is steady and in focus')
+        }
+
+        if (quality?.has_complex_background) {
+          recommendations.push('Consider using a plain background for cleaner product shots')
+        }
+
+        if (recommendations.length === 0) {
+          recommendations.push('Image quality is good!')
+        }
+
+        return NextResponse.json({
+          success: false,
+          error: 'Image enhancement service is not configured. Here are tips to improve your image manually:',
+          enhancement_unavailable: true,
+          recommendations,
+          quality_score: quality?.score || 5,
+          tip: 'Contact support to enable AI image enhancement, or follow the recommendations above.'
+        }, { status: 503 })
+      } catch (analysisError) {
+        console.error('[EnhanceImage] Analysis fallback failed:', analysisError)
+        return NextResponse.json({
+          success: false,
+          error: 'Image enhancement service is not configured. Please ensure your image has good lighting and a clean background.',
+          enhancement_unavailable: true,
+          tip: 'Set GOOGLE_CLOUD_PROJECT_ID and GOOGLE_CLOUD_CREDENTIALS environment variables to enable image enhancement.'
+        }, { status: 503 })
+      }
+    }
+
+    // Enhance the image using Vertex AI
+    console.log('[EnhanceImage] Using Vertex AI Imagen for enhancement')
+
     const result = await vertexImagen.enhanceProductImage(imageBuffer, {
       removeBackground: enhanceOptions.removeBackground ?? true,
       fixLighting: enhanceOptions.fixLighting ?? true,
@@ -65,10 +111,19 @@ export async function POST(request: Request) {
     })
 
     if (!result.success || !result.enhancedImage) {
-      return NextResponse.json(
-        { error: result.error || 'Image enhancement failed' },
-        { status: 500 }
-      )
+      console.error('[EnhanceImage] Enhancement failed:', result.error)
+
+      // Provide helpful error message
+      return NextResponse.json({
+        success: false,
+        error: result.error || 'Image enhancement did not produce a result',
+        details: 'The AI enhancement service could not process this image. This can happen if the image format is unsupported or the service is temporarily unavailable.',
+        suggestions: [
+          'Try with a different image format (JPEG or PNG)',
+          'Ensure the image is not corrupted',
+          'Try again in a few moments'
+        ]
+      }, { status: 500 })
     }
 
     // Upload enhanced image to Supabase Storage
@@ -111,7 +166,11 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('[EnhanceImage] Error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Enhancement failed' },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Enhancement failed',
+        details: 'An unexpected error occurred during image enhancement.'
+      },
       { status: 500 }
     )
   }
@@ -174,11 +233,15 @@ export async function GET(request: Request) {
       quality.hasCompositionIssues ||
       quality.isBlurry
 
+    // Check if enhancement service is available
+    const enhancementAvailable = await vertexImagen.isAvailable()
+
     return NextResponse.json({
       success: true,
       quality: {
         score: quality.overallScore,
         needs_enhancement: needsEnhancement,
+        enhancement_available: enhancementAvailable,
         issues: {
           background: quality.hasBackgroundIssues,
           lighting: quality.hasLightingIssues,

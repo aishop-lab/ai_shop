@@ -292,6 +292,105 @@ Combine ALL visible information into one comprehensive analysis.`,
   }
 
   /**
+   * Analyze multiple images AND determine which should be the primary (front-facing) image
+   * Returns both the combined analysis and the suggested primary image index
+   */
+  async analyzeMultipleProductImagesWithPrimarySelection(
+    images: Array<{ buffer: Buffer; mimeType: string }>
+  ): Promise<{ analysis: ProductAnalysis; suggestedPrimaryIndex: number }> {
+    this.logProvider('analyzeMultipleProductImagesWithPrimarySelection')
+
+    if (images.length === 0) {
+      throw new Error('At least one image is required')
+    }
+
+    if (images.length === 1) {
+      return {
+        analysis: await this.analyzeProductImage(images[0]),
+        suggestedPrimaryIndex: 0
+      }
+    }
+
+    try {
+      // Prepare all images for the API
+      const imageContents = images.map(img => {
+        const base64 = img.buffer.toString('base64')
+        return {
+          type: 'image' as const,
+          image: base64,
+          mimeType: img.mimeType
+        }
+      })
+
+      // Create a combined schema for analysis + primary selection
+      const { z } = await import('zod')
+      const combinedSchema = z.object({
+        product_analysis: productAnalysisSchema,
+        primary_image_index: z.number().min(0).describe('Index (0-based) of the best image to use as primary/main image'),
+        primary_selection_reason: z.string().describe('Brief reason why this image was selected as primary')
+      })
+
+      const { object } = await generateObject({
+        model: getVisionModel(),
+        schema: combinedSchema,
+        system: PRODUCT_ANALYSIS_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              ...imageContents,
+              {
+                type: 'text',
+                text: `You are analyzing ${images.length} images of the SAME product. These images show different angles, details, or packaging.
+
+TASK 1 - PRODUCT ANALYSIS:
+Combine information from ALL ${images.length} images to create a comprehensive product listing:
+1. Product title (SEO-friendly, 3-7 words)
+2. Description (2-3 compelling sentences combining details from all images)
+3. Categories and tags
+4. Visible attributes (color, material, style, etc.)
+5. Any text visible in ANY image (OCR)
+6. Overall image quality assessment
+
+TASK 2 - PRIMARY IMAGE SELECTION:
+Determine which image (by index, 0-based) should be the PRIMARY/MAIN product image.
+
+The BEST primary image should be:
+- Front-facing view of the product (not back, side, or detail shots)
+- Shows the full product clearly
+- Has good lighting and clarity
+- Would be most appealing as the main listing image customers see first
+- Is NOT a close-up detail, tag, or packaging-only shot
+
+Images are numbered 0 to ${images.length - 1}. Select the best one for primary.
+
+Be thorough in analysis and thoughtful in primary selection.`,
+              },
+            ],
+          },
+        ],
+      })
+
+      console.log(`[VercelAI] Multi-image + primary selection complete. Primary: ${object.primary_image_index}, Reason: ${object.primary_selection_reason}`)
+
+      return {
+        analysis: object.product_analysis,
+        suggestedPrimaryIndex: Math.min(object.primary_image_index, images.length - 1)
+      }
+    } catch (error) {
+      console.error('[VercelAI] Multi-image with primary selection failed:', error)
+
+      // Fallback to basic multi-image analysis
+      console.log('[VercelAI] Falling back to basic multi-image analysis')
+      const analysis = await this.analyzeMultipleProductImages(images)
+      return {
+        analysis,
+        suggestedPrimaryIndex: 0 // Default to first image
+      }
+    }
+  }
+
+  /**
    * Enhanced product analysis with price suggestion and SEO
    */
   async analyzeProductImageEnhanced(
