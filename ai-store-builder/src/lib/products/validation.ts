@@ -8,12 +8,12 @@ import { z } from 'zod'
 export const productInputSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters').max(200, 'Title too long'),
   description: z.string().min(10, 'Description must be at least 10 characters').max(5000, 'Description too long'),
-  price: z.number().positive('Price must be positive'),
+  price: z.number().min(0, 'Price cannot be negative').default(0),
   compare_at_price: z.number().positive('Compare at price must be positive').optional().nullable(),
   cost_per_item: z.number().positive('Cost must be positive').optional().nullable(),
   sku: z.string().max(100, 'SKU too long').optional().nullable(),
   barcode: z.string().max(100, 'Barcode too long').optional().nullable(),
-  quantity: z.number().int('Quantity must be a whole number').min(0, 'Quantity cannot be negative').default(0),
+  quantity: z.number().int('Quantity must be a whole number').min(0, 'Quantity cannot be negative').optional().default(0),
   track_quantity: z.boolean().default(true),
   weight: z.number().positive('Weight must be positive').optional().nullable(),
   requires_shipping: z.boolean().default(true),
@@ -30,7 +30,7 @@ export const productUploadSchema = z.object({
   store_id: z.string().uuid('Invalid store ID'),
   title: z.string().min(3).max(200).optional(),
   description: z.string().min(10).max(5000).optional(),
-  price: z.number().positive().optional(),
+  price: z.number().min(0).optional().default(0),
   compare_at_price: z.number().positive().optional().nullable(),
   cost_per_item: z.number().positive().optional().nullable(),
   sku: z.string().max(100).optional().nullable(),
@@ -114,16 +114,16 @@ export type ProductListQuery = z.infer<typeof productListQuerySchema>
  * Validate that compare_at_price is greater than price
  */
 export function validatePricing(price: number, compareAtPrice?: number | null): { valid: boolean; error?: string } {
-  if (price <= 0) {
-    return { valid: false, error: 'Price must be greater than 0' }
+  if (price < 0) {
+    return { valid: false, error: 'Price cannot be negative' }
   }
-  
-  if (compareAtPrice !== null && compareAtPrice !== undefined) {
+
+  if (compareAtPrice !== null && compareAtPrice !== undefined && price > 0) {
     if (compareAtPrice <= price) {
       return { valid: false, error: 'Compare at price must be greater than sale price' }
     }
   }
-  
+
   return { valid: true }
 }
 

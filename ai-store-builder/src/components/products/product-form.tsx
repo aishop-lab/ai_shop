@@ -29,17 +29,17 @@ const AUTO_APPLY_THRESHOLD = 0.80
 const productSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
-  price: z.number().positive('Price must be positive'),
+  price: z.number().min(0, 'Price cannot be negative').default(0),
   compare_at_price: z.number().positive().optional().nullable(),
   cost_per_item: z.number().positive().optional().nullable(),
-  quantity: z.number().int().min(0),
+  quantity: z.number().int().min(0).default(0).optional(),
   sku: z.string().optional().nullable(),
   barcode: z.string().optional().nullable(),
   weight: z.number().positive().optional().nullable(),
-  categories: z.array(z.string()),
-  tags: z.array(z.string()),
-  track_quantity: z.boolean(),
-  requires_shipping: z.boolean()
+  categories: z.array(z.string()).default([]),
+  tags: z.array(z.string()).default([]),
+  track_quantity: z.boolean().default(true),
+  requires_shipping: z.boolean().default(true)
 })
 
 type ProductFormData = z.infer<typeof productSchema>

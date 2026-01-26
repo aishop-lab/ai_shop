@@ -295,8 +295,15 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Product upload error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    console.error('Error details:', { message: errorMessage, stack: errorStack })
     return NextResponse.json(
-      { success: false, error: 'Failed to upload product' },
+      {
+        success: false,
+        error: 'Failed to upload product',
+        details: errorMessage
+      },
       { status: 500 }
     )
   }
