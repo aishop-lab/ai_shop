@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { completeOnboardingSchema } from '@/lib/validations/onboarding'
 import { getDemoProducts, getDemoProductImageUrl } from '@/lib/products/demo-products'
 import { vercelAI } from '@/lib/ai/vercel-ai-service'
+import { sendWelcomeMerchantEmail } from '@/lib/email/merchant-notifications'
 
 export async function POST(request: Request) {
   try {
@@ -198,8 +199,35 @@ export async function POST(request: Request) {
       // Don't fail the whole request - store is already active
     }
 
+    // Send welcome email to merchant
+    try {
+      // Get merchant profile for name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+
+      const merchantName = profile?.full_name || user.email?.split('@')[0] || 'Merchant'
+      const merchantEmail = user.email
+
+      if (merchantEmail) {
+        await sendWelcomeMerchantEmail({
+          merchantEmail,
+          merchantName,
+          storeName: store.name,
+          storeSlug: store.slug
+        })
+        console.log('[Complete] Welcome email sent to merchant:', merchantEmail)
+      }
+    } catch (emailError) {
+      console.error('[Complete] Welcome email failed (non-blocking):', emailError)
+      // Don't fail the whole request - store is already active
+    }
+
     // Generate subdomain URL
-    const subdomain = `${store.slug}.mystore.in`
+    const PRODUCTION_DOMAIN = process.env.NEXT_PUBLIC_PRODUCTION_DOMAIN || 'storeforge.site'
+    const subdomain = `${store.slug}.${PRODUCTION_DOMAIN}`
     const storeUrl = `https://${subdomain}`
 
     return NextResponse.json({

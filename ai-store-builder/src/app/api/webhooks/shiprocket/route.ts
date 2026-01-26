@@ -5,6 +5,11 @@ import {
   sendOrderShippedEmail,
   sendOrderDeliveredEmail,
 } from '@/lib/email/order-confirmation'
+import {
+  sendOrderShippedWhatsApp,
+  sendOrderDeliveredWhatsApp,
+  sendOutForDeliveryWhatsApp,
+} from '@/lib/whatsapp/msg91'
 
 // Use service role for webhooks (no user context)
 const supabase = createClient(
@@ -143,19 +148,55 @@ export async function POST(request: Request) {
         })
         .eq('id', order.id)
 
+      // Send email
       await sendOrderShippedEmail({
         ...order,
         tracking_number: payload.awb,
         courier_name: payload.courier_name,
         store: storeInfo,
       })
-      console.log('[Shiprocket Webhook] Shipped email sent for order:', order.order_number)
+
+      // Send WhatsApp notification
+      if (order.shipping_phone) {
+        await sendOrderShippedWhatsApp({
+          phone: order.shipping_phone,
+          customerName: order.shipping_name || 'Customer',
+          orderNumber: order.order_number,
+          courierName: payload.courier_name,
+          trackingNumber: payload.awb,
+          estimatedDelivery: payload.etd || undefined
+        })
+      }
+
+      console.log('[Shiprocket Webhook] Shipped notifications sent for order:', order.order_number)
+    } else if (mappedStatus === 'out_for_delivery') {
+      // Send WhatsApp notification for out for delivery
+      if (order.shipping_phone) {
+        await sendOutForDeliveryWhatsApp({
+          phone: order.shipping_phone,
+          customerName: order.shipping_name || 'Customer',
+          orderNumber: order.order_number
+        })
+      }
+      console.log('[Shiprocket Webhook] Out for delivery notification sent for order:', order.order_number)
     } else if (mappedStatus === 'delivered') {
+      // Send email
       await sendOrderDeliveredEmail({
         ...order,
         store: storeInfo,
       })
-      console.log('[Shiprocket Webhook] Delivered email sent for order:', order.order_number)
+
+      // Send WhatsApp notification
+      if (order.shipping_phone) {
+        await sendOrderDeliveredWhatsApp({
+          phone: order.shipping_phone,
+          customerName: order.shipping_name || 'Customer',
+          orderNumber: order.order_number,
+          storeName: storeInfo?.name || 'Store'
+        })
+      }
+
+      console.log('[Shiprocket Webhook] Delivered notifications sent for order:', order.order_number)
     }
 
     console.log('[Shiprocket Webhook] Processed successfully:', {

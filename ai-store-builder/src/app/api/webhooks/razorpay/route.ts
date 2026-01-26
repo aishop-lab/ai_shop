@@ -6,6 +6,8 @@ import {
   sendOrderConfirmationEmail,
   sendRefundProcessedEmail,
 } from '@/lib/email/order-confirmation'
+import { sendOrderConfirmationWhatsApp } from '@/lib/whatsapp/msg91'
+import { sendNewOrderMerchantEmail } from '@/lib/email/merchant-notifications'
 import type {
   RazorpayWebhookEvent,
   RazorpayPayment,
@@ -149,14 +151,21 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
   // Release inventory reservation
   await releaseReservation(order.id)
 
-  // Get store name for email
+  // Get store and owner info for notifications
   const { data: store } = await supabase
     .from('stores')
-    .select('name')
+    .select('name, owner_id, contact_email')
     .eq('id', order.store_id)
     .single()
 
-  // Send confirmation email
+  // Get merchant email from auth
+  let merchantEmail: string | undefined
+  if (store?.owner_id) {
+    const { data: authUser } = await supabase.auth.admin.getUserById(store.owner_id)
+    merchantEmail = authUser?.user?.email || store.contact_email || undefined
+  }
+
+  // Send confirmation email to customer
   const orderWithStore: Order & { store?: { name: string } } = {
     ...order,
     order_items: orderItems,
@@ -164,6 +173,58 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
   }
 
   await sendOrderConfirmationEmail(orderWithStore)
+
+  // Send WhatsApp notification to customer (if phone provided)
+  if (order.shipping_phone) {
+    await sendOrderConfirmationWhatsApp({
+      phone: order.shipping_phone,
+      customerName: order.shipping_name || order.customer_email?.split('@')[0] || 'Customer',
+      orderNumber: order.order_number,
+      totalAmount: order.total_amount,
+      storeName: store?.name || 'Store',
+      items: orderItems.map((item: OrderItem) => ({
+        title: item.product_title || item.title || 'Product',
+        quantity: item.quantity,
+        price: item.unit_price
+      }))
+    })
+  }
+
+  // Send new order notification to merchant
+  if (merchantEmail && store) {
+    const shippingAddress = {
+      name: order.shipping_name || '',
+      address_line1: order.shipping_address_line1 || '',
+      address_line2: order.shipping_address_line2 || undefined,
+      city: order.shipping_city || '',
+      state: order.shipping_state || '',
+      pincode: order.shipping_pincode || '',
+      country: order.shipping_country || 'India',
+      phone: order.shipping_phone || ''
+    }
+
+    await sendNewOrderMerchantEmail({
+      merchantEmail,
+      storeName: store.name,
+      orderNumber: order.order_number,
+      customerName: order.shipping_name || order.customer_email || 'Customer',
+      customerEmail: order.customer_email || '',
+      customerPhone: order.shipping_phone || undefined,
+      items: orderItems.map((item: OrderItem) => ({
+        product_title: item.product_title || item.title || 'Product',
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        sku: item.sku || undefined
+      })),
+      subtotal: order.subtotal || order.total_amount,
+      shippingCost: order.shipping_cost || 0,
+      totalAmount: order.total_amount,
+      shippingAddress,
+      paymentMethod: order.payment_method || 'online',
+      paymentStatus: 'paid'
+    })
+  }
 
   console.log('Order confirmed:', order.order_number)
 }
