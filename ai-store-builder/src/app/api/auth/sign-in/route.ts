@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { signInSchema } from '@/lib/validations/auth'
 import { handleAuthError } from '@/lib/utils/errors'
 import { getUserProfile } from '@/lib/auth/utils'
@@ -22,9 +22,10 @@ export async function POST(request: Request) {
     const { email, password } = validationResult.data
 
     const supabase = await createClient()
+    const adminClient = await createAdminClient()
 
-    // Check if user exists by looking for their profile
-    const { data: existingProfile } = await supabase
+    // Check if user exists by looking for their profile (using admin client to bypass RLS)
+    const { data: existingProfile } = await adminClient
       .from('profiles')
       .select('id')
       .eq('email', email)
