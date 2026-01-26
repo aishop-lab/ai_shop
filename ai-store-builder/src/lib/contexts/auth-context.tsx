@@ -75,6 +75,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json()
 
       if (!response.ok) {
+        // Check if user doesn't exist - redirect to sign-up
+        if (data.code === 'USER_NOT_FOUND') {
+          toast.info('No account found. Let\'s create one!')
+          router.push(`/sign-up?email=${encodeURIComponent(email)}`)
+          return
+        }
         throw new Error(data.error || 'Failed to sign in')
       }
 

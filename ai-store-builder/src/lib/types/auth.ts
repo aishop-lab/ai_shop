@@ -45,6 +45,7 @@ export interface AuthResponse {
   user?: AuthUser | null
   profile?: Profile | null
   error?: string
+  code?: 'USER_NOT_FOUND' | string
 }
 
 export interface ProfileUpdateData {

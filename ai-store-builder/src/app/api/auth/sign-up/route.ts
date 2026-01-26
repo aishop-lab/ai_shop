@@ -31,7 +31,7 @@ export async function POST(request: Request) {
           full_name,
           phone: phone || null
         },
-        emailRedirectTo: `${new URL(request.url).origin}/api/auth/callback`
+        emailRedirectTo: `${new URL(request.url).origin}/auth/confirm`
       }
     })
 

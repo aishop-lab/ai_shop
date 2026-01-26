@@ -23,6 +23,25 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
+    // Check if user exists by looking for their profile
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle()
+
+    if (!existingProfile) {
+      // No account with this email - return specific error code
+      return NextResponse.json<AuthResponse>(
+        {
+          success: false,
+          error: 'No account found with this email',
+          code: 'USER_NOT_FOUND'
+        },
+        { status: 404 }
+      )
+    }
+
     // Sign in with Supabase Auth
     const { data, error } = await supabase.auth.signInWithPassword({
       email,

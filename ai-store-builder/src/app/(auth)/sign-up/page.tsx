@@ -2,8 +2,9 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -16,6 +17,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { PasswordStrength } from '@/components/auth/password-strength'
 import { Separator } from '@/components/ui/separator'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -52,6 +54,8 @@ type SignUpFormData = z.infer<typeof signUpSchema>
 
 export default function SignUpPage() {
   const { signUp, signInWithGoogle } = useAuth()
+  const searchParams = useSearchParams()
+  const prefillEmail = searchParams.get('email') || ''
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -61,12 +65,19 @@ export default function SignUpPage() {
     resolver: zodResolver(signUpSchema),
     defaultValues: {
       full_name: '',
-      email: '',
+      email: prefillEmail,
       phone: '',
       password: '',
       confirmPassword: ''
     }
   })
+
+  // Update email field if prefillEmail changes
+  useEffect(() => {
+    if (prefillEmail) {
+      form.setValue('email', prefillEmail)
+    }
+  }, [prefillEmail, form])
 
   const password = form.watch('password')
 
@@ -106,6 +117,15 @@ export default function SignUpPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Show message if redirected from sign-in */}
+        {prefillEmail && (
+          <Alert className="mb-4 bg-blue-50 border-blue-200">
+            <AlertDescription className="text-blue-800">
+              No account found for <strong>{prefillEmail}</strong>. Create one below to get started.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Google Sign Up */}
         <Button
           type="button"
