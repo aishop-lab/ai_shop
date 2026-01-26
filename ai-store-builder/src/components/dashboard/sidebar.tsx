@@ -201,9 +201,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
               items={[
                 {
                   label: 'View Store',
-                  href: process.env.NODE_ENV === 'production'
-                    ? `https://${store.slug}.storeforge.site`
-                    : `/${store.slug}`,
+                  href: `/${store.slug}`,
                   icon: ExternalLink,
                   external: true
                 },
