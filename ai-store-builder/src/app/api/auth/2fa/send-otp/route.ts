@@ -10,15 +10,19 @@ import {
 } from '@/lib/auth/email-otp'
 import { sendTwoFactorOTPEmail } from '@/lib/email/two-factor'
 
-/**
- * POST /api/auth/2fa/disable
- *
- * Send an OTP to start the disable flow.
- * The actual disabling happens in /api/auth/2fa/verify with action='disable'
- */
-export async function POST() {
+interface SendOTPRequest {
+  action: 'login' | 'enable' | 'disable'
+}
+
+export async function POST(request: Request) {
   try {
     const supabase = await createClient()
+    const body: SendOTPRequest = await request.json()
+    const { action } = body
+
+    if (!action || !['login', 'enable', 'disable'].includes(action)) {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    }
 
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -27,7 +31,7 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get profile with 2FA data
+    // Get profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('full_name, email, two_factor_enabled, two_factor_last_otp_sent_at')
@@ -35,11 +39,16 @@ export async function POST() {
       .single()
 
     if (profileError || !profile) {
-      console.error('[2FA Disable] Profile error:', profileError)
+      console.error('[2FA Send OTP] Profile error:', profileError)
       return NextResponse.json({ error: 'Failed to get profile' }, { status: 500 })
     }
 
-    if (!profile.two_factor_enabled) {
+    // Validate action based on current 2FA state
+    if (action === 'enable' && profile.two_factor_enabled) {
+      return NextResponse.json({ error: '2FA is already enabled' }, { status: 400 })
+    }
+
+    if (action === 'disable' && !profile.two_factor_enabled) {
       return NextResponse.json({ error: '2FA is not enabled' }, { status: 400 })
     }
 
@@ -57,7 +66,7 @@ export async function POST() {
     const otpHash = hashOTP(otp)
     const expiresAt = getOTPExpiry()
 
-    // Store OTP hash
+    // Store OTP hash and reset attempts
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
@@ -69,34 +78,43 @@ export async function POST() {
       .eq('id', user.id)
 
     if (updateError) {
-      console.error('[2FA Disable] Update error:', updateError)
+      console.error('[2FA Send OTP] Update error:', updateError)
       return NextResponse.json({ error: 'Failed to generate OTP' }, { status: 500 })
     }
 
-    // Send OTP email
+    // Send email
     const emailResult = await sendTwoFactorOTPEmail({
       email: profile.email || user.email!,
       userName: profile.full_name || 'User',
       otpCode: otp,
-      action: 'disable'
+      action
     })
 
     if (!emailResult.success) {
-      console.error('[2FA Disable] Email error:', emailResult.error)
+      console.error('[2FA Send OTP] Email error:', emailResult.error)
+
+      // Check for Resend testing mode limitation
+      if (emailResult.error?.includes('testing emails') || emailResult.error?.includes('verify a domain')) {
+        return NextResponse.json({
+          error: 'Email service is in testing mode. Please verify a domain in Resend or use the account owner email for testing.',
+          details: emailResult.error
+        }, { status: 503 })
+      }
+
       return NextResponse.json({ error: 'Failed to send verification email' }, { status: 500 })
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Verification code sent to your email. Enter the code to disable 2FA.',
+      message: 'Verification code sent to your email',
       expiresInMinutes: OTP_CONFIG.expiryMinutes,
       cooldownSeconds: OTP_CONFIG.cooldownSeconds
     })
 
   } catch (error) {
-    console.error('[2FA Disable] Error:', error)
+    console.error('[2FA Send OTP] Error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to initiate 2FA disable' },
+      { error: error instanceof Error ? error.message : 'Failed to send OTP' },
       { status: 500 }
     )
   }

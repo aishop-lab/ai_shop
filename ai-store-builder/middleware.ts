@@ -7,6 +7,10 @@ const authRoutes = ['/sign-in', '/sign-up']
 // Production domain for subdomain routing
 const PRODUCTION_DOMAIN = 'storeforge.site'
 
+// Cache for custom domain lookups (in-memory, resets on cold start)
+const customDomainCache = new Map<string, { slug: string; expiresAt: number }>()
+const CACHE_TTL = 60 * 1000 // 1 minute
+
 /**
  * Extract store slug from subdomain if present
  * e.g., mystore.storeforge.site -> mystore
@@ -32,6 +36,67 @@ function extractStoreSlug(hostname: string): string | null {
   return null
 }
 
+/**
+ * Check if hostname is a custom domain (not our platform domain)
+ */
+function isCustomDomain(hostname: string): boolean {
+  // Remove port if present
+  const host = hostname.split(':')[0]
+
+  // Not a custom domain if it's our platform
+  if (host.endsWith(PRODUCTION_DOMAIN)) return false
+  if (host.includes('localhost') || host.includes('127.0.0.1')) return false
+  if (host.endsWith('.vercel.app')) return false
+
+  return true
+}
+
+/**
+ * Look up store slug for a custom domain
+ */
+async function getStoreSlugForCustomDomain(hostname: string): Promise<string | null> {
+  const host = hostname.split(':')[0].toLowerCase()
+
+  // Check cache first
+  const cached = customDomainCache.get(host)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.slug
+  }
+
+  // Look up in database
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    return null
+  }
+
+  try {
+    const response = await fetch(`${supabaseUrl}/rest/v1/stores?custom_domain=eq.${encodeURIComponent(host)}&custom_domain_verified=eq.true&status=eq.active&select=slug`, {
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`
+      }
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      if (data && data[0]?.slug) {
+        // Cache the result
+        customDomainCache.set(host, {
+          slug: data[0].slug,
+          expiresAt: Date.now() + CACHE_TTL
+        })
+        return data[0].slug
+      }
+    }
+  } catch (error) {
+    console.error('Custom domain lookup error:', error)
+  }
+
+  return null
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const hostname = request.headers.get('host') || ''
@@ -39,6 +104,22 @@ export async function middleware(request: NextRequest) {
   // Skip for static files and API routes
   if (pathname.startsWith('/_next') || pathname.includes('.') || pathname.startsWith('/api')) {
     return NextResponse.next()
+  }
+
+  // === CUSTOM DOMAIN ROUTING ===
+  if (isCustomDomain(hostname)) {
+    const storeSlug = await getStoreSlugForCustomDomain(hostname)
+
+    if (storeSlug) {
+      // Custom domain found - rewrite to store route
+      const url = request.nextUrl.clone()
+
+      if (!pathname.startsWith(`/${storeSlug}`)) {
+        url.pathname = pathname === '/' ? `/${storeSlug}` : `/${storeSlug}${pathname}`
+        return NextResponse.rewrite(url)
+      }
+    }
+    // If custom domain not found, continue (will show 404 or landing page)
   }
 
   // === SUBDOMAIN ROUTING ===

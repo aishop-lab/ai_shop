@@ -3,6 +3,13 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { signInSchema } from '@/lib/validations/auth'
 import { handleAuthError } from '@/lib/utils/errors'
 import { getUserProfile } from '@/lib/auth/utils'
+import {
+  generateOTP,
+  hashOTP,
+  getOTPExpiry,
+  createPendingToken
+} from '@/lib/auth/email-otp'
+import { sendTwoFactorOTPEmail } from '@/lib/email/two-factor'
 import type { AuthResponse } from '@/lib/types/auth'
 
 export async function POST(request: Request) {
@@ -27,7 +34,7 @@ export async function POST(request: Request) {
     // Check if user exists by looking for their profile (using admin client to bypass RLS)
     const { data: existingProfile } = await adminClient
       .from('profiles')
-      .select('id')
+      .select('id, full_name, two_factor_enabled')
       .eq('email', email)
       .maybeSingle()
 
@@ -61,6 +68,71 @@ export async function POST(request: Request) {
       return NextResponse.json<AuthResponse>(
         { success: false, error: 'Invalid email or password' },
         { status: 401 }
+      )
+    }
+
+    // Check if 2FA is enabled
+    if (existingProfile.two_factor_enabled) {
+      // Generate OTP and send email
+      const otp = generateOTP()
+      const otpHash = hashOTP(otp)
+      const expiresAt = getOTPExpiry()
+
+      // Store OTP hash in profile
+      await adminClient
+        .from('profiles')
+        .update({
+          two_factor_secret: otpHash,
+          two_factor_otp_expires_at: expiresAt.toISOString(),
+          two_factor_otp_attempts: 0,
+          two_factor_last_otp_sent_at: new Date().toISOString()
+        })
+        .eq('id', data.user.id)
+
+      // Send OTP email
+      const emailResult = await sendTwoFactorOTPEmail({
+        email,
+        userName: existingProfile.full_name || 'User',
+        otpCode: otp,
+        action: 'login'
+      })
+
+      if (!emailResult.success) {
+        console.error('[Sign-in 2FA] Email error:', emailResult.error)
+        // Sign out since we couldn't send the OTP
+        await supabase.auth.signOut()
+
+        // Check for Resend testing mode limitation
+        if (emailResult.error?.includes('testing emails') || emailResult.error?.includes('verify a domain')) {
+          return NextResponse.json<AuthResponse>(
+            {
+              success: false,
+              error: 'Email service is in testing mode. Please contact support or verify your domain in Resend.'
+            },
+            { status: 503 }
+          )
+        }
+
+        return NextResponse.json<AuthResponse>(
+          { success: false, error: 'Failed to send verification email. Please try again.' },
+          { status: 500 }
+        )
+      }
+
+      // Create pending token
+      const pendingToken = createPendingToken(data.user.id)
+
+      // Sign out the temporary session (user needs to complete 2FA first)
+      await supabase.auth.signOut()
+
+      return NextResponse.json<AuthResponse>(
+        {
+          success: true,
+          message: 'Verification code sent to your email',
+          requires2FA: true,
+          pendingToken
+        },
+        { status: 200 }
       )
     }
 

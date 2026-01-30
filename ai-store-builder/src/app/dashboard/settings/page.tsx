@@ -22,7 +22,8 @@ import {
   FileText,
   Database,
   Shield,
-  AlertTriangle
+  AlertTriangle,
+  Globe
 } from 'lucide-react'
 import { RebuildStoreDialog } from '@/components/dashboard/rebuild-store-dialog'
 import { ColorAccessibilityChecker } from '@/components/ui/color-accessibility-checker'
@@ -567,11 +568,36 @@ export default function SettingsPage() {
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
               Enable two-factor authentication to add an extra layer of security.
-              Use Google Authenticator or similar apps.
+              Verification codes will be sent to your email.
             </p>
             <Link href="/dashboard/settings/security">
               <Button variant="outline">
                 Security Settings
+                <ExternalLink className="h-3 w-3 ml-2" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Custom Domain */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5" />
+              Custom Domain
+            </CardTitle>
+            <CardDescription>
+              Connect your own domain to your store
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Use your own domain (e.g., myshop.com) instead of {store.slug}.storeforge.site.
+              Your subdomain will always remain active as a backup.
+            </p>
+            <Link href="/dashboard/settings/domain">
+              <Button variant="outline">
+                Domain Settings
                 <ExternalLink className="h-3 w-3 ml-2" />
               </Button>
             </Link>

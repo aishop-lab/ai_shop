@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { setupTwoFactor } from '@/lib/auth/two-factor'
+import {
+  generateOTP,
+  hashOTP,
+  getOTPExpiry,
+  canSendOTP,
+  getCooldownRemaining,
+  OTP_CONFIG
+} from '@/lib/auth/email-otp'
+import { sendTwoFactorOTPEmail } from '@/lib/email/two-factor'
 
 export async function POST() {
   try {
@@ -13,10 +21,10 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if 2FA is already enabled
+    // Get profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('two_factor_enabled')
+      .select('full_name, email, two_factor_enabled, two_factor_last_otp_sent_at')
       .eq('id', user.id)
       .single()
 
@@ -29,15 +37,28 @@ export async function POST() {
       return NextResponse.json({ error: '2FA is already enabled' }, { status: 400 })
     }
 
-    // Generate 2FA setup data
-    const setupData = await setupTwoFactor(user.email || user.id)
+    // Check rate limiting (60 second cooldown)
+    if (!canSendOTP(profile?.two_factor_last_otp_sent_at)) {
+      const remaining = getCooldownRemaining(profile?.two_factor_last_otp_sent_at)
+      return NextResponse.json({
+        error: `Please wait ${remaining} seconds before requesting another code`,
+        cooldownRemaining: remaining
+      }, { status: 429 })
+    }
 
-    // Store the secret temporarily (will be confirmed in verify step)
+    // Generate OTP
+    const otp = generateOTP()
+    const otpHash = hashOTP(otp)
+    const expiresAt = getOTPExpiry()
+
+    // Store OTP hash and reset attempts
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
-        two_factor_secret: setupData.secret,
-        two_factor_backup_codes: setupData.backupCodes
+        two_factor_secret: otpHash,
+        two_factor_otp_expires_at: expiresAt.toISOString(),
+        two_factor_otp_attempts: 0,
+        two_factor_last_otp_sent_at: new Date().toISOString()
       })
       .eq('id', user.id)
 
@@ -46,11 +67,33 @@ export async function POST() {
       return NextResponse.json({ error: 'Failed to store 2FA data' }, { status: 500 })
     }
 
+    // Send OTP email
+    const emailResult = await sendTwoFactorOTPEmail({
+      email: profile?.email || user.email!,
+      userName: profile?.full_name || 'User',
+      otpCode: otp,
+      action: 'enable'
+    })
+
+    if (!emailResult.success) {
+      console.error('[2FA Setup] Email error:', emailResult.error)
+
+      // Check for Resend testing mode limitation
+      if (emailResult.error?.includes('testing emails') || emailResult.error?.includes('verify a domain')) {
+        return NextResponse.json({
+          error: 'Email service is in testing mode. Please verify a domain in Resend or use the account owner email for testing.',
+          details: emailResult.error
+        }, { status: 503 })
+      }
+
+      return NextResponse.json({ error: 'Failed to send verification email' }, { status: 500 })
+    }
+
     return NextResponse.json({
       success: true,
-      qrCode: setupData.qrCodeUrl,
-      backupCodes: setupData.backupCodes,
-      message: 'Scan the QR code with your authenticator app, then verify with a code'
+      message: 'Verification code sent to your email. Enter the code to enable 2FA.',
+      expiresInMinutes: OTP_CONFIG.expiryMinutes,
+      cooldownSeconds: OTP_CONFIG.cooldownSeconds
     })
 
   } catch (error) {

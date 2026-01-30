@@ -13,11 +13,8 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
-  Smartphone,
-  Key,
-  Copy,
-  Eye,
-  EyeOff
+  Mail,
+  RefreshCw
 } from 'lucide-react'
 import {
   Dialog,
@@ -31,30 +28,34 @@ import {
 interface TwoFactorStatus {
   enabled: boolean
   enabledAt: string | null
-  remainingBackupCodes: number
-}
-
-interface SetupData {
-  qrCode: string
-  backupCodes: string[]
 }
 
 export default function SecuritySettingsPage() {
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState<TwoFactorStatus | null>(null)
-  const [setupData, setSetupData] = useState<SetupData | null>(null)
-  const [verificationCode, setVerificationCode] = useState('')
   const [isSettingUp, setIsSettingUp] = useState(false)
+  const [showVerifyDialog, setShowVerifyDialog] = useState(false)
+  const [verificationCode, setVerificationCode] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
-  const [isDisabling, setIsDisabling] = useState(false)
   const [showDisableDialog, setShowDisableDialog] = useState(false)
   const [disableCode, setDisableCode] = useState('')
-  const [showBackupCodes, setShowBackupCodes] = useState(false)
+  const [isDisabling, setIsDisabling] = useState(false)
+  const [isResending, setIsResending] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
+  const [currentAction, setCurrentAction] = useState<'enable' | 'disable'>('enable')
 
   // Fetch 2FA status on mount
   useEffect(() => {
     fetchStatus()
   }, [])
+
+  // Cooldown countdown
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [cooldown])
 
   const fetchStatus = async () => {
     try {
@@ -79,17 +80,46 @@ export default function SecuritySettingsPage() {
       const data = await response.json()
 
       if (!response.ok) {
+        if (data.cooldownRemaining) {
+          setCooldown(data.cooldownRemaining)
+        }
         throw new Error(data.error || 'Setup failed')
       }
 
-      setSetupData({
-        qrCode: data.qrCode,
-        backupCodes: data.backupCodes
-      })
+      toast.success('Verification code sent to your email')
+      setCurrentAction('enable')
+      setShowVerifyDialog(true)
+      setCooldown(data.cooldownSeconds || 60)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to start 2FA setup')
     } finally {
       setIsSettingUp(false)
+    }
+  }
+
+  const handleStartDisable = async () => {
+    setIsDisabling(true)
+    try {
+      const response = await fetch('/api/auth/2fa/disable', {
+        method: 'POST'
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (data.cooldownRemaining) {
+          setCooldown(data.cooldownRemaining)
+        }
+        throw new Error(data.error || 'Failed to start disable process')
+      }
+
+      toast.success('Verification code sent to your email')
+      setCurrentAction('disable')
+      setShowDisableDialog(true)
+      setCooldown(data.cooldownSeconds || 60)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to start disable process')
+    } finally {
+      setIsDisabling(false)
     }
   }
 
@@ -109,11 +139,16 @@ export default function SecuritySettingsPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Verification failed')
+        if (data.attemptsRemaining !== undefined) {
+          toast.error(`${data.error}. ${data.attemptsRemaining} attempts remaining.`)
+        } else {
+          throw new Error(data.error || 'Verification failed')
+        }
+        return
       }
 
       toast.success('2FA enabled successfully!')
-      setSetupData(null)
+      setShowVerifyDialog(false)
       setVerificationCode('')
       fetchStatus()
     } catch (error) {
@@ -123,23 +158,28 @@ export default function SecuritySettingsPage() {
     }
   }
 
-  const handleDisable = async () => {
+  const handleDisableVerify = async () => {
     if (disableCode.length !== 6) {
       toast.error('Please enter a 6-digit code')
       return
     }
 
-    setIsDisabling(true)
+    setIsVerifying(true)
     try {
-      const response = await fetch('/api/auth/2fa/disable', {
+      const response = await fetch('/api/auth/2fa/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: disableCode })
+        body: JSON.stringify({ token: disableCode, action: 'disable' })
       })
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to disable')
+        if (data.attemptsRemaining !== undefined) {
+          toast.error(`${data.error}. ${data.attemptsRemaining} attempts remaining.`)
+        } else {
+          throw new Error(data.error || 'Failed to disable')
+        }
+        return
       }
 
       toast.success('2FA disabled successfully')
@@ -149,14 +189,30 @@ export default function SecuritySettingsPage() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to disable 2FA')
     } finally {
-      setIsDisabling(false)
+      setIsVerifying(false)
     }
   }
 
-  const copyBackupCodes = () => {
-    if (setupData?.backupCodes) {
-      navigator.clipboard.writeText(setupData.backupCodes.join('\n'))
-      toast.success('Backup codes copied to clipboard')
+  const handleResend = async (action: 'enable' | 'disable') => {
+    setIsResending(true)
+    try {
+      const endpoint = action === 'enable' ? '/api/auth/2fa/setup' : '/api/auth/2fa/disable'
+      const response = await fetch(endpoint, { method: 'POST' })
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (data.cooldownRemaining) {
+          setCooldown(data.cooldownRemaining)
+        }
+        throw new Error(data.error || 'Failed to resend code')
+      }
+
+      toast.success('New verification code sent')
+      setCooldown(data.cooldownSeconds || 60)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to resend code')
+    } finally {
+      setIsResending(false)
     }
   }
 
@@ -194,7 +250,7 @@ export default function SecuritySettingsPage() {
               Two-Factor Authentication
             </CardTitle>
             <CardDescription>
-              Add an extra layer of security to your account
+              Add an extra layer of security with email verification codes
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -222,8 +278,12 @@ export default function SecuritySettingsPage() {
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={() => setShowDisableDialog(true)}
+                  onClick={handleStartDisable}
+                  disabled={isDisabling}
                 >
+                  {isDisabling ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
                   Disable
                 </Button>
               ) : (
@@ -231,135 +291,109 @@ export default function SecuritySettingsPage() {
                   {isSettingUp ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
-                    <Smartphone className="h-4 w-4 mr-2" />
+                    <Mail className="h-4 w-4 mr-2" />
                   )}
                   Enable 2FA
                 </Button>
               )}
             </div>
 
-            {/* Backup codes info */}
-            {status?.enabled && (
-              <div className="flex items-center gap-3 p-3 border rounded-lg">
-                <Key className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">
-                  {status.remainingBackupCodes} backup codes remaining
-                </span>
-              </div>
-            )}
-
-            {/* Setup Flow */}
-            {setupData && (
-              <div className="space-y-4 pt-4 border-t">
-                <div className="text-center">
-                  <h3 className="font-semibold mb-2">Scan QR Code</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Use Google Authenticator, Authy, or similar app
-                  </p>
-                  <div className="inline-block p-4 bg-white rounded-lg border">
-                    {/* Using img instead of next/image for base64 data URLs */}
-                    <img
-                      src={setupData.qrCode}
-                      alt="2FA QR Code"
-                      width={200}
-                      height={200}
-                      className="mx-auto"
-                    />
-                  </div>
-                </div>
-
-                {/* Backup Codes */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Backup Codes</Label>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowBackupCodes(!showBackupCodes)}
-                      >
-                        {showBackupCodes ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={copyBackupCodes}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Save these codes securely. Each can be used once if you lose access to your authenticator.
-                  </p>
-                  {showBackupCodes && (
-                    <div className="grid grid-cols-2 gap-2 p-3 bg-muted rounded-lg font-mono text-sm">
-                      {setupData.backupCodes.map((code, index) => (
-                        <div key={index} className="text-center">
-                          {code}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Verification */}
-                <div className="space-y-2">
-                  <Label htmlFor="code">Enter verification code</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="code"
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="000000"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-                      className="font-mono text-center tracking-widest"
-                    />
-                    <Button onClick={handleVerify} disabled={isVerifying}>
-                      {isVerifying ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        'Verify'
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Benefits */}
-            {!status?.enabled && !setupData && (
+            {/* How it works */}
+            {!status?.enabled && (
               <div className="space-y-2 pt-4 border-t">
-                <p className="text-sm font-medium">Why enable 2FA?</p>
+                <p className="text-sm font-medium">How it works</p>
                 <ul className="text-sm text-muted-foreground space-y-1">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-3 w-3 text-green-500" />
-                    Protects against password theft
+                    Receive a 6-digit code via email when signing in
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-3 w-3 text-green-500" />
-                    Prevents unauthorized access
+                    Codes expire after 10 minutes for security
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-3 w-3 text-green-500" />
-                    Industry-standard TOTP security
+                    No authenticator app required
                   </li>
                 </ul>
+              </div>
+            )}
+
+            {/* When enabled */}
+            {status?.enabled && (
+              <div className="space-y-2 pt-4 border-t">
+                <p className="text-sm font-medium">Security active</p>
+                <p className="text-sm text-muted-foreground">
+                  A verification code will be sent to your email each time you sign in.
+                  This helps protect your account even if your password is compromised.
+                </p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Disable Dialog */}
+      {/* Enable Verification Dialog */}
+      <Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Verification Code</DialogTitle>
+            <DialogDescription>
+              We sent a 6-digit code to your email. Enter it below to enable 2FA.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="verify-code">Verification Code</Label>
+              <Input
+                id="verify-code"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="000000"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                className="font-mono text-center tracking-widest text-lg"
+                autoFocus
+              />
+            </div>
+            <div className="text-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleResend('enable')}
+                disabled={isResending || cooldown > 0}
+              >
+                {isResending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend Code'}
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowVerifyDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleVerify} disabled={isVerifying || verificationCode.length !== 6}>
+              {isVerifying ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Enable 2FA
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Disable Verification Dialog */}
       <Dialog open={showDisableDialog} onOpenChange={setShowDisableDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Disable Two-Factor Authentication</DialogTitle>
             <DialogDescription>
-              Enter your authenticator code to confirm disabling 2FA.
+              Enter the verification code sent to your email to confirm disabling 2FA.
               This will make your account less secure.
             </DialogDescription>
           </DialogHeader>
@@ -374,8 +408,24 @@ export default function SecuritySettingsPage() {
                 placeholder="000000"
                 value={disableCode}
                 onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, ''))}
-                className="font-mono text-center tracking-widest"
+                className="font-mono text-center tracking-widest text-lg"
+                autoFocus
               />
+            </div>
+            <div className="text-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleResend('disable')}
+                disabled={isResending || cooldown > 0}
+              >
+                {isResending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend Code'}
+              </Button>
             </div>
           </div>
           <DialogFooter>
@@ -384,10 +434,10 @@ export default function SecuritySettingsPage() {
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDisable}
-              disabled={isDisabling}
+              onClick={handleDisableVerify}
+              disabled={isVerifying || disableCode.length !== 6}
             >
-              {isDisabling ? (
+              {isVerifying ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : null}
               Disable 2FA

@@ -15,7 +15,7 @@ export async function GET() {
     // Get 2FA status from profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('two_factor_enabled, two_factor_enabled_at, two_factor_backup_codes')
+      .select('two_factor_enabled, two_factor_enabled_at')
       .eq('id', user.id)
       .single()
 
@@ -24,14 +24,9 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to get 2FA status' }, { status: 500 })
     }
 
-    // Count remaining backup codes
-    const backupCodes = profile?.two_factor_backup_codes || []
-    const remainingBackupCodes = backupCodes.filter((code: string | null) => code !== null).length
-
     return NextResponse.json({
       enabled: profile?.two_factor_enabled || false,
-      enabledAt: profile?.two_factor_enabled_at || null,
-      remainingBackupCodes
+      enabledAt: profile?.two_factor_enabled_at || null
     })
 
   } catch (error) {

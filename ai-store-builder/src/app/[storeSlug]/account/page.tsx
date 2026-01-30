@@ -17,7 +17,8 @@ import {
   LogOut,
   Loader2,
   ShoppingBag,
-  ChevronRight
+  ChevronRight,
+  Settings
 } from 'lucide-react'
 
 export default function CustomerAccountPage() {
@@ -121,7 +122,7 @@ export default function CustomerAccountPage() {
       </div>
 
       {/* Navigation Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         <Link href={`/${storeSlug}/account/orders`}>
           <Card className="hover:border-primary transition-colors cursor-pointer">
             <CardContent className="pt-6">
@@ -157,6 +158,20 @@ export default function CustomerAccountPage() {
                 <div className="flex items-center gap-3">
                   <Heart className="h-5 w-5 text-muted-foreground" />
                   <span className="font-medium">Wishlist</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href={`/${storeSlug}/account/settings`}>
+          <Card className="hover:border-primary transition-colors cursor-pointer">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Settings className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">Settings</span>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </div>

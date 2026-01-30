@@ -46,6 +46,9 @@ export interface AuthResponse {
   profile?: Profile | null
   error?: string
   code?: 'USER_NOT_FOUND' | string
+  // 2FA fields
+  requires2FA?: boolean
+  pendingToken?: string
 }
 
 export interface ProfileUpdateData {

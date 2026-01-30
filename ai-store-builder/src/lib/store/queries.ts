@@ -15,7 +15,11 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
  * In production: https://{slug}.storeforge.site
  * In development: http://localhost:3000/{slug}
  */
-export function getStoreUrl(slug: string): string {
+export function getStoreUrl(slug: string, customDomain?: string | null): string {
+  // Use custom domain if verified and in production
+  if (IS_PRODUCTION && customDomain) {
+    return `https://${customDomain}`
+  }
   if (IS_PRODUCTION) {
     return `https://${slug}.${PRODUCTION_DOMAIN}`
   }
@@ -25,11 +29,24 @@ export function getStoreUrl(slug: string): string {
 /**
  * Get just the display hostname for a store (without protocol)
  */
-export function getStoreHostname(slug: string): string {
+export function getStoreHostname(slug: string, customDomain?: string | null): string {
+  if (IS_PRODUCTION && customDomain) {
+    return customDomain
+  }
   if (IS_PRODUCTION) {
     return `${slug}.${PRODUCTION_DOMAIN}`
   }
   return `localhost:3000/${slug}`
+}
+
+/**
+ * Get the subdomain URL for a store (always returns subdomain, ignores custom domain)
+ */
+export function getSubdomainUrl(slug: string): string {
+  if (IS_PRODUCTION) {
+    return `https://${slug}.${PRODUCTION_DOMAIN}`
+  }
+  return `${BASE_URL}/${slug}`
 }
 
 /**

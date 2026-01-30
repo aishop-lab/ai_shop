@@ -84,6 +84,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(data.error || 'Failed to sign in')
       }
 
+      // Check if 2FA is required
+      if (data.requires2FA && data.pendingToken) {
+        toast.info('Verification code sent to your email')
+        router.push(`/verify-2fa?token=${encodeURIComponent(data.pendingToken)}`)
+        return
+      }
+
       setUser(data.user)
       setProfile(data.profile)
 
