@@ -6,6 +6,9 @@ import { calculateCartTotal } from '@/lib/cart/calculations'
 import { createRazorpayOrder } from '@/lib/payment/razorpay'
 import { reserveInventory } from '@/lib/orders/inventory'
 import { sendOrderConfirmationEmail } from '@/lib/email/order-confirmation'
+import { sendShipmentFailedEmail } from '@/lib/email/merchant-notifications'
+import { autoCreateShipment } from '@/lib/shipping/shiprocket'
+import { createNotification } from '@/lib/notifications'
 import type { StoreSettings } from '@/lib/types/store'
 import type { CreateOrderResponse, ShippingAddress } from '@/lib/types/order'
 
@@ -288,6 +291,56 @@ export async function POST(
         console.error('Failed to send COD order confirmation email:', emailError)
         // Don't fail the order if email fails
       }
+
+      // AUTO-CREATE SHIPROCKET SHIPMENT FOR COD ORDERS
+      // This runs asynchronously to not block the order response
+      autoCreateShipment(supabase, orderId, { courier_preference: 'cheapest' })
+        .then(async (result) => {
+          if (result.success) {
+            console.log(`[AutoShipment] COD shipment created for order ${orderNumber}:`, {
+              awb: result.awb_code,
+              courier: result.courier_name
+            })
+          } else {
+            // All retries failed - notify merchant
+            console.error(`[AutoShipment] Failed for COD order ${orderNumber}:`, result.error)
+
+            // Get merchant email for notification
+            const { data: authUser } = await supabase.auth.admin.getUserById(store.owner_id)
+            const merchantEmail = authUser?.user?.email
+
+            // Create dashboard notification
+            await createNotification(supabase, {
+              store_id,
+              user_id: store.owner_id,
+              type: 'system',
+              title: 'Shipment Creation Failed',
+              message: `Could not auto-create shipment for COD order ${orderNumber}. Please create it manually.`,
+              priority: 'high',
+              metadata: {
+                order_id: orderId,
+                order_number: orderNumber,
+                error: result.error,
+                attempts: result.attempts
+              }
+            })
+
+            // Send email notification to merchant
+            if (merchantEmail) {
+              await sendShipmentFailedEmail({
+                merchantEmail,
+                storeName: store.name,
+                orderNumber,
+                customerName: customer_details.name,
+                error: result.error || 'Unknown error',
+                attempts: result.attempts || 0
+              })
+            }
+          }
+        })
+        .catch((err) => {
+          console.error(`[AutoShipment] Unexpected error for COD order ${orderNumber}:`, err)
+        })
     }
 
     // 11. Return order details

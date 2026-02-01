@@ -237,6 +237,84 @@ export async function sendWelcomeMerchantEmail(params: {
 }
 
 /**
+ * Send shipment creation failed notification to merchant
+ */
+export async function sendShipmentFailedEmail(params: {
+  merchantEmail: string
+  storeName: string
+  orderNumber: string
+  customerName: string
+  error: string
+  attempts: number
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { merchantEmail, storeName, orderNumber, customerName, error, attempts } = params
+
+    // If Resend is not configured, log and return
+    if (!resend) {
+      console.log('=== SHIPMENT FAILED EMAIL (Resend not configured) ===')
+      console.log('To:', merchantEmail)
+      console.log('Order:', orderNumber)
+      console.log('Error:', error)
+      console.log('Attempts:', attempts)
+      console.log('=====================================================')
+      return { success: true }
+    }
+
+    const { data, error: sendError } = await resend.emails.send({
+      from: `StoreForge <${fromEmail}>`,
+      to: merchantEmail,
+      subject: `⚠️ Action Required: Shipment Failed for Order #${orderNumber}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc2626;">Automatic Shipment Creation Failed</h2>
+
+          <p>Hello,</p>
+
+          <p>We were unable to automatically create a shipment for the following order on <strong>${storeName}</strong>:</p>
+
+          <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <p style="margin: 4px 0;"><strong>Order Number:</strong> ${orderNumber}</p>
+            <p style="margin: 4px 0;"><strong>Customer:</strong> ${customerName}</p>
+            <p style="margin: 4px 0;"><strong>Attempts Made:</strong> ${attempts}</p>
+            <p style="margin: 4px 0;"><strong>Error:</strong> ${error}</p>
+          </div>
+
+          <p><strong>Action Required:</strong> Please create the shipment manually from your dashboard.</p>
+
+          <a href="${dashboardUrl}/dashboard/orders"
+             style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px;
+                    text-decoration: none; border-radius: 6px; margin: 16px 0;">
+            Go to Orders Dashboard
+          </a>
+
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+
+          <p style="color: #6b7280; font-size: 14px;">
+            This is an automated message from StoreForge. If the issue persists,
+            please check your Shiprocket account settings or contact support.
+          </p>
+        </div>
+      `
+    })
+
+    if (sendError) {
+      console.error('Failed to send shipment failed email:', sendError)
+      return { success: false, error: sendError.message }
+    }
+
+    console.log('Shipment failed email sent:', data?.id)
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to send shipment failed email:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send email'
+    }
+  }
+}
+
+/**
  * Format currency in INR
  */
 function formatCurrency(amount: number): string {

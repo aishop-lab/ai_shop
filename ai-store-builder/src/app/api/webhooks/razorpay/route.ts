@@ -7,7 +7,9 @@ import {
   sendRefundProcessedEmail,
 } from '@/lib/email/order-confirmation'
 import { sendOrderConfirmationWhatsApp } from '@/lib/whatsapp/msg91'
-import { sendNewOrderMerchantEmail } from '@/lib/email/merchant-notifications'
+import { sendNewOrderMerchantEmail, sendShipmentFailedEmail } from '@/lib/email/merchant-notifications'
+import { autoCreateShipment } from '@/lib/shipping/shiprocket'
+import { createNotification } from '@/lib/notifications'
 import type {
   RazorpayWebhookEvent,
   RazorpayPayment,
@@ -227,6 +229,54 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
   }
 
   console.log('Order confirmed:', order.order_number)
+
+  // AUTO-CREATE SHIPROCKET SHIPMENT
+  // This runs asynchronously to not block the webhook response
+  autoCreateShipment(supabase, order.id, { courier_preference: 'cheapest' })
+    .then(async (result) => {
+      if (result.success) {
+        console.log(`[AutoShipment] Shipment created for order ${order.order_number}:`, {
+          awb: result.awb_code,
+          courier: result.courier_name
+        })
+      } else {
+        // All retries failed - notify merchant
+        console.error(`[AutoShipment] Failed for order ${order.order_number}:`, result.error)
+
+        // Create dashboard notification
+        if (store?.owner_id) {
+          await createNotification(supabase, {
+            store_id: order.store_id,
+            user_id: store.owner_id,
+            type: 'system',
+            title: 'Shipment Creation Failed',
+            message: `Could not auto-create shipment for order ${order.order_number}. Please create it manually.`,
+            priority: 'high',
+            metadata: {
+              order_id: order.id,
+              order_number: order.order_number,
+              error: result.error,
+              attempts: result.attempts
+            }
+          })
+        }
+
+        // Send email notification to merchant
+        if (merchantEmail && store) {
+          await sendShipmentFailedEmail({
+            merchantEmail,
+            storeName: store.name,
+            orderNumber: order.order_number,
+            customerName: order.shipping_name || order.customer_email || 'Customer',
+            error: result.error || 'Unknown error',
+            attempts: result.attempts || 0
+          })
+        }
+      }
+    })
+    .catch((err) => {
+      console.error(`[AutoShipment] Unexpected error for order ${order.order_number}:`, err)
+    })
 }
 
 /**

@@ -2,6 +2,7 @@
 // Documentation: https://apidocs.shiprocket.in/
 
 import { format } from 'date-fns'
+import { SupabaseClient } from '@supabase/supabase-js'
 
 const SHIPROCKET_API_BASE = 'https://apiv2.shiprocket.in/v1/external'
 
@@ -565,3 +566,269 @@ export function mapShiprocketStatus(shiprocketStatus: string): string {
 
   return statusMap[shiprocketStatus.toUpperCase()] || 'processing'
 }
+
+// Auto shipment creation types
+export interface AutoShipmentResult {
+  success: boolean
+  shiprocket_order_id?: number
+  shiprocket_shipment_id?: number
+  awb_code?: string
+  courier_name?: string
+  label_url?: string
+  estimated_delivery_date?: string
+  error?: string
+  attempts?: number
+}
+
+export interface AutoShipmentOptions {
+  courier_preference?: 'cheapest' | 'fastest'
+  max_retries?: number
+  retry_delay_ms?: number
+}
+
+/**
+ * Automatically create shipment for an order with retry logic
+ * This is called after payment confirmation (Razorpay) or for COD orders
+ */
+export async function autoCreateShipment(
+  supabase: SupabaseClient,
+  orderId: string,
+  options: AutoShipmentOptions = {}
+): Promise<AutoShipmentResult> {
+  const {
+    courier_preference = 'cheapest',
+    max_retries = 3,
+    retry_delay_ms = 2000
+  } = options
+
+  let lastError: string = ''
+  let attempts = 0
+
+  // Check if Shiprocket is configured
+  if (!shiprocket.isConfigured()) {
+    console.log('[AutoShipment] Shiprocket not configured, skipping auto-shipment')
+    return {
+      success: false,
+      error: 'Shiprocket not configured',
+      attempts: 0
+    }
+  }
+
+  // Retry loop
+  for (attempts = 1; attempts <= max_retries; attempts++) {
+    try {
+      console.log(`[AutoShipment] Attempt ${attempts}/${max_retries} for order ${orderId}`)
+
+      // Fetch order with items
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            id,
+            product_id,
+            variant_id,
+            quantity,
+            unit_price,
+            title,
+            sku
+          ),
+          stores (
+            id,
+            name,
+            settings,
+            contact_email,
+            contact_phone
+          )
+        `)
+        .eq('id', orderId)
+        .single()
+
+      if (orderError || !order) {
+        throw new Error(`Order not found: ${orderError?.message || 'Unknown error'}`)
+      }
+
+      // Check if shipment already exists
+      if (order.shiprocket_order_id) {
+        console.log(`[AutoShipment] Shipment already exists for order ${orderId}`)
+        return {
+          success: true,
+          shiprocket_order_id: order.shiprocket_order_id,
+          shiprocket_shipment_id: order.shiprocket_shipment_id,
+          awb_code: order.awb_code,
+          courier_name: order.courier_name,
+          label_url: order.label_url,
+          attempts
+        }
+      }
+
+      // Get pickup location from store settings or default
+      const storeSettings = order.stores?.settings || {}
+      const pickupLocationName = storeSettings.shiprocket?.pickup_location || 'Primary'
+
+      // Get pickup pincode from Shiprocket settings
+      let pickupPincode = '110001' // Default Delhi pincode
+      try {
+        const pickupLocations = await shiprocket.getPickupLocations()
+        const location = pickupLocations.find(l => l.pickup_location === pickupLocationName)
+        if (location?.pin_code) {
+          pickupPincode = location.pin_code
+        }
+      } catch (e) {
+        console.warn('[AutoShipment] Could not fetch pickup locations, using default pincode')
+      }
+
+      // Get delivery pincode from shipping address
+      const shippingAddress = order.shipping_address as {
+        name: string
+        phone: string
+        address_line1: string
+        address_line2?: string
+        city: string
+        state: string
+        pincode: string
+        country: string
+      }
+      const deliveryPincode = shippingAddress.pincode
+
+      // Check serviceability and get couriers
+      const isCOD = order.payment_method === 'cod'
+      const couriers = await shiprocket.getServiceability({
+        pickup_postcode: pickupPincode,
+        delivery_postcode: deliveryPincode,
+        weight: 0.5, // Default weight
+        cod: isCOD
+      })
+
+      if (!couriers.length) {
+        throw new Error(`No couriers available for delivery to ${deliveryPincode}`)
+      }
+
+      // Select courier based on preference
+      const selectedCourier = courier_preference === 'fastest'
+        ? getFastestCourier(couriers)
+        : getCheapestCourier(couriers)
+
+      if (!selectedCourier) {
+        throw new Error('Could not select courier')
+      }
+
+      console.log(`[AutoShipment] Selected courier: ${selectedCourier.name} (${courier_preference})`)
+
+      // Build Shiprocket order
+      const shiprocketOrderData = buildShiprocketOrder(
+        {
+          order_number: order.order_number,
+          customer_name: order.customer_name,
+          customer_email: order.email,
+          customer_phone: order.phone,
+          shipping_address: shippingAddress,
+          order_items: order.order_items.map((item: { title: string; quantity: number; unit_price: number; sku?: string }) => ({
+            product_title: item.title,
+            quantity: item.quantity,
+            unit_price: item.unit_price
+          })),
+          payment_method: order.payment_method,
+          subtotal: order.subtotal,
+          created_at: order.created_at
+        },
+        pickupLocationName
+      )
+
+      // Create order in Shiprocket
+      const shiprocketResponse = await shiprocket.createOrder(shiprocketOrderData)
+
+      let awbCode = shiprocketResponse.awb_code
+      let courierName = shiprocketResponse.courier_name
+
+      // Generate AWB if not auto-assigned
+      if (!awbCode && shiprocketResponse.shipment_id) {
+        console.log('[AutoShipment] AWB not auto-assigned, generating manually...')
+        const awbResponse = await shiprocket.generateAWB(
+          shiprocketResponse.shipment_id,
+          selectedCourier.id
+        )
+        awbCode = awbResponse.awb_code
+        courierName = awbResponse.courier_name
+      }
+
+      // Generate shipping label
+      let labelUrl: string | undefined
+      if (shiprocketResponse.shipment_id) {
+        try {
+          labelUrl = await shiprocket.generateLabel([shiprocketResponse.shipment_id])
+        } catch (labelError) {
+          console.warn('[AutoShipment] Could not generate label:', labelError)
+        }
+      }
+
+      // Calculate estimated delivery date
+      const estimatedDeliveryDate = new Date()
+      estimatedDeliveryDate.setDate(
+        estimatedDeliveryDate.getDate() + selectedCourier.estimated_delivery_days
+      )
+
+      // Update order with Shiprocket details
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({
+          shiprocket_order_id: shiprocketResponse.order_id,
+          shiprocket_shipment_id: shiprocketResponse.shipment_id,
+          awb_code: awbCode,
+          tracking_number: awbCode,
+          courier_name: courierName,
+          label_url: labelUrl,
+          estimated_delivery_date: format(estimatedDeliveryDate, 'yyyy-MM-dd'),
+          shipping_provider: 'shiprocket',
+          fulfillment_status: 'processing'
+        })
+        .eq('id', orderId)
+
+      if (updateError) {
+        throw new Error(`Failed to update order: ${updateError.message}`)
+      }
+
+      // Log shipment creation event
+      await supabase.from('shipment_events').insert({
+        order_id: orderId,
+        awb_code: awbCode,
+        event_date: new Date().toISOString(),
+        status: 'CREATED',
+        activity: `Shipment created automatically via ${courierName}`,
+        location: 'System'
+      })
+
+      console.log(`[AutoShipment] Successfully created shipment for order ${orderId}`)
+
+      return {
+        success: true,
+        shiprocket_order_id: shiprocketResponse.order_id,
+        shiprocket_shipment_id: shiprocketResponse.shipment_id,
+        awb_code: awbCode,
+        courier_name: courierName,
+        label_url: labelUrl,
+        estimated_delivery_date: format(estimatedDeliveryDate, 'yyyy-MM-dd'),
+        attempts
+      }
+
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`[AutoShipment] Attempt ${attempts} failed:`, lastError)
+
+      // Wait before retry (except on last attempt)
+      if (attempts < max_retries) {
+        await new Promise(resolve => setTimeout(resolve, retry_delay_ms))
+      }
+    }
+  }
+
+  // All retries failed - notify merchant
+  console.error(`[AutoShipment] All ${max_retries} attempts failed for order ${orderId}`)
+
+  return {
+    success: false,
+    error: lastError,
+    attempts
+  }
+}
+
