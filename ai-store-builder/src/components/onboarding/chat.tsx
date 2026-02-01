@@ -5,13 +5,31 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ColorAccessibilityChecker } from '@/components/ui/color-accessibility-checker'
 import { ConfidenceBadge } from '@/components/ui/confidence-badge'
-import { Loader2, Send, Upload, Check, Sparkles, Palette, Wand2, Image, RefreshCw, X } from 'lucide-react'
+import { Loader2, Send, Upload, Check, Sparkles, Palette, Wand2, Image, RefreshCw, X, ArrowLeft } from 'lucide-react'
 import NextImage from 'next/image'
 import { StoreBuildingPreview } from './store-building-preview'
 import { TemplateSelector } from './template-selector'
 import type { StoreData, ProcessMessageResponse, BrandVibe } from '@/lib/types/onboarding'
+import { canGoBack } from '@/lib/onboarding/flow'
 
 type StepType = 'text' | 'select' | 'file' | 'color' | 'multi-input' | 'action' | 'template-select'
+
+// State snapshot for going back
+interface StepStateSnapshot {
+  step: number
+  messages: Message[]
+  extractedData: Partial<StoreData>
+  stepType: StepType
+  stepOptions: Array<{ value: string; label: string }>
+  aiSuggestions: AISuggestions | null
+  aiConfidence: { score: number; level: 'high' | 'medium' | 'low'; reasoning?: string } | null
+  logoColors: { colors: Array<{ hex: string; name: string; percentage: number }>; suggested_primary: string; suggested_secondary: string } | null
+  selectedColor: string
+  generatedLogos: Array<{ url: string; extracted_colors?: { colors: Array<{ hex: string; name: string; percentage: number }>; suggested_primary: string; suggested_secondary: string } }>
+  selectedLogoIndex: number | null
+  contactInfo: { email: string; phone: string; whatsapp: string; instagram: string }
+  selectedTemplate: string | null
+}
 
 interface Message {
   id: string
@@ -85,6 +103,10 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
   const [whatsappSameAsPhone, setWhatsappSameAsPhone] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
 
+  // Step history for back navigation
+  const [stepHistory, setStepHistory] = useState<number[]>([1])
+  const [stateSnapshots, setStateSnapshots] = useState<Map<number, StepStateSnapshot>>(new Map())
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -97,6 +119,63 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
   useEffect(() => {
     onStepChange?.(currentStep)
   }, [currentStep, onStepChange])
+
+  // Save current state snapshot before navigating away
+  const saveStateSnapshot = (step: number) => {
+    const snapshot: StepStateSnapshot = {
+      step,
+      messages: [...messages],
+      extractedData: { ...extractedData },
+      stepType,
+      stepOptions: [...stepOptions],
+      aiSuggestions,
+      aiConfidence,
+      logoColors,
+      selectedColor,
+      generatedLogos: [...generatedLogos],
+      selectedLogoIndex,
+      contactInfo: { ...contactInfo },
+      selectedTemplate
+    }
+    setStateSnapshots(prev => new Map(prev).set(step, snapshot))
+  }
+
+  // Handle going back to the previous step
+  const handleGoBack = () => {
+    if (!canGoBack(currentStep, stepHistory)) return
+
+    // Save current state before going back
+    saveStateSnapshot(currentStep)
+
+    // Get the previous step from history
+    const currentIndex = stepHistory.indexOf(currentStep)
+    const previousStepId = stepHistory[currentIndex - 1]
+    const snapshot = stateSnapshots.get(previousStepId)
+
+    if (snapshot) {
+      // Restore state from snapshot
+      setMessages(snapshot.messages)
+      setExtractedData(snapshot.extractedData)
+      setStepType(snapshot.stepType)
+      setStepOptions(snapshot.stepOptions)
+      setAiSuggestions(snapshot.aiSuggestions)
+      setAiConfidence(snapshot.aiConfidence)
+      setLogoColors(snapshot.logoColors)
+      setSelectedColor(snapshot.selectedColor)
+      setGeneratedLogos(snapshot.generatedLogos)
+      setSelectedLogoIndex(snapshot.selectedLogoIndex)
+      setContactInfo(snapshot.contactInfo)
+      setSelectedTemplate(snapshot.selectedTemplate)
+      setCurrentStep(previousStepId)
+
+      // Remove current step from history (we're going back)
+      setStepHistory(prev => prev.slice(0, currentIndex))
+    } else {
+      // No snapshot, just go back to previous step ID
+      setCurrentStep(previousStepId)
+      setStepHistory(prev => prev.slice(0, currentIndex))
+    }
+  }
 
   // Start onboarding session
   useEffect(() => {
@@ -226,6 +305,17 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
 
         const nextStep = processedData.current_step
         const newStepType: StepType = stepTypes[nextStep] || 'text'
+
+        // Save current state snapshot before moving forward
+        saveStateSnapshot(currentStep)
+
+        // Update step history (add next step if not already there)
+        setStepHistory(prev => {
+          if (!prev.includes(nextStep)) {
+            return [...prev, nextStep]
+          }
+          return prev
+        })
 
         // Update all state together
         setCurrentStep(nextStep)
@@ -555,6 +645,21 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
 
       {/* Input area */}
       <div className="border-t p-4">
+        {/* Back button */}
+        {canGoBack(currentStep, stepHistory) && !isLoading && !isComplete && (
+          <div className="mb-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleGoBack}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to previous step
+            </Button>
+          </div>
+        )}
+
         {stepType === 'select' && stepOptions.length > 0 && !isLoading && (
           <div className="flex flex-wrap gap-2 mb-3">
             {stepOptions.map((option) => (

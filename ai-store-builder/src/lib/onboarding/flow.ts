@@ -182,6 +182,20 @@ export function getNextStepAfterCurrent(currentStepId: number, data: Partial<Sto
   return getNextStep(currentStepId, data)
 }
 
+export function getPreviousStep(currentStepId: number, stepHistory: number[]): OnboardingStep | null {
+  // Find the previous step from history (the one before current)
+  const currentIndex = stepHistory.indexOf(currentStepId)
+  if (currentIndex <= 0) return null
+
+  const previousStepId = stepHistory[currentIndex - 1]
+  return ONBOARDING_STEPS.find(s => s.id === previousStepId) || null
+}
+
+export function canGoBack(currentStepId: number, stepHistory: number[]): boolean {
+  // Can go back if we're not on the first step and have history
+  return stepHistory.length > 1 && stepHistory.indexOf(currentStepId) > 0
+}
+
 export function formatQuestion(step: OnboardingStep, data: Partial<StoreData>): string {
   let question = step.question
 
