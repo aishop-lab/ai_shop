@@ -27,6 +27,50 @@ export interface StorePolicies {
   shipping: StorePolicy
 }
 
+// Policy Configuration Types (from MCQ questionnaire)
+export type ReturnCondition = 'unused_with_tags' | 'opened_ok' | 'any_condition' | 'no_returns'
+export type RefundMethod = 'original_payment' | 'store_credit' | 'exchange_only' | 'buyer_choice'
+export type FreeShippingType = 'always' | 'threshold' | 'never'
+export type DeliverySpeed = 'express' | 'standard' | 'economy'
+export type ShippingRegion = 'pan_india' | 'metro_only' | 'specific_states'
+
+export interface ReturnPolicyConfig {
+  enabled: boolean
+  window_days: 7 | 14 | 30 | 0  // 0 means no returns
+  condition: ReturnCondition
+  refund_method: RefundMethod
+}
+
+export interface ShippingPolicyConfig {
+  free_shipping: FreeShippingType
+  free_threshold: number  // Only used when free_shipping is 'threshold'
+  delivery_speed: DeliverySpeed
+  regions: ShippingRegion
+  specific_states?: string[]  // Only used when regions is 'specific_states'
+  processing_days: 1 | 2 | 3 | 5
+}
+
+export interface PolicyConfig {
+  returns: ReturnPolicyConfig
+  shipping: ShippingPolicyConfig
+}
+
+export const DEFAULT_POLICY_CONFIG: PolicyConfig = {
+  returns: {
+    enabled: true,
+    window_days: 14,
+    condition: 'unused_with_tags',
+    refund_method: 'original_payment'
+  },
+  shipping: {
+    free_shipping: 'threshold',
+    free_threshold: 999,
+    delivery_speed: 'standard',
+    regions: 'pan_india',
+    processing_days: 2
+  }
+}
+
 export interface Store {
   id: string
   owner_id: string

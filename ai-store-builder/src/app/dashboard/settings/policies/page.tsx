@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileText, Save, AlertTriangle, RefreshCw } from 'lucide-react'
+import { FileText, Save, AlertTriangle, RefreshCw, Settings2, Edit3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
+import { PolicyConfigurator } from '@/components/dashboard/policy-configurator'
+import type { PolicyConfig } from '@/lib/types/store'
 
 interface Policy {
     content: string
@@ -39,12 +41,30 @@ const policyLabels: Record<keyof Policies, { title: string; description: string 
     }
 }
 
+const DEFAULT_POLICY_CONFIG: PolicyConfig = {
+    returns: {
+        enabled: true,
+        window_days: 14,
+        condition: 'unused_with_tags',
+        refund_method: 'original_payment'
+    },
+    shipping: {
+        free_shipping: 'threshold',
+        free_threshold: 999,
+        delivery_speed: 'standard',
+        regions: 'pan_india',
+        processing_days: 2
+    }
+}
+
 export default function PoliciesSettingsPage() {
     const [policies, setPolicies] = useState<Policies | null>(null)
+    const [policyConfig, setPolicyConfig] = useState<PolicyConfig>(DEFAULT_POLICY_CONFIG)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [regenerating, setRegenerating] = useState(false)
     const [activeTab, setActiveTab] = useState<keyof Policies>('returns')
+    const [viewMode, setViewMode] = useState<'configure' | 'edit'>('configure')
     const [editedContent, setEditedContent] = useState<Record<keyof Policies, string>>({
         returns: '',
         privacy: '',
@@ -54,6 +74,7 @@ export default function PoliciesSettingsPage() {
 
     useEffect(() => {
         fetchPolicies()
+        fetchPolicyConfig()
     }, [])
 
     const fetchPolicies = async () => {
@@ -74,6 +95,18 @@ export default function PoliciesSettingsPage() {
             toast.error('Failed to load policies')
         } finally {
             setLoading(false)
+        }
+    }
+
+    const fetchPolicyConfig = async () => {
+        try {
+            const response = await fetch('/api/stores/policy-config')
+            if (response.ok) {
+                const data = await response.json()
+                setPolicyConfig(data.policy_config || DEFAULT_POLICY_CONFIG)
+            }
+        } catch (error) {
+            console.error('Failed to fetch policy config:', error)
         }
     }
 
@@ -124,6 +157,11 @@ export default function PoliciesSettingsPage() {
         }
     }
 
+    const handleConfigSaved = () => {
+        fetchPolicies()
+        fetchPolicyConfig()
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -138,85 +176,140 @@ export default function PoliciesSettingsPage() {
                 <div>
                     <h1 className="text-2xl font-bold">Legal Policies</h1>
                     <p className="text-muted-foreground">
-                        Manage your store's legal documents and policies
+                        Manage your store&apos;s legal documents and policies
                     </p>
                 </div>
+            </div>
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2 p-1 bg-muted rounded-lg w-fit">
                 <Button
-                    variant="outline"
-                    onClick={handleRegenerate}
-                    disabled={regenerating}
+                    variant={viewMode === 'configure' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('configure')}
+                    className="gap-2"
                 >
-                    <RefreshCw className={`w-4 h-4 mr-2 ${regenerating ? 'animate-spin' : ''}`} />
-                    Regenerate All
+                    <Settings2 className="h-4 w-4" />
+                    Configure Policies
+                </Button>
+                <Button
+                    variant={viewMode === 'edit' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('edit')}
+                    className="gap-2"
+                >
+                    <Edit3 className="h-4 w-4" />
+                    Edit Policy Text
                 </Button>
             </div>
 
-            {/* Warning Banner */}
-            <Card className="border-yellow-200 bg-yellow-50">
-                <CardContent className="flex items-start gap-3 py-4">
-                    <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
-                    <div>
-                        <p className="text-sm font-medium text-yellow-800">
-                            Legal Disclaimer
-                        </p>
-                        <p className="text-sm text-yellow-700">
-                            These policies are auto-generated templates. We recommend consulting a lawyer
-                            before making major changes, especially for complex business requirements.
-                        </p>
+            {/* Configure Mode */}
+            {viewMode === 'configure' && (
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Settings2 className="h-5 w-5" />
+                                Policy Configuration
+                            </CardTitle>
+                            <CardDescription>
+                                Answer a few questions to automatically generate customized Return and Shipping policies for your store.
+                                Privacy Policy and Terms of Service are generated based on your store information.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <PolicyConfigurator
+                                initialConfig={policyConfig}
+                                onConfigSaved={handleConfigSaved}
+                            />
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Edit Mode */}
+            {viewMode === 'edit' && (
+                <div className="space-y-6">
+                    {/* Warning Banner */}
+                    <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-900">
+                        <CardContent className="flex items-start gap-3 py-4">
+                            <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                                    Legal Disclaimer
+                                </p>
+                                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                                    These policies are auto-generated templates. We recommend consulting a lawyer
+                                    before making major changes, especially for complex business requirements.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Regenerate Button */}
+                    <div className="flex justify-end">
+                        <Button
+                            variant="outline"
+                            onClick={handleRegenerate}
+                            disabled={regenerating}
+                        >
+                            <RefreshCw className={`w-4 h-4 mr-2 ${regenerating ? 'animate-spin' : ''}`} />
+                            Regenerate All Policies
+                        </Button>
                     </div>
-                </CardContent>
-            </Card>
 
-            {/* Policy Editor */}
-            <Card>
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as keyof Policies)}>
-                    <CardHeader>
-                        <TabsList className="grid grid-cols-4">
-                            {Object.entries(policyLabels).map(([key, { title }]) => (
-                                <TabsTrigger key={key} value={key} className="text-xs sm:text-sm">
-                                    {title.split(' ')[0]}
-                                </TabsTrigger>
+                    {/* Policy Editor */}
+                    <Card>
+                        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as keyof Policies)}>
+                            <CardHeader>
+                                <TabsList className="grid grid-cols-4">
+                                    {Object.entries(policyLabels).map(([key, { title }]) => (
+                                        <TabsTrigger key={key} value={key} className="text-xs sm:text-sm">
+                                            {title.split(' ')[0]}
+                                        </TabsTrigger>
+                                    ))}
+                                </TabsList>
+                            </CardHeader>
+
+                            {Object.entries(policyLabels).map(([key, { title, description }]) => (
+                                <TabsContent key={key} value={key}>
+                                    <CardContent className="space-y-4">
+                                        <div>
+                                            <h3 className="font-semibold">{title}</h3>
+                                            <p className="text-sm text-muted-foreground">{description}</p>
+                                        </div>
+
+                                        <Textarea
+                                            value={editedContent[key as keyof Policies]}
+                                            onChange={(e) => setEditedContent(prev => ({
+                                                ...prev,
+                                                [key]: e.target.value
+                                            }))}
+                                            className="min-h-[400px] font-mono text-sm"
+                                            placeholder="Enter policy content (HTML supported)..."
+                                        />
+
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-xs text-muted-foreground">
+                                                {policies?.[key as keyof Policies]?.updated_at && (
+                                                    <>Last updated: {new Date(policies[key as keyof Policies].updated_at!).toLocaleDateString()}</>
+                                                )}
+                                            </p>
+                                            <Button
+                                                onClick={() => handleSave(key as keyof Policies)}
+                                                disabled={saving}
+                                            >
+                                                <Save className="w-4 h-4 mr-2" />
+                                                Save Changes
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </TabsContent>
                             ))}
-                        </TabsList>
-                    </CardHeader>
-
-                    {Object.entries(policyLabels).map(([key, { title, description }]) => (
-                        <TabsContent key={key} value={key}>
-                            <CardContent className="space-y-4">
-                                <div>
-                                    <h3 className="font-semibold">{title}</h3>
-                                    <p className="text-sm text-muted-foreground">{description}</p>
-                                </div>
-
-                                <Textarea
-                                    value={editedContent[key as keyof Policies]}
-                                    onChange={(e) => setEditedContent(prev => ({
-                                        ...prev,
-                                        [key]: e.target.value
-                                    }))}
-                                    className="min-h-[400px] font-mono text-sm"
-                                    placeholder="Enter policy content (HTML supported)..."
-                                />
-
-                                <div className="flex items-center justify-between">
-                                    <p className="text-xs text-muted-foreground">
-                                        {policies?.[key as keyof Policies]?.updated_at && (
-                                            <>Last updated: {new Date(policies[key as keyof Policies].updated_at!).toLocaleDateString()}</>
-                                        )}
-                                    </p>
-                                    <Button
-                                        onClick={() => handleSave(key as keyof Policies)}
-                                        disabled={saving}
-                                    >
-                                        <Save className="w-4 h-4 mr-2" />
-                                        Save Changes
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </TabsContent>
-                    ))}
-                </Tabs>
-            </Card>
+                        </Tabs>
+                    </Card>
+                </div>
+            )}
         </div>
     )
 }

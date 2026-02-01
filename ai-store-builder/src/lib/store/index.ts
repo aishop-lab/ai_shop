@@ -71,6 +71,17 @@ export {
 // Policies
 export { generateStorePolicies } from './policies'
 export type { StorePolicies } from './policies'
+export type {
+  PolicyConfig,
+  ReturnPolicyConfig,
+  ShippingPolicyConfig,
+  ReturnCondition,
+  RefundMethod,
+  FreeShippingType,
+  DeliverySpeed,
+  ShippingRegion
+} from '@/lib/types/store'
+export { DEFAULT_POLICY_CONFIG } from '@/lib/types/store'
 
 // Theme system
 export { 
