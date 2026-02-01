@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Menu } from 'lucide-react'
 import { useStore } from '@/lib/contexts/store-context'
 import MiniCart from '@/components/store/mini-cart'
+import AccountDropdown from '@/components/store/account-dropdown'
 
 interface MinimalZenHeaderProps {
   onMenuClick?: () => void
@@ -80,7 +81,8 @@ export default function MinimalZenHeader({ onMenuClick }: MinimalZenHeaderProps)
           </nav>
 
           {/* Right Actions */}
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-4">
+            <AccountDropdown />
             <MiniCart />
           </div>
         </div>

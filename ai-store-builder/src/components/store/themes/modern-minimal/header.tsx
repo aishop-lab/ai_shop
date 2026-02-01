@@ -6,6 +6,7 @@ import { Menu, Search } from 'lucide-react'
 import { useState } from 'react'
 import { useStore, useIsHydrated } from '@/lib/contexts/store-context'
 import MiniCart from '@/components/store/mini-cart'
+import AccountDropdown from '@/components/store/account-dropdown'
 
 interface ModernMinimalHeaderProps {
   onMenuClick?: () => void
@@ -92,7 +93,7 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
           </nav>
 
           {/* Right Actions */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-1 sm:space-x-2">
             {/* Search Button */}
             <button
               onClick={() => setSearchOpen(!searchOpen)}
@@ -101,6 +102,9 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
             >
               <Search className="w-5 h-5" />
             </button>
+
+            {/* Account */}
+            <AccountDropdown />
 
             {/* Cart */}
             <MiniCart />

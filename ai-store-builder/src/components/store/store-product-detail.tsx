@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Minus, Plus, ShoppingCart, Heart, Share2, ChevronLeft, ChevronRight, Check, Truck, Shield, RotateCcw } from 'lucide-react'
+import { Minus, Plus, ShoppingCart, Share2, ChevronLeft, ChevronRight, Check, Truck, Shield, RotateCcw } from 'lucide-react'
 import type { Product } from '@/lib/types/store'
 import type { ProductWithVariants, VariantSelection, ProductVariant } from '@/lib/types/variant'
 import { useStore } from '@/lib/contexts/store-context'
@@ -12,6 +12,7 @@ import { VariantSelector, useVariantSelection } from './variant-selector'
 import ProductCard from './themes/modern-minimal/product-card'
 import { ReviewsList } from '@/components/reviews/reviews-list'
 import { PincodeChecker } from './pincode-checker'
+import WishlistButton from './wishlist-button'
 
 interface StoreProductDetailProps {
   product: Product | ProductWithVariants
@@ -338,9 +339,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
                     </>
                   )}
                 </button>
-                <button className="p-4 border rounded-lg hover:bg-gray-50">
-                  <Heart className="w-5 h-5" />
-                </button>
+                <WishlistButton productId={product.id} size="lg" />
                 <button className="p-4 border rounded-lg hover:bg-gray-50">
                   <Share2 className="w-5 h-5" />
                 </button>

@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { removeDomainFromVercel, isVercelConfigured } from '@/lib/vercel'
+import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
 // DNS target for custom domains
 const DNS_TARGET = 'cname.vercel-dns.com'
+
+/**
+ * Generate a unique verification token for DNS TXT record
+ */
+function generateVerificationToken(): string {
+  return `storeforge-verify-${crypto.randomBytes(16).toString('hex')}`
+}
 
 const domainSchema = z.object({
   domain: z.string()
@@ -31,7 +40,7 @@ export async function GET() {
 
     const { data: stores, error: storeError } = await supabase
       .from('stores')
-      .select('id, slug, custom_domain, custom_domain_verified, custom_domain_verified_at, custom_domain_dns_target, custom_domain_ssl_status')
+      .select('id, slug, custom_domain, custom_domain_verified, custom_domain_verified_at, custom_domain_dns_target, custom_domain_ssl_status, custom_domain_verification_token')
       .eq('owner_id', user.id)
       .limit(1)
 
@@ -45,6 +54,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Store not found' }, { status: 404 })
     }
 
+    const isApexDomain = store.custom_domain && !store.custom_domain.startsWith('www.')
+
     return NextResponse.json({
       success: true,
       domain: store.custom_domain ? {
@@ -52,9 +63,26 @@ export async function GET() {
         verified: store.custom_domain_verified,
         verifiedAt: store.custom_domain_verified_at,
         dnsTarget: store.custom_domain_dns_target || DNS_TARGET,
-        sslStatus: store.custom_domain_ssl_status
+        sslStatus: store.custom_domain_ssl_status,
+        verificationToken: store.custom_domain_verification_token
       } : null,
-      subdomain: `${store.slug}.storeforge.site`
+      subdomain: `${store.slug}.storeforge.site`,
+      instructions: store.custom_domain && !store.custom_domain_verified ? {
+        txtRecord: {
+          type: 'TXT',
+          name: '_storeforge-verify',
+          value: store.custom_domain_verification_token,
+          message: 'Add a TXT record to verify ownership'
+        },
+        dnsRecord: {
+          type: isApexDomain ? 'A' : 'CNAME',
+          name: isApexDomain ? '@' : 'www',
+          value: isApexDomain ? '76.76.21.21' : DNS_TARGET,
+          message: isApexDomain
+            ? 'Add an A record pointing to 76.76.21.21 (Vercel)'
+            : `Add a CNAME record pointing to ${DNS_TARGET}`
+        }
+      } : null
     })
   } catch (error) {
     console.error('Get domain error:', error)
@@ -127,6 +155,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Generate verification token
+    const verificationToken = generateVerificationToken()
+
     // Update store with new domain
     const { error: updateError } = await supabase
       .from('stores')
@@ -136,6 +167,7 @@ export async function POST(request: NextRequest) {
         custom_domain_verified_at: null,
         custom_domain_dns_target: DNS_TARGET,
         custom_domain_ssl_status: 'pending',
+        custom_domain_verification_token: verificationToken,
         updated_at: new Date().toISOString()
       })
       .eq('id', store.id)
@@ -145,19 +177,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to add domain' }, { status: 500 })
     }
 
+    // Determine the TXT record name based on domain
+    const isApexDomain = !domain.startsWith('www.')
+    const txtRecordName = isApexDomain ? '_storeforge-verify' : `_storeforge-verify.${domain.replace('www.', '')}`
+
     return NextResponse.json({
       success: true,
       domain: {
         domain,
         verified: false,
         dnsTarget: DNS_TARGET,
-        sslStatus: 'pending'
+        sslStatus: 'pending',
+        verificationToken
       },
       instructions: {
-        type: 'CNAME',
-        name: domain.startsWith('www.') ? 'www' : '@',
-        value: DNS_TARGET,
-        message: `Add a CNAME record pointing to ${DNS_TARGET}`
+        // Step 1: TXT record for ownership verification
+        txtRecord: {
+          type: 'TXT',
+          name: '_storeforge-verify',
+          value: verificationToken,
+          message: `Add a TXT record to verify ownership`
+        },
+        // Step 2: CNAME/A record for routing
+        dnsRecord: {
+          type: isApexDomain ? 'A' : 'CNAME',
+          name: isApexDomain ? '@' : 'www',
+          value: isApexDomain ? '76.76.21.21' : DNS_TARGET,
+          message: isApexDomain
+            ? `Add an A record pointing to 76.76.21.21 (Vercel)`
+            : `Add a CNAME record pointing to ${DNS_TARGET}`
+        }
       }
     })
   } catch (error) {
@@ -179,7 +228,7 @@ export async function DELETE() {
 
     const { data: stores, error: storeError } = await supabase
       .from('stores')
-      .select('id')
+      .select('id, custom_domain, custom_domain_verified')
       .eq('owner_id', user.id)
       .limit(1)
 
@@ -193,6 +242,15 @@ export async function DELETE() {
       return NextResponse.json({ error: 'Store not found' }, { status: 404 })
     }
 
+    // Remove from Vercel if it was verified (meaning it was added to Vercel)
+    if (store.custom_domain && store.custom_domain_verified && isVercelConfigured()) {
+      const vercelResult = await removeDomainFromVercel(store.custom_domain)
+      if (!vercelResult.success) {
+        console.error('Failed to remove domain from Vercel:', vercelResult.error)
+        // Continue anyway - domain will be orphaned in Vercel but user can remove manually
+      }
+    }
+
     const { error: updateError } = await supabase
       .from('stores')
       .update({
@@ -201,6 +259,7 @@ export async function DELETE() {
         custom_domain_verified_at: null,
         custom_domain_dns_target: null,
         custom_domain_ssl_status: null,
+        custom_domain_verification_token: null,
         updated_at: new Date().toISOString()
       })
       .eq('id', store.id)

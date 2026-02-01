@@ -39,6 +39,14 @@ interface DomainInfo {
   verifiedAt?: string
   dnsTarget: string
   sslStatus: string
+  verificationToken?: string
+}
+
+interface DnsInstruction {
+  type: string
+  name: string
+  value: string
+  message: string
 }
 
 interface DomainResponse {
@@ -46,10 +54,20 @@ interface DomainResponse {
   domain: DomainInfo | null
   subdomain: string
   instructions?: {
+    txtRecord?: DnsInstruction
+    dnsRecord?: DnsInstruction
+  } | null
+}
+
+interface VerifyResponse {
+  success: boolean
+  verified: boolean
+  step?: 'txt' | 'dns' | 'vercel'
+  message?: string
+  expected?: {
     type: string
     name: string
     value: string
-    message: string
   }
 }
 
@@ -74,6 +92,7 @@ export default function DomainSettingsPage() {
   const [isRemoving, setIsRemoving] = useState(false)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
   const [instructions, setInstructions] = useState<DomainResponse['instructions'] | null>(null)
+  const [verificationStep, setVerificationStep] = useState<string | null>(null)
 
   const form = useForm<DomainFormData>({
     resolver: zodResolver(domainSchema),
@@ -91,6 +110,9 @@ export default function DomainSettingsPage() {
         const data: DomainResponse = await response.json()
         setDomainInfo(data.domain)
         setSubdomain(data.subdomain)
+        if (data.instructions) {
+          setInstructions(data.instructions)
+        }
       }
     } catch (error) {
       console.error('Failed to fetch domain status:', error)
@@ -127,23 +149,36 @@ export default function DomainSettingsPage() {
 
   const handleVerify = async () => {
     setIsVerifying(true)
+    setVerificationStep(null)
     try {
       const response = await fetch('/api/dashboard/domain/verify', {
         method: 'POST'
       })
 
-      const result = await response.json()
+      const result: VerifyResponse = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Verification failed')
+        throw new Error(result.message || 'Verification failed')
       }
 
       if (result.verified) {
         toast.success('Domain verified successfully!')
-        setDomainInfo(prev => prev ? { ...prev, verified: true } : null)
+        setDomainInfo(prev => prev ? { ...prev, verified: true, sslStatus: 'issued' } : null)
         setInstructions(null)
+        setVerificationStep(null)
       } else {
-        toast.error(result.message || 'DNS not configured correctly')
+        // Show which step failed
+        setVerificationStep(result.step || null)
+
+        if (result.step === 'txt') {
+          toast.error('TXT record not found. Please add the verification TXT record.')
+        } else if (result.step === 'dns') {
+          toast.error('DNS routing not configured. Please add the CNAME or A record.')
+        } else if (result.step === 'vercel') {
+          toast.error(result.message || 'Failed to add domain to hosting provider.')
+        } else {
+          toast.error(result.message || 'DNS not configured correctly')
+        }
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Verification failed')
@@ -282,57 +317,173 @@ export default function DomainSettingsPage() {
                 {/* DNS Instructions (if not verified) */}
                 {!domainInfo.verified && (
                   <div className="space-y-4">
-                    <div className="p-4 bg-muted rounded-lg space-y-3">
-                      <p className="text-sm font-medium">DNS Configuration Required</p>
-                      <p className="text-sm text-muted-foreground">
-                        Add the following DNS record to your domain provider:
-                      </p>
-
-                      <div className="grid gap-2">
-                        <div className="flex items-center justify-between p-2 bg-background rounded border">
-                          <div>
-                            <span className="text-xs text-muted-foreground">Type</span>
-                            <p className="font-mono text-sm">CNAME</p>
-                          </div>
+                    {/* Progress indicator */}
+                    {(instructions?.txtRecord || instructions?.dnsRecord) && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className={`flex items-center gap-1 ${verificationStep === 'txt' ? 'text-yellow-600' : verificationStep === 'dns' || verificationStep === 'vercel' || !verificationStep ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          {verificationStep === 'txt' ? (
+                            <XCircle className="h-4 w-4" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4" />
+                          )}
+                          <span>Ownership</span>
                         </div>
-                        <div className="flex items-center justify-between p-2 bg-background rounded border">
-                          <div>
-                            <span className="text-xs text-muted-foreground">Name/Host</span>
-                            <p className="font-mono text-sm">
-                              {domainInfo.domain.startsWith('www.') ? 'www' : '@'}
-                            </p>
-                          </div>
+                        <div className="h-px w-4 bg-muted" />
+                        <div className={`flex items-center gap-1 ${verificationStep === 'dns' ? 'text-yellow-600' : verificationStep === 'vercel' || !verificationStep ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
+                          {verificationStep === 'dns' ? (
+                            <XCircle className="h-4 w-4" />
+                          ) : verificationStep === 'vercel' ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                          )}
+                          <span>DNS</span>
                         </div>
-                        <div className="flex items-center justify-between p-2 bg-background rounded border">
-                          <div className="flex-1">
-                            <span className="text-xs text-muted-foreground">Value/Target</span>
-                            <p className="font-mono text-sm">{domainInfo.dnsTarget}</p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(domainInfo.dnsTarget)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
+                        <div className="h-px w-4 bg-muted" />
+                        <div className={`flex items-center gap-1 ${verificationStep === 'vercel' ? 'text-yellow-600' : 'text-muted-foreground'}`}>
+                          {verificationStep === 'vercel' ? (
+                            <XCircle className="h-4 w-4" />
+                          ) : (
+                            <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                          )}
+                          <span>SSL</span>
                         </div>
                       </div>
+                    )}
 
-                      <p className="text-xs text-muted-foreground">
-                        DNS changes can take up to 48 hours to propagate, but usually complete within a few minutes.
-                      </p>
-                    </div>
+                    {/* Step 1: TXT Record for Verification */}
+                    {instructions?.txtRecord && (
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                        <p className="text-sm font-medium text-blue-800">Step 1: Verify Domain Ownership</p>
+                        <p className="text-sm text-blue-600">
+                          Add a TXT record to prove you own this domain:
+                        </p>
+
+                        <div className="grid gap-2">
+                          <div className="flex items-center justify-between p-2 bg-white rounded border border-blue-200">
+                            <div>
+                              <span className="text-xs text-muted-foreground">Type</span>
+                              <p className="font-mono text-sm">{instructions.txtRecord.type}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-white rounded border border-blue-200">
+                            <div className="flex-1">
+                              <span className="text-xs text-muted-foreground">Name/Host</span>
+                              <p className="font-mono text-sm">{instructions.txtRecord.name}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(instructions.txtRecord!.name)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-white rounded border border-blue-200">
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs text-muted-foreground">Value</span>
+                              <p className="font-mono text-sm truncate">{instructions.txtRecord.value}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(instructions.txtRecord!.value)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 2: CNAME/A Record for Routing */}
+                    {instructions?.dnsRecord && (
+                      <div className="p-4 bg-muted rounded-lg space-y-3">
+                        <p className="text-sm font-medium">Step 2: Point Domain to StoreForge</p>
+                        <p className="text-sm text-muted-foreground">
+                          Add the following DNS record to route traffic:
+                        </p>
+
+                        <div className="grid gap-2">
+                          <div className="flex items-center justify-between p-2 bg-background rounded border">
+                            <div>
+                              <span className="text-xs text-muted-foreground">Type</span>
+                              <p className="font-mono text-sm">{instructions.dnsRecord.type}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-background rounded border">
+                            <div>
+                              <span className="text-xs text-muted-foreground">Name/Host</span>
+                              <p className="font-mono text-sm">{instructions.dnsRecord.name}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-background rounded border">
+                            <div className="flex-1">
+                              <span className="text-xs text-muted-foreground">Value/Target</span>
+                              <p className="font-mono text-sm">{instructions.dnsRecord.value}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(instructions.dnsRecord!.value)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Fallback for old format */}
+                    {!instructions?.txtRecord && !instructions?.dnsRecord && (
+                      <div className="p-4 bg-muted rounded-lg space-y-3">
+                        <p className="text-sm font-medium">DNS Configuration Required</p>
+                        <div className="grid gap-2">
+                          <div className="flex items-center justify-between p-2 bg-background rounded border">
+                            <div>
+                              <span className="text-xs text-muted-foreground">Type</span>
+                              <p className="font-mono text-sm">CNAME</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-background rounded border">
+                            <div>
+                              <span className="text-xs text-muted-foreground">Name/Host</span>
+                              <p className="font-mono text-sm">
+                                {domainInfo.domain.startsWith('www.') ? 'www' : '@'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-background rounded border">
+                            <div className="flex-1">
+                              <span className="text-xs text-muted-foreground">Value/Target</span>
+                              <p className="font-mono text-sm">{domainInfo.dnsTarget}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(domainInfo.dnsTarget)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-muted-foreground">
+                      DNS changes can take up to 48 hours to propagate, but usually complete within a few minutes.
+                    </p>
 
                     <Button onClick={handleVerify} disabled={isVerifying} className="w-full">
                       {isVerifying ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Checking DNS...
+                          Verifying...
                         </>
                       ) : (
                         <>
                           <RefreshCw className="h-4 w-4 mr-2" />
-                          Verify DNS Configuration
+                          Verify Domain
                         </>
                       )}
                     </Button>

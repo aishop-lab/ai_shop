@@ -200,6 +200,15 @@ export default function CustomerLoginPage() {
                     )}
                   />
 
+                  <div className="flex justify-end">
+                    <Link
+                      href={`/${storeSlug}/account/forgot-password`}
+                      className="text-sm text-muted-foreground hover:text-primary"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+
                   <Button type="submit" className="w-full" disabled={isSubmitting}>
                     {isSubmitting ? (
                       <>

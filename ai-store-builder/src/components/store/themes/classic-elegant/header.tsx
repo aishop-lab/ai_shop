@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Menu, Search } from 'lucide-react'
 import { useStore } from '@/lib/contexts/store-context'
 import MiniCart from '@/components/store/mini-cart'
+import AccountDropdown from '@/components/store/account-dropdown'
 
 interface ClassicElegantHeaderProps {
   onMenuClick?: () => void
@@ -98,10 +99,12 @@ export default function ClassicElegantHeader({ onMenuClick }: ClassicElegantHead
           </nav>
 
           {/* Right Actions */}
-          <div className="flex items-center space-x-5">
+          <div className="flex items-center space-x-3">
             <button className="p-2 text-gray-700 hover:text-[var(--color-primary)] transition-colors">
               <Search className="w-5 h-5" />
             </button>
+
+            <AccountDropdown />
 
             <MiniCart />
           </div>

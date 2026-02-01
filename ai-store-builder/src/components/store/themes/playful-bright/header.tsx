@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Menu, Sparkles } from 'lucide-react'
 import { useStore } from '@/lib/contexts/store-context'
 import MiniCart from '@/components/store/mini-cart'
+import AccountDropdown from '@/components/store/account-dropdown'
 
 interface PlayfulBrightHeaderProps {
   onMenuClick?: () => void
@@ -77,6 +78,7 @@ export default function PlayfulBrightHeader({ onMenuClick }: PlayfulBrightHeader
 
           {/* Right Actions */}
           <div className="flex items-center space-x-2">
+            <AccountDropdown />
             <MiniCart />
           </div>
         </div>

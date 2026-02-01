@@ -20,7 +20,7 @@ const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000
 /**
  * Hash password using scrypt
  */
-async function hashPassword(password: string): Promise<string> {
+export async function hashPassword(password: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const salt = crypto.randomBytes(16).toString('hex')
     crypto.scrypt(password, salt, 64, (err, derivedKey) => {
