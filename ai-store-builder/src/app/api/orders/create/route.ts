@@ -310,14 +310,14 @@ export async function POST(
             const merchantEmail = authUser?.user?.email
 
             // Create dashboard notification
-            await createNotification(supabase, {
+            await createNotification({
               store_id,
               user_id: store.owner_id,
               type: 'system',
               title: 'Shipment Creation Failed',
               message: `Could not auto-create shipment for COD order ${orderNumber}. Please create it manually.`,
               priority: 'high',
-              metadata: {
+              data: {
                 order_id: orderId,
                 order_number: orderNumber,
                 error: result.error,

@@ -245,14 +245,14 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
 
         // Create dashboard notification
         if (store?.owner_id) {
-          await createNotification(supabase, {
+          await createNotification({
             store_id: order.store_id,
             user_id: store.owner_id,
             type: 'system',
             title: 'Shipment Creation Failed',
             message: `Could not auto-create shipment for order ${order.order_number}. Please create it manually.`,
             priority: 'high',
-            metadata: {
+            data: {
               order_id: order.id,
               order_number: order.order_number,
               error: result.error,
