@@ -101,10 +101,9 @@ export default function AboutPreview() {
                     className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
                     style={{ backgroundColor: 'var(--color-primary-light)' }}
                   >
-                    <IconComponent
-                      className="w-6 h-6"
-                      style={{ color: 'var(--color-primary)' }}
-                    />
+                    <span style={{ color: 'var(--color-primary)' }}>
+                      <IconComponent className="w-6 h-6" />
+                    </span>
                   </div>
                   <h3
                     className="font-semibold text-gray-900 mb-1"

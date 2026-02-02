@@ -454,5 +454,5 @@ async function createSession(
 function sanitizeCustomer(customer: Record<string, unknown>): Customer {
   // Remove sensitive fields
   const { password_hash, ...safe } = customer
-  return safe as Customer
+  return safe as unknown as Customer
 }

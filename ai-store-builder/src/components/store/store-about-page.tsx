@@ -127,10 +127,9 @@ export default function StoreAboutPage() {
                     className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: 'var(--color-primary-light)' }}
                   >
-                    <IconComponent
-                      className="w-8 h-8"
-                      style={{ color: 'var(--color-primary)' }}
-                    />
+                    <span style={{ color: 'var(--color-primary)' }}>
+                      <IconComponent className="w-8 h-8" />
+                    </span>
                   </div>
                   <h3
                     className="text-xl font-bold mb-2"

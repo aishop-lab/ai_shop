@@ -66,7 +66,7 @@ export default function ProductDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { store } = useAuth()
+  const [store, setStore] = useState<{ slug: string } | null>(null)
 
   const productId = params.id as string
 
@@ -116,6 +116,19 @@ export default function ProductDetailPage() {
         setFeatured(p.featured ?? false)
         setCategories(p.categories || [])
         setTags(p.tags || [])
+
+        // Fetch store slug for the "View in Store" link
+        if (p.store_id) {
+          try {
+            const storeRes = await fetch('/api/dashboard/settings')
+            const storeData = await storeRes.json()
+            if (storeData.store?.slug) {
+              setStore({ slug: storeData.store.slug })
+            }
+          } catch {
+            // Store fetch is not critical
+          }
+        }
       } else {
         toast({
           title: 'Error',

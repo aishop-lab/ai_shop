@@ -42,7 +42,7 @@ async function removeBackground(imageBuffer: Buffer): Promise<Buffer | null> {
 
   try {
     const formData = new FormData()
-    formData.append('image_file', new Blob([imageBuffer]), 'image.png')
+    formData.append('image_file', new Blob([new Uint8Array(imageBuffer)]), 'image.png')
     formData.append('size', 'auto') // auto, preview, small, regular, medium, hd, 4k
     formData.append('type', 'product') // auto, person, product, car
     formData.append('format', 'png')

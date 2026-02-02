@@ -128,7 +128,7 @@ export default function HeroSection() {
                   key={index}
                   className="flex items-center space-x-2 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full"
                 >
-                  <IconComponent className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
+                  <span style={{ color: 'var(--color-primary)' }}><IconComponent className="w-5 h-5" /></span>
                   <span className="text-sm font-medium text-gray-700">{badge.title}</span>
                 </div>
               )

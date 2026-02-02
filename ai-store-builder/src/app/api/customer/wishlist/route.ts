@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     // Filter out products that are no longer available
     const activeWishlist = wishlist?.filter(
-      item => item.product && (item.product as { status: string }).status === 'published'
+      item => item.product && (item.product as unknown as { status: string }).status === 'published'
     ) || []
 
     return NextResponse.json({ success: true, wishlist: activeWishlist })

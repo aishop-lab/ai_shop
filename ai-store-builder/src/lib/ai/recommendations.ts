@@ -34,7 +34,7 @@ interface Product {
   price: number
   categories?: string[]
   tags?: string[]
-  store_id: string
+  store_id?: string
 }
 
 interface RecommendationResult {

@@ -110,9 +110,9 @@ export async function POST(request: Request) {
     console.log(`[ExtractEnhanced] Optimized to: ${(optimizedBuffer.length / 1024).toFixed(1)}KB`)
 
     // Run AI analysis
-    const stages = [
-      { name: 'upload', status: 'completed' as const, message: 'Image received' },
-      { name: 'ai_analysis', status: 'processing' as const, message: 'Analyzing product...' }
+    const stages: Array<{ name: string; status: 'completed' | 'processing' | 'failed'; message: string }> = [
+      { name: 'upload', status: 'completed', message: 'Image received' },
+      { name: 'ai_analysis', status: 'processing', message: 'Analyzing product...' }
     ]
 
     let aiResult
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
 
       stages[1] = {
         name: 'ai_analysis',
-        status: 'completed' as const,
+        status: 'completed',
         message: `Confidence: ${(aiResult.confidence * 100).toFixed(0)}%`
       }
     } catch (aiError) {
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
 
       stages[1] = {
         name: 'ai_analysis',
-        status: 'failed' as const,
+        status: 'failed',
         message: aiError instanceof Error ? aiError.message : 'AI analysis failed'
       }
 

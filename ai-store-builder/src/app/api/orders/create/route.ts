@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { validateCartItems } from '@/lib/cart/validation'
 import { calculateCartTotal } from '@/lib/cart/calculations'
-import { createRazorpayOrder } from '@/lib/payment/razorpay'
+import { createRazorpayOrder, getStoreRazorpayCredentials, getStoreRazorpayKeyId } from '@/lib/payment/razorpay'
 import { reserveInventory } from '@/lib/orders/inventory'
 import { sendOrderConfirmationEmail } from '@/lib/email/order-confirmation'
 import { sendShipmentFailedEmail } from '@/lib/email/merchant-notifications'
@@ -215,8 +215,12 @@ export async function POST(
 
     // 9. Create Razorpay order (for online payment only)
     let razorpayOrder = null
+    let razorpayKeyId = process.env.RAZORPAY_KEY_ID
     if (payment_method === 'razorpay') {
       try {
+        // Fetch store-specific Razorpay credentials (if configured)
+        const storeCredentials = await getStoreRazorpayCredentials(store_id, supabase)
+
         razorpayOrder = await createRazorpayOrder(
           totals.total,
           'INR',
@@ -225,8 +229,12 @@ export async function POST(
             order_id: orderId,
             store_id,
             customer_email: customer_details.email,
-          }
+          },
+          storeCredentials || undefined
         )
+
+        // Get the appropriate key ID for frontend
+        razorpayKeyId = storeCredentials?.key_id || process.env.RAZORPAY_KEY_ID
 
         // Update order with Razorpay order ID
         await supabase
@@ -285,7 +293,7 @@ export async function POST(
             total: item.total,  // Database column name
           })),
           store: { name: store.name },
-        } as Record<string, unknown>)
+        } as unknown as Parameters<typeof sendOrderConfirmationEmail>[0])
         console.log('COD order confirmation email sent for:', orderNumber)
       } catch (emailError) {
         console.error('Failed to send COD order confirmation email:', emailError)
@@ -349,9 +357,9 @@ export async function POST(
       order: {
         id: orderId,
         order_number: orderNumber,
-        total: totals.total,
+        total_amount: totals.total,
         razorpay_order_id: razorpayOrder?.id,
-        razorpay_key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        razorpay_key_id: razorpayKeyId,
       },
     })
   } catch (error) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { refundPayment } from '@/lib/payment/razorpay'
+import { refundPayment, getStoreRazorpayCredentials } from '@/lib/payment/razorpay'
 import { restoreInventory } from '@/lib/orders/inventory'
 import { sendRefundProcessedEmail } from '@/lib/email/order-confirmation'
 import { z } from 'zod'
@@ -102,13 +102,17 @@ export async function POST(
       )
     }
 
-    // Process Razorpay refund
+    // Fetch store-specific Razorpay credentials (if configured)
+    const storeCredentials = await getStoreRazorpayCredentials(order.stores.id, supabase)
+
+    // Process Razorpay refund with appropriate credentials
     let razorpayRefund
     try {
       razorpayRefund = await refundPayment(
         order.razorpay_payment_id,
         amount,
-        { reason, order_id: orderId }
+        { reason, order_id: orderId },
+        storeCredentials || undefined
       )
     } catch (rpError) {
       console.error('Razorpay refund failed:', rpError)

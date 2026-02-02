@@ -1,5 +1,30 @@
 // Store and Product TypeScript Types
 
+// Razorpay Credentials Types
+export interface RazorpayCredentials {
+  key_id: string
+  key_secret: string
+  webhook_secret?: string
+}
+
+export interface StoredRazorpayCredentials {
+  razorpay_key_id: string | null
+  razorpay_key_secret_encrypted: string | null
+  razorpay_webhook_secret_encrypted: string | null
+  razorpay_credentials_verified: boolean
+  razorpay_credentials_verified_at: string | null
+}
+
+export interface RazorpayCredentialStatus {
+  configured: boolean
+  verified: boolean
+  verified_at: string | null
+  key_id: string | null
+  key_secret_masked: string | null
+  webhook_secret_masked: string | null
+  using_platform_credentials: boolean
+}
+
 export interface StorePageData {
   store: Store
   products: Product[]

@@ -9,7 +9,7 @@
 - **UI**: Tailwind CSS 4, Radix UI, Shadcn UI
 - **Database**: Supabase (PostgreSQL + Auth + Storage + Realtime)
 - **AI**: Vercel AI SDK (Google Gemini 2.0 Flash + Claude)
-- **Payments**: Razorpay (UPI, cards, COD)
+- **Payments**: Razorpay (UPI, cards, COD) with per-store credentials
 - **Shipping**: Shiprocket
 - **Email**: Resend + React Email templates
 
@@ -28,6 +28,7 @@
 - Customer accounts with order history, addresses, wishlist
 - Abandoned cart recovery with 3-email sequence
 - WhatsApp order notifications (MSG91)
+- Per-store Razorpay integration (merchants use their own payment accounts)
 
 ---
 
@@ -52,7 +53,8 @@ src/
 │   ├── store/            # queries.ts, dynamic-styles.ts
 │   ├── customer/         # auth.ts (customer authentication)
 │   ├── cart/             # abandoned-cart.ts (recovery system)
-│   ├── payment/          # razorpay.ts
+│   ├── payment/          # razorpay.ts (per-store credentials support)
+│   ├── encryption.ts     # AES-256-GCM for sensitive credentials
 │   ├── shipping/         # shiprocket.ts
 │   ├── whatsapp/         # msg91.ts (WhatsApp notifications)
 │   ├── email/            # Email service + merchant notifications
@@ -79,13 +81,15 @@ src/
 | `middleware.ts` | Subdomain detection + auth protection |
 | `app/api/onboarding/complete/route.ts` | Store activation + AI content generation |
 | `app/api/shipping/calculate/route.ts` | Real-time shipping cost calculation |
+| `lib/encryption.ts` | AES-256-GCM encryption for Razorpay secrets |
+| `app/api/dashboard/settings/razorpay/route.ts` | Per-store Razorpay credential management |
 
 ---
 
 ## Database
 
 ### Main Tables (20+)
-- **stores** - Config, blueprint (JSONB), policies, settings, cart_recovery_settings
+- **stores** - Config, blueprint (JSONB), policies, settings, cart_recovery_settings, razorpay_credentials
 - **products** - Details, pricing, `is_demo` flag for demo products
 - **product_variants** - SKU combinations with per-variant pricing
 - **orders** / **order_items** - With Shiprocket tracking, customer_id link
@@ -118,10 +122,11 @@ AI_PROVIDER=google
 GOOGLE_GENERATIVE_AI_API_KEY=
 ANTHROPIC_API_KEY=
 
-# Payments
+# Payments (Platform defaults - merchants can override with their own)
 RAZORPAY_KEY_ID=
 RAZORPAY_KEY_SECRET=
 RAZORPAY_WEBHOOK_SECRET=
+CREDENTIALS_ENCRYPTION_KEY=  # 32-byte base64 key for encrypting merchant secrets
 
 # Shipping
 SHIPROCKET_EMAIL=
@@ -147,6 +152,7 @@ NEXT_PUBLIC_APP_URL=https://storeforge.site
 
 | Date | Change |
 |------|--------|
+| 2026-02-03 | **Per-Store Razorpay**: Merchants can configure their own Razorpay credentials for direct settlement |
 | 2026-01-26 | **AI Recommendations**: Product similarity, "frequently bought together", personalized recommendations |
 | 2026-01-26 | **Abandoned Cart Recovery**: Cart persistence, 3-email recovery sequence, cron job |
 | 2026-01-26 | **Customer Accounts**: Registration, login, order history, saved addresses, wishlist |
@@ -180,7 +186,7 @@ Stores are accessible at `{store-slug}.storeforge.site`:
 - Multi-language support (Hindi at minimum)
 - SMS OTP verification
 - PWA support (installable stores)
-- Multiple payment gateways (Stripe for international)
+- Stripe integration for international payments
 - Multiple shipping providers (Delhivery, Blue Dart)
 
 ---
@@ -193,4 +199,4 @@ Stores are accessible at `{store-slug}.storeforge.site`:
 4. Enable Razorpay live mode + webhook URL
 5. Configure Shiprocket production credentials
 
-*Last Updated: 2026-01-26*
+*Last Updated: 2026-02-03*

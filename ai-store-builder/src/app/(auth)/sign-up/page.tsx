@@ -2,13 +2,13 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 import { useAuth } from '@/lib/contexts/auth-context'
 import { Button } from '@/components/ui/button'
@@ -52,7 +52,7 @@ const signUpSchema = z.object({
 
 type SignUpFormData = z.infer<typeof signUpSchema>
 
-export default function SignUpPage() {
+function SignUpContent() {
   const { signUp, signInWithGoogle } = useAuth()
   const searchParams = useSearchParams()
   const prefillEmail = searchParams.get('email') || ''
@@ -286,5 +286,29 @@ export default function SignUpPage() {
         </p>
       </CardFooter>
     </Card>
+  )
+}
+
+function SignUpFallback() {
+  return (
+    <Card>
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl font-bold text-center">Create your account</CardTitle>
+        <CardDescription className="text-center">
+          Enter your details to get started
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </CardContent>
+    </Card>
+  )
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={<SignUpFallback />}>
+      <SignUpContent />
+    </Suspense>
   )
 }

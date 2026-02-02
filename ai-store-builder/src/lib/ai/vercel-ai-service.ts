@@ -510,7 +510,7 @@ Be specific and detailed.`,
       return {
         ...object,
         attributes: attributesArrayToRecord(object.attributes as Array<{ name: string; value: string }>)
-      } as EnhancedProductAnalysis
+      } as unknown as EnhancedProductAnalysis
     } catch (error) {
       console.error('[VercelAI] Enhanced product analysis failed:', error)
 
@@ -519,14 +519,14 @@ Be specific and detailed.`,
         description: 'Product description pending',
         categories: ['General'],
         tags: [],
-        attributes: {},
+        attributes: [] as { name: string; value: string }[],
         ocr_text: [],
         image_quality: {
           score: 5,
           is_blurry: false,
-          brightness: 'normal',
+          brightness: 'normal' as const,
           has_complex_background: false,
-          recommended_actions: ['none'],
+          recommended_actions: ['none'] as ('none' | 'crop' | 'enhance' | 'remove_background')[],
         },
         price_suggestion: {
           min: 0,

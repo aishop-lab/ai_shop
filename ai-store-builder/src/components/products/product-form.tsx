@@ -90,7 +90,7 @@ export default function ProductForm({
   const [lastAnalyzedCount, setLastAnalyzedCount] = useState(0) // Track when we last analyzed
 
   const form = useForm<ProductFormData>({
-    resolver: zodResolver(productSchema),
+    resolver: zodResolver(productSchema) as never,
     defaultValues: {
       title: initialData?.title || '',
       description: initialData?.description || '',
@@ -390,7 +390,7 @@ export default function ProductForm({
       formData.append('title', data.title)
       formData.append('description', data.description)
       formData.append('price', data.price.toString())
-      formData.append('quantity', data.quantity.toString())
+      formData.append('quantity', (data.quantity ?? 0).toString())
       formData.append('status', status)
       formData.append('track_quantity', data.track_quantity.toString())
       formData.append('requires_shipping', data.requires_shipping.toString())

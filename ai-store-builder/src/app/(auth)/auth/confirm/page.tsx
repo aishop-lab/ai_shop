@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 
-export default function ConfirmEmailPage() {
+function ConfirmEmailContent() {
   const searchParams = useSearchParams()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [errorMessage, setErrorMessage] = useState('')
@@ -107,5 +107,28 @@ export default function ConfirmEmailPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function ConfirmEmailFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="max-w-md w-full text-center">
+        <div className="space-y-4">
+          <Loader2 className="h-16 w-16 text-primary mx-auto animate-spin" />
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Loading...
+          </h1>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function ConfirmEmailPage() {
+  return (
+    <Suspense fallback={<ConfirmEmailFallback />}>
+      <ConfirmEmailContent />
+    </Suspense>
   )
 }

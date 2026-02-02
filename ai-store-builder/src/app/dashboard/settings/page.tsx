@@ -498,9 +498,12 @@ export default function SettingsPage() {
                   Stripe {store.settings?.payments?.stripe_enabled ? '(Enabled)' : '(Disabled)'}
                 </p>
               </div>
-              <Button variant="outline" size="sm" className="mt-3" disabled>
-                Configure Payments (Coming Soon)
-              </Button>
+              <Link href="/dashboard/settings/payments">
+                <Button variant="outline" size="sm" className="mt-3">
+                  Configure Razorpay
+                  <ExternalLink className="h-3 w-3 ml-2" />
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

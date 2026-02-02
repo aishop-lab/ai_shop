@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import { verifyRazorpaySignature } from '@/lib/payment/razorpay'
+import { verifyRazorpaySignature, getStoreRazorpayCredentials } from '@/lib/payment/razorpay'
 import { reduceInventory, releaseReservation } from '@/lib/orders/inventory'
 import { sendOrderConfirmationEmail } from '@/lib/email/order-confirmation'
 import type { VerifyPaymentResponse, Order, OrderItem } from '@/lib/types/order'
@@ -45,22 +45,7 @@ export async function POST(
       order_id,
     } = validationResult.data
 
-    // 1. Verify Razorpay signature
-    const isValid = verifyRazorpaySignature(
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature
-    )
-
-    if (!isValid) {
-      console.error('Invalid payment signature for order:', order_id)
-      return NextResponse.json(
-        { success: false, error: 'Invalid payment signature' },
-        { status: 400 }
-      )
-    }
-
-    // 2. Get order details
+    // 1. Get order details first (we need store_id to fetch credentials)
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(
@@ -80,7 +65,26 @@ export async function POST(
       )
     }
 
-    // 3. Verify order matches Razorpay order
+    // 2. Fetch store-specific Razorpay credentials (if configured)
+    const storeCredentials = await getStoreRazorpayCredentials(order.store_id, supabase)
+
+    // 3. Verify Razorpay signature (using store credentials if available)
+    const isValid = verifyRazorpaySignature(
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      storeCredentials?.key_secret
+    )
+
+    if (!isValid) {
+      console.error('Invalid payment signature for order:', order_id)
+      return NextResponse.json(
+        { success: false, error: 'Invalid payment signature' },
+        { status: 400 }
+      )
+    }
+
+    // 4. Verify order matches Razorpay order
     if (order.razorpay_order_id !== razorpay_order_id) {
       console.error('Order ID mismatch:', {
         expected: order.razorpay_order_id,
@@ -92,7 +96,7 @@ export async function POST(
       )
     }
 
-    // 4. Check if already paid (idempotency)
+    // 5. Check if already paid (idempotency)
     if (order.payment_status === 'paid') {
       return NextResponse.json({
         success: true,
@@ -100,7 +104,7 @@ export async function POST(
       })
     }
 
-    // 5. Update order status
+    // 6. Update order status
     const { error: updateError } = await supabase
       .from('orders')
       .update({
@@ -119,7 +123,7 @@ export async function POST(
       )
     }
 
-    // 6. Reduce inventory (variant-aware)
+    // 7. Reduce inventory (variant-aware)
     const orderItems = (order.order_items || []) as OrderItem[]
     await reduceInventory(
       orderItems.map((item) => ({
@@ -129,10 +133,10 @@ export async function POST(
       }))
     )
 
-    // 7. Release inventory reservation
+    // 8. Release inventory reservation
     await releaseReservation(order_id)
 
-    // 8. Send confirmation email
+    // 9. Send confirmation email
     const orderWithStore: Order & { store?: { name: string } } = {
       ...order,
       order_items: orderItems,
@@ -149,7 +153,7 @@ export async function POST(
       orderWithStore.store = { name: store.name }
     }
 
-    await sendOrderConfirmationEmail(orderWithStore)
+    await sendOrderConfirmationEmail(orderWithStore as unknown as Parameters<typeof sendOrderConfirmationEmail>[0])
 
     return NextResponse.json({
       success: true,

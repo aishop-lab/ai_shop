@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifyWebhookSignature } from '@/lib/payment/razorpay'
+import { decrypt } from '@/lib/encryption'
 import { reduceInventory, releaseReservation, restoreInventory } from '@/lib/orders/inventory'
 import {
   sendOrderConfirmationEmail,
@@ -24,6 +25,50 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+/**
+ * Get the webhook secret to use for verification.
+ * Tries to find store-specific secret based on store_id in payment notes,
+ * falls back to platform secret.
+ */
+async function getWebhookSecret(event: RazorpayWebhookEvent): Promise<string | null> {
+  // Try to extract store_id from payment notes
+  let storeId: string | undefined
+
+  if (event.payload.payment?.entity?.notes?.store_id) {
+    storeId = event.payload.payment.entity.notes.store_id
+  } else if (event.payload.refund?.entity?.notes?.store_id) {
+    // For refund events, try to find the order first
+    const paymentId = event.payload.refund.entity.payment_id
+    const { data: order } = await supabase
+      .from('orders')
+      .select('store_id')
+      .eq('razorpay_payment_id', paymentId)
+      .single()
+    storeId = order?.store_id
+  }
+
+  // If we have a store_id, try to get store-specific webhook secret
+  if (storeId) {
+    const { data: store } = await supabase
+      .from('stores')
+      .select('razorpay_webhook_secret_encrypted, razorpay_credentials_verified')
+      .eq('id', storeId)
+      .single()
+
+    if (store?.razorpay_webhook_secret_encrypted && store.razorpay_credentials_verified) {
+      try {
+        return decrypt(store.razorpay_webhook_secret_encrypted)
+      } catch (err) {
+        console.error('Failed to decrypt store webhook secret:', err)
+        // Fall through to platform secret
+      }
+    }
+  }
+
+  // Fallback to platform webhook secret
+  return process.env.RAZORPAY_WEBHOOK_SECRET || null
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Get raw body for signature verification
@@ -35,25 +80,39 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
     }
 
-    // Verify webhook signature
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
+    // Parse event first to extract store_id for webhook secret lookup
+    const event: RazorpayWebhookEvent = JSON.parse(body)
+
+    // Get appropriate webhook secret (store-specific or platform)
+    const webhookSecret = await getWebhookSecret(event)
     if (!webhookSecret) {
-      console.error('Webhook: Missing webhook secret')
+      console.error('Webhook: No webhook secret available')
       return NextResponse.json(
         { error: 'Server configuration error' },
         { status: 500 }
       )
     }
 
+    // Verify webhook signature
     const isValid = verifyWebhookSignature(body, signature, webhookSecret)
 
     if (!isValid) {
-      console.error('Webhook: Invalid signature')
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+      // If store-specific verification failed, try platform secret as fallback
+      // This handles the case where the store just removed their credentials
+      const platformSecret = process.env.RAZORPAY_WEBHOOK_SECRET
+      if (platformSecret && platformSecret !== webhookSecret) {
+        const isValidWithPlatform = verifyWebhookSignature(body, signature, platformSecret)
+        if (!isValidWithPlatform) {
+          console.error('Webhook: Invalid signature (tried both store and platform secrets)')
+          return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+        }
+        // Valid with platform secret, continue processing
+        console.log('Webhook: Verified with platform secret fallback')
+      } else {
+        console.error('Webhook: Invalid signature')
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+      }
     }
-
-    // Parse event
-    const event: RazorpayWebhookEvent = JSON.parse(body)
 
     console.log('Webhook received:', event.event)
 
@@ -174,7 +233,7 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
     store: store ? { name: store.name } : undefined,
   }
 
-  await sendOrderConfirmationEmail(orderWithStore)
+  await sendOrderConfirmationEmail(orderWithStore as unknown as Parameters<typeof sendOrderConfirmationEmail>[0])
 
   // Send WhatsApp notification to customer (if phone provided)
   if (order.shipping_phone) {
@@ -184,8 +243,8 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
       orderNumber: order.order_number,
       totalAmount: order.total_amount,
       storeName: store?.name || 'Store',
-      items: orderItems.map((item: OrderItem) => ({
-        title: item.product_title || item.title || 'Product',
+      items: orderItems.map((item) => ({
+        title: ((item as unknown as Record<string, unknown>).product_title || (item as unknown as Record<string, unknown>).title || 'Product') as string,
         quantity: item.quantity,
         price: item.unit_price
       }))
@@ -212,12 +271,12 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
       customerName: order.shipping_name || order.customer_email || 'Customer',
       customerEmail: order.customer_email || '',
       customerPhone: order.shipping_phone || undefined,
-      items: orderItems.map((item: OrderItem) => ({
-        product_title: item.product_title || item.title || 'Product',
+      items: orderItems.map((item) => ({
+        product_title: ((item as unknown as Record<string, unknown>).product_title || (item as unknown as Record<string, unknown>).title || 'Product') as string,
         quantity: item.quantity,
         unit_price: item.unit_price,
-        total_price: item.total_price,
-        sku: item.sku || undefined
+        total_price: (item as unknown as Record<string, unknown>).total_price as number,
+        sku: ((item as unknown as Record<string, unknown>).sku || undefined) as string | undefined
       })),
       subtotal: order.subtotal || order.total_amount,
       shippingCost: order.shipping_cost || 0,
