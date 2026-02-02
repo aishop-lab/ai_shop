@@ -285,6 +285,32 @@ export interface ProductImage {
   alt_text?: string
 }
 
+// Shipping Zone Configuration
+export interface ShippingZone {
+  id: string
+  name: string
+  type: 'states' | 'pincodes' | 'default'
+  states?: string[]  // State codes for state-based zones
+  pincodes?: string[]  // Specific pincodes or ranges (e.g., "110001", "40-41")
+  flat_rate: number
+  free_shipping_threshold?: number  // Override global threshold for this zone
+  cod_available?: boolean
+  cod_fee?: number
+  estimated_days?: number  // Estimated delivery days
+  is_default?: boolean  // Fallback zone for unmatched areas
+}
+
+export interface ShippingConfig {
+  use_zones: boolean  // If false, use simple flat rate
+  zones?: ShippingZone[]
+  // Weight-based pricing (optional)
+  weight_based?: {
+    enabled: boolean
+    base_weight: number  // kg, included in base rate
+    per_kg_rate: number  // Additional rate per kg above base
+  }
+}
+
 export interface StoreSettings {
   checkout: {
     guest_checkout_enabled: boolean
@@ -295,12 +321,88 @@ export interface StoreSettings {
     flat_rate_national: number
     cod_enabled: boolean
     cod_fee?: number
+    // Extended shipping configuration
+    config?: ShippingConfig
   }
   payments: {
     razorpay_enabled: boolean
     stripe_enabled: boolean
     upi_enabled: boolean
   }
+}
+
+// Indian States for shipping zones
+export const INDIAN_STATES = [
+  { code: 'AN', name: 'Andaman and Nicobar Islands' },
+  { code: 'AP', name: 'Andhra Pradesh' },
+  { code: 'AR', name: 'Arunachal Pradesh' },
+  { code: 'AS', name: 'Assam' },
+  { code: 'BR', name: 'Bihar' },
+  { code: 'CG', name: 'Chhattisgarh' },
+  { code: 'CH', name: 'Chandigarh' },
+  { code: 'DD', name: 'Dadra and Nagar Haveli and Daman and Diu' },
+  { code: 'DL', name: 'Delhi' },
+  { code: 'GA', name: 'Goa' },
+  { code: 'GJ', name: 'Gujarat' },
+  { code: 'HP', name: 'Himachal Pradesh' },
+  { code: 'HR', name: 'Haryana' },
+  { code: 'JH', name: 'Jharkhand' },
+  { code: 'JK', name: 'Jammu and Kashmir' },
+  { code: 'KA', name: 'Karnataka' },
+  { code: 'KL', name: 'Kerala' },
+  { code: 'LA', name: 'Ladakh' },
+  { code: 'LD', name: 'Lakshadweep' },
+  { code: 'MH', name: 'Maharashtra' },
+  { code: 'ML', name: 'Meghalaya' },
+  { code: 'MN', name: 'Manipur' },
+  { code: 'MP', name: 'Madhya Pradesh' },
+  { code: 'MZ', name: 'Mizoram' },
+  { code: 'NL', name: 'Nagaland' },
+  { code: 'OR', name: 'Odisha' },
+  { code: 'PB', name: 'Punjab' },
+  { code: 'PY', name: 'Puducherry' },
+  { code: 'RJ', name: 'Rajasthan' },
+  { code: 'SK', name: 'Sikkim' },
+  { code: 'TN', name: 'Tamil Nadu' },
+  { code: 'TS', name: 'Telangana' },
+  { code: 'TR', name: 'Tripura' },
+  { code: 'UK', name: 'Uttarakhand' },
+  { code: 'UP', name: 'Uttar Pradesh' },
+  { code: 'WB', name: 'West Bengal' },
+]
+
+// Pre-defined zone templates for easy setup
+export const SHIPPING_ZONE_TEMPLATES = {
+  metro: {
+    name: 'Metro Cities',
+    states: ['DL', 'MH', 'KA', 'TN', 'WB', 'GJ'],
+    estimated_days: 2,
+  },
+  north: {
+    name: 'North India',
+    states: ['UP', 'HR', 'PB', 'RJ', 'MP', 'UK', 'HP', 'CH', 'JK', 'LA'],
+    estimated_days: 4,
+  },
+  south: {
+    name: 'South India',
+    states: ['KL', 'AP', 'TS', 'TN', 'KA', 'PY', 'GA'],
+    estimated_days: 4,
+  },
+  east: {
+    name: 'East India',
+    states: ['WB', 'OR', 'JH', 'BR', 'AS'],
+    estimated_days: 5,
+  },
+  northeast: {
+    name: 'North East',
+    states: ['AR', 'MN', 'MZ', 'NL', 'ML', 'TR', 'SK'],
+    estimated_days: 7,
+  },
+  islands: {
+    name: 'Islands & Remote',
+    states: ['AN', 'LD'],
+    estimated_days: 10,
+  },
 }
 
 // API Response types

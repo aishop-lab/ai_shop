@@ -307,16 +307,29 @@ export default function StoreThankYouPage() {
         
         <div className="p-6 border rounded-lg">
           <div className="flex items-center gap-3 mb-3">
-            <div 
+            <div
               className="w-10 h-10 rounded-lg flex items-center justify-center"
               style={{ backgroundColor: 'var(--color-primary-light)' }}
             >
               <Truck className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
             </div>
-            <h3 className="font-semibold">Shipping Updates</h3>
+            <h3 className="font-semibold">Track Your Order</h3>
           </div>
           <p className="text-gray-600 text-sm">
-            You&apos;ll receive tracking information once your order ships.
+            {orderNumber ? (
+              <>
+                <Link
+                  href={`${baseUrl}/track/${orderNumber}`}
+                  className="font-medium hover:underline"
+                  style={{ color: 'var(--color-primary)' }}
+                >
+                  Track your order
+                </Link>
+                {' '}anytime to see real-time shipping updates.
+              </>
+            ) : (
+              "You'll receive tracking information once your order ships."
+            )}
           </p>
         </div>
       </div>
@@ -349,13 +362,28 @@ export default function StoreThankYouPage() {
             <span className="text-gray-700">Your order will be carefully packed and shipped</span>
           </li>
           <li className="flex items-start gap-3">
-            <span 
+            <span
               className="w-6 h-6 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0"
               style={{ backgroundColor: 'var(--color-primary)' }}
             >
               3
             </span>
-            <span className="text-gray-700">Track your delivery with the link in your email</span>
+            <span className="text-gray-700">
+              {orderNumber ? (
+                <>
+                  <Link
+                    href={`${baseUrl}/track/${orderNumber}`}
+                    className="font-medium hover:underline"
+                    style={{ color: 'var(--color-primary)' }}
+                  >
+                    Track your order
+                  </Link>
+                  {' '}to see real-time delivery updates
+                </>
+              ) : (
+                'Track your delivery with the link in your email'
+              )}
+            </span>
           </li>
         </ul>
       </div>
@@ -388,15 +416,25 @@ export default function StoreThankYouPage() {
       
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+        {orderNumber && (
+          <Link
+            href={`${baseUrl}/track/${orderNumber}`}
+            className="inline-flex items-center px-6 py-3 rounded-lg font-semibold text-white"
+            style={{ backgroundColor: 'var(--color-primary)' }}
+          >
+            <Truck className="mr-2 w-4 h-4" />
+            Track Order
+          </Link>
+        )}
+
         <Link
           href={`${baseUrl}/products`}
-          className="inline-flex items-center px-6 py-3 rounded-lg font-semibold text-white"
-          style={{ backgroundColor: 'var(--color-primary)' }}
+          className="inline-flex items-center px-6 py-3 rounded-lg font-semibold border border-gray-300 hover:bg-gray-50"
         >
           Continue Shopping
           <ArrowRight className="ml-2 w-4 h-4" />
         </Link>
-        
+
         <Link
           href={baseUrl}
           className="inline-flex items-center px-6 py-3 rounded-lg font-semibold border border-gray-300 hover:bg-gray-50"

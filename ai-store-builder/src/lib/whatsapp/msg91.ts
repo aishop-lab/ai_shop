@@ -9,16 +9,28 @@
  * 2. Apply for WhatsApp Business API
  * 3. Create message templates and get them approved
  * 4. Set MSG91_AUTH_KEY and MSG91_WHATSAPP_INTEGRATED_NUMBER in env
+ *
+ * Features:
+ * - Automatic retry with exponential backoff (3 attempts)
+ * - Phone number validation and formatting
+ * - Structured logging for audit trail
+ * - Graceful fallback when API unavailable
  */
 
 const MSG91_BASE_URL = 'https://api.msg91.com/api/v5/whatsapp'
 const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY
 const MSG91_INTEGRATED_NUMBER = process.env.MSG91_WHATSAPP_INTEGRATED_NUMBER
 
+// Retry configuration
+const MAX_RETRIES = 3
+const INITIAL_RETRY_DELAY_MS = 1000 // 1 second
+const MAX_RETRY_DELAY_MS = 10000 // 10 seconds
+
 interface WhatsAppResult {
   success: boolean
   messageId?: string
   error?: string
+  attempts?: number
 }
 
 interface OrderItem {
@@ -27,14 +39,66 @@ interface OrderItem {
   price: number
 }
 
+interface WhatsAppLogEntry {
+  timestamp: string
+  event: 'send_attempt' | 'send_success' | 'send_failure' | 'retry' | 'final_failure'
+  phone: string
+  template: string
+  messageId?: string
+  error?: string
+  attempt?: number
+  maxAttempts?: number
+}
+
+/**
+ * Log WhatsApp message events for audit trail
+ */
+function logWhatsAppEvent(entry: WhatsAppLogEntry): void {
+  const logData = {
+    service: 'whatsapp',
+    provider: 'msg91',
+    ...entry,
+  }
+
+  if (entry.event === 'send_success') {
+    console.log('[WhatsApp]', JSON.stringify(logData))
+  } else if (entry.event === 'send_failure' || entry.event === 'final_failure') {
+    console.error('[WhatsApp]', JSON.stringify(logData))
+  } else {
+    console.log('[WhatsApp]', JSON.stringify(logData))
+  }
+}
+
+/**
+ * Validate Indian phone number
+ * Returns true if valid, false otherwise
+ */
+export function validatePhoneNumber(phone: string): boolean {
+  // Remove all non-digit characters
+  const cleaned = phone.replace(/\D/g, '')
+
+  // Check for valid Indian mobile number patterns:
+  // - 10 digits starting with 6-9 (local format)
+  // - 12 digits starting with 91 followed by 6-9 (with country code)
+  // - 13 digits starting with +91 (after stripping +)
+  if (cleaned.length === 10) {
+    return /^[6-9]\d{9}$/.test(cleaned)
+  } else if (cleaned.length === 12) {
+    return /^91[6-9]\d{9}$/.test(cleaned)
+  }
+
+  return false
+}
+
 /**
  * Format phone number to international format (India)
+ * Returns formatted number or throws if invalid
  */
-function formatPhoneNumber(phone: string): string {
+export function formatPhoneNumber(phone: string): string {
   // Remove any non-digit characters
   let cleaned = phone.replace(/\D/g, '')
 
-  // If starts with 0, remove it
+  // If starts with 0, remove it (local format: 09876543210)
   if (cleaned.startsWith('0')) {
     cleaned = cleaned.substring(1)
   }
@@ -42,6 +106,17 @@ function formatPhoneNumber(phone: string): string {
   // If 10 digits, add India country code
   if (cleaned.length === 10) {
     cleaned = '91' + cleaned
+  }
+
+  // Validate the final number
+  if (cleaned.length !== 12 || !cleaned.startsWith('91')) {
+    throw new Error(`Invalid phone number format: ${phone}`)
+  }
+
+  // Validate the mobile number part (should start with 6-9)
+  const mobileNumber = cleaned.substring(2)
+  if (!/^[6-9]\d{9}$/.test(mobileNumber)) {
+    throw new Error(`Invalid Indian mobile number: ${phone}`)
   }
 
   return cleaned
@@ -55,76 +130,213 @@ function formatCurrency(amount: number): string {
     style: 'currency',
     currency: 'INR',
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   }).format(amount)
 }
 
 /**
- * Send WhatsApp message via MSG91
+ * Sleep for specified milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Calculate delay for exponential backoff
+ */
+function getRetryDelay(attempt: number): number {
+  const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1)
+  // Add jitter (random 0-500ms) to prevent thundering herd
+  const jitter = Math.random() * 500
+  return Math.min(delay + jitter, MAX_RETRY_DELAY_MS)
+}
+
+/**
+ * Check if error is retryable
+ */
+function isRetryableError(statusCode: number, error?: string): boolean {
+  // Retry on server errors (5xx), rate limiting (429), or network issues
+  if (statusCode >= 500 || statusCode === 429) {
+    return true
+  }
+
+  // Don't retry on client errors (4xx) except 429
+  if (statusCode >= 400 && statusCode < 500) {
+    return false
+  }
+
+  // Retry on network-related errors
+  const networkErrors = ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED']
+  if (error && networkErrors.some((e) => error.includes(e))) {
+    return true
+  }
+
+  return false
+}
+
+/**
+ * Send WhatsApp message via MSG91 with retry logic
  */
 async function sendWhatsAppMessage(params: {
   to: string
   templateName: string
   templateParams: Record<string, string>
 }): Promise<WhatsAppResult> {
+  // Development mode - log and return success
   if (!MSG91_AUTH_KEY || !MSG91_INTEGRATED_NUMBER) {
-    // Log for development when WhatsApp not configured
+    logWhatsAppEvent({
+      timestamp: new Date().toISOString(),
+      event: 'send_success',
+      phone: params.to,
+      template: params.templateName,
+      messageId: 'dev-mode',
+    })
     console.log('=== WHATSAPP MESSAGE (MSG91 not configured) ===')
     console.log('To:', params.to)
     console.log('Template:', params.templateName)
     console.log('Params:', params.templateParams)
     console.log('==============================================')
-    return { success: true, messageId: 'dev-mode' }
+    return { success: true, messageId: 'dev-mode', attempts: 1 }
   }
 
+  // Validate and format phone number
+  let formattedPhone: string
   try {
-    const response = await fetch(`${MSG91_BASE_URL}/whatsapp/outbound/send`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'authkey': MSG91_AUTH_KEY
-      },
-      body: JSON.stringify({
-        integrated_number: MSG91_INTEGRATED_NUMBER,
-        content_type: 'template',
-        payload: {
-          to: formatPhoneNumber(params.to),
-          type: 'template',
-          template: {
-            name: params.templateName,
-            language: {
-              code: 'en',
-              policy: 'deterministic'
-            },
-            components: [
-              {
-                type: 'body',
-                parameters: Object.entries(params.templateParams).map(([, value]) => ({
-                  type: 'text',
-                  text: value
-                }))
-              }
-            ]
-          }
-        }
-      })
+    formattedPhone = formatPhoneNumber(params.to)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Invalid phone number'
+    logWhatsAppEvent({
+      timestamp: new Date().toISOString(),
+      event: 'final_failure',
+      phone: params.to,
+      template: params.templateName,
+      error: errorMessage,
+    })
+    return { success: false, error: errorMessage, attempts: 0 }
+  }
+
+  let lastError: string | undefined
+  let lastStatusCode = 0
+
+  // Retry loop with exponential backoff
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    logWhatsAppEvent({
+      timestamp: new Date().toISOString(),
+      event: 'send_attempt',
+      phone: formattedPhone,
+      template: params.templateName,
+      attempt,
+      maxAttempts: MAX_RETRIES,
     })
 
-    const data = await response.json()
+    try {
+      const response = await fetch(`${MSG91_BASE_URL}/whatsapp/outbound/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          authkey: MSG91_AUTH_KEY,
+        },
+        body: JSON.stringify({
+          integrated_number: MSG91_INTEGRATED_NUMBER,
+          content_type: 'template',
+          payload: {
+            to: formattedPhone,
+            type: 'template',
+            template: {
+              name: params.templateName,
+              language: {
+                code: 'en',
+                policy: 'deterministic',
+              },
+              components: [
+                {
+                  type: 'body',
+                  parameters: Object.entries(params.templateParams).map(([, value]) => ({
+                    type: 'text',
+                    text: value,
+                  })),
+                },
+              ],
+            },
+          },
+        }),
+      })
 
-    if (!response.ok) {
-      console.error('[WhatsApp] MSG91 error:', data)
-      return { success: false, error: data.message || 'Failed to send message' }
-    }
+      lastStatusCode = response.status
 
-    console.log('[WhatsApp] Message sent:', data.request_id)
-    return { success: true, messageId: data.request_id }
-  } catch (error) {
-    console.error('[WhatsApp] Error:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to send WhatsApp message'
+      const data = await response.json()
+
+      if (response.ok) {
+        logWhatsAppEvent({
+          timestamp: new Date().toISOString(),
+          event: 'send_success',
+          phone: formattedPhone,
+          template: params.templateName,
+          messageId: data.request_id,
+          attempt,
+        })
+        return { success: true, messageId: data.request_id, attempts: attempt }
+      }
+
+      lastError = data.message || `HTTP ${response.status}: ${response.statusText}`
+
+      // Check if we should retry
+      if (!isRetryableError(response.status, lastError) || attempt === MAX_RETRIES) {
+        break
+      }
+
+      // Log retry and wait
+      const delay = getRetryDelay(attempt)
+      logWhatsAppEvent({
+        timestamp: new Date().toISOString(),
+        event: 'retry',
+        phone: formattedPhone,
+        template: params.templateName,
+        error: lastError,
+        attempt,
+        maxAttempts: MAX_RETRIES,
+      })
+
+      await sleep(delay)
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : 'Network error'
+
+      // Check if we should retry network errors
+      if (attempt === MAX_RETRIES || !isRetryableError(0, lastError)) {
+        break
+      }
+
+      // Log retry and wait
+      const delay = getRetryDelay(attempt)
+      logWhatsAppEvent({
+        timestamp: new Date().toISOString(),
+        event: 'retry',
+        phone: formattedPhone,
+        template: params.templateName,
+        error: lastError,
+        attempt,
+        maxAttempts: MAX_RETRIES,
+      })
+
+      await sleep(delay)
     }
+  }
+
+  // All retries exhausted
+  logWhatsAppEvent({
+    timestamp: new Date().toISOString(),
+    event: 'final_failure',
+    phone: formattedPhone,
+    template: params.templateName,
+    error: lastError,
+    attempt: MAX_RETRIES,
+    maxAttempts: MAX_RETRIES,
+  })
+
+  return {
+    success: false,
+    error: lastError || 'Failed to send WhatsApp message after all retries',
+    attempts: MAX_RETRIES,
   }
 }
 
@@ -147,7 +359,7 @@ export async function sendOrderConfirmationWhatsApp(params: {
   // Create items summary (first 3 items)
   const itemsSummary = items
     .slice(0, 3)
-    .map(item => `${item.quantity}x ${item.title}`)
+    .map((item) => `${item.quantity}x ${item.title}`)
     .join(', ')
   const moreItems = items.length > 3 ? ` +${items.length - 3} more` : ''
 
@@ -159,8 +371,8 @@ export async function sendOrderConfirmationWhatsApp(params: {
       order_number: orderNumber,
       items_summary: itemsSummary + moreItems,
       total_amount: formatCurrency(totalAmount),
-      store_name: storeName
-    }
+      store_name: storeName,
+    },
   })
 }
 
@@ -190,8 +402,8 @@ export async function sendOrderShippedWhatsApp(params: {
       courier_name: courierName,
       tracking_number: trackingNumber,
       tracking_url: trackingUrl || `https://shiprocket.co/tracking/${trackingNumber}`,
-      estimated_delivery: estimatedDelivery || 'within 3-5 business days'
-    }
+      estimated_delivery: estimatedDelivery || 'within 3-5 business days',
+    },
   })
 }
 
@@ -217,8 +429,8 @@ export async function sendOrderDeliveredWhatsApp(params: {
       customer_name: customerName,
       order_number: orderNumber,
       store_name: storeName,
-      review_url: reviewUrl || '#'
-    }
+      review_url: reviewUrl || '#',
+    },
   })
 }
 
@@ -240,8 +452,8 @@ export async function sendOutForDeliveryWhatsApp(params: {
     templateName: 'out_for_delivery',
     templateParams: {
       customer_name: customerName,
-      order_number: orderNumber
-    }
+      order_number: orderNumber,
+    },
   })
 }
 
@@ -267,8 +479,8 @@ export async function sendAbandonedCartWhatsApp(params: {
       customer_name: customerName,
       items_count: itemsCount.toString(),
       cart_url: cartUrl,
-      store_name: storeName
-    }
+      store_name: storeName,
+    },
   })
 }
 
@@ -292,8 +504,8 @@ export async function sendCODReminderWhatsApp(params: {
     templateParams: {
       customer_name: customerName,
       order_number: orderNumber,
-      total_amount: formatCurrency(totalAmount)
-    }
+      total_amount: formatCurrency(totalAmount),
+    },
   })
 }
 

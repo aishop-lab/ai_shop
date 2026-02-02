@@ -7,6 +7,7 @@ import {
   Home,
   Package,
   ShoppingCart,
+  ShoppingBasket,
   BarChart3,
   Globe,
   Settings,
@@ -19,7 +20,8 @@ import {
   MessageSquare,
   Megaphone,
   Folder,
-  FileSpreadsheet
+  FileSpreadsheet,
+  PackageX,
 } from 'lucide-react'
 import { UserDropdown } from './user-dropdown'
 import { Button } from '@/components/ui/button'
@@ -143,6 +145,14 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
             onNavigate={onClose}
           />
 
+          {/* Abandoned Carts */}
+          <NavSection
+            label="Abandoned Carts"
+            icon={ShoppingBasket}
+            href="/dashboard/abandoned-carts"
+            onNavigate={onClose}
+          />
+
           {/* Coupons */}
           <NavSection
             label="Coupons"
@@ -164,6 +174,14 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
             label="Refunds"
             icon={RotateCcw}
             href="/dashboard/refunds"
+            onNavigate={onClose}
+          />
+
+          {/* Returns / RTO */}
+          <NavSection
+            label="Returns & RTO"
+            icon={PackageX}
+            href="/dashboard/returns"
             onNavigate={onClose}
           />
 

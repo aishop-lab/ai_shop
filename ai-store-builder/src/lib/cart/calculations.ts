@@ -1,7 +1,8 @@
 // Cart Calculation Utilities
 
-import type { StoreSettings, DEFAULT_STORE_SETTINGS } from '@/lib/types/store'
+import type { StoreSettings } from '@/lib/types/store'
 import type { ValidatedCartItem, CartTotals } from '@/lib/types/cart'
+import { calculateZoneShipping } from '@/lib/shipping/zones'
 
 /**
  * Calculate cart subtotal from validated items
@@ -13,12 +14,25 @@ export function calculateSubtotal(items: ValidatedCartItem[]): number {
 }
 
 /**
+ * Calculate total weight from items
+ */
+export function calculateTotalWeight(items: ValidatedCartItem[]): number {
+  return items.reduce((total, item) => {
+    const weight = item.product.weight || 0.5  // Default 0.5kg if not specified
+    return total + (weight * item.quantity)
+  }, 0)
+}
+
+/**
  * Calculate shipping cost based on store settings
+ * Supports both simple flat rate and zone-based pricing
  */
 export function calculateShipping(
   subtotal: number,
   settings: StoreSettings,
-  paymentMethod?: string
+  paymentMethod?: string,
+  shippingAddress?: { state?: string; pincode?: string },
+  totalWeight?: number
 ): number {
   const shippingSettings = settings.shipping || {
     free_shipping_threshold: 999,
@@ -27,6 +41,22 @@ export function calculateShipping(
     cod_fee: 20
   }
 
+  // If zone-based shipping is configured and we have address info, use it
+  if (shippingSettings.config?.use_zones && shippingAddress?.state && shippingAddress?.pincode) {
+    const zoneResult = calculateZoneShipping(
+      shippingAddress.state,
+      shippingAddress.pincode,
+      settings,
+      {
+        subtotal,
+        paymentMethod: paymentMethod as 'razorpay' | 'cod' | undefined,
+        totalWeight,
+      }
+    )
+    return zoneResult.totalShipping
+  }
+
+  // Fall back to simple flat rate calculation
   // Free shipping if above threshold
   if (subtotal >= shippingSettings.free_shipping_threshold) {
     // Still add COD fee if applicable
@@ -79,10 +109,14 @@ export function calculateCartTotal(
   items: ValidatedCartItem[],
   settings: StoreSettings,
   paymentMethod?: string,
-  couponCode?: string
+  couponCode?: string,
+  shippingAddress?: { state?: string; pincode?: string }
 ): CartTotals {
   const subtotal = calculateSubtotal(items)
-  const shipping = items.length > 0 ? calculateShipping(subtotal, settings, paymentMethod) : 0
+  const totalWeight = calculateTotalWeight(items)
+  const shipping = items.length > 0
+    ? calculateShipping(subtotal, settings, paymentMethod, shippingAddress, totalWeight)
+    : 0
   const tax = calculateTax(subtotal, settings)
   const discount = calculateDiscount(subtotal, couponCode)
 

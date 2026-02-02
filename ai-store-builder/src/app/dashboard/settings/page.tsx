@@ -445,6 +445,18 @@ export default function SettingsPage() {
                 />
               </div>
             )}
+
+            <div className="pt-4 border-t">
+              <Link href="/dashboard/settings/shipping">
+                <Button variant="outline" className="w-full">
+                  <Truck className="h-4 w-4 mr-2" />
+                  Advanced Shipping Settings
+                </Button>
+              </Link>
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Configure shipping zones, weight-based rates, and more
+              </p>
+            </div>
           </CardContent>
         </Card>
 
