@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { validateCartItems } from '@/lib/cart/validation'
@@ -9,6 +10,7 @@ import { sendOrderConfirmationEmail } from '@/lib/email/order-confirmation'
 import { sendShipmentFailedEmail } from '@/lib/email/merchant-notifications'
 import { autoCreateShipmentForStore } from '@/lib/shipping/provider-manager'
 import { createNotification } from '@/lib/notifications'
+import { validateSession } from '@/lib/customer/auth'
 import type { StoreSettings } from '@/lib/types/store'
 import type { CreateOrderResponse, ShippingAddress } from '@/lib/types/order'
 
@@ -92,6 +94,25 @@ export async function POST(
       )
     }
 
+    // 1b. Check if customer is logged in (optional - allows guest checkout)
+    let customerId: string | null = null
+    try {
+      const cookieStore = await cookies()
+      const sessionToken = cookieStore.get('customer_session')?.value
+      if (sessionToken) {
+        const sessionResult = await validateSession(sessionToken)
+        if (sessionResult.success && sessionResult.customer) {
+          // Verify customer belongs to this store
+          if (sessionResult.customer.store_id === store_id) {
+            customerId = sessionResult.customer.id
+          }
+        }
+      }
+    } catch (error) {
+      // Silently continue - guest checkout is allowed
+      console.log('Customer session check failed, proceeding as guest:', error)
+    }
+
     // 2. Get store settings
     const { data: store, error: storeError } = await supabase
       .from('stores')
@@ -154,6 +175,7 @@ export async function POST(
       id: orderId,
       order_number: orderNumber,
       store_id,
+      customer_id: customerId, // Link to customer account if logged in
       customer_name: customer_details.name,
       email: customer_details.email,
       phone: customer_details.phone,
