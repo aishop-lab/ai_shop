@@ -500,56 +500,168 @@ export default function ShippingProvidersPage() {
         <CardHeader>
           <CardTitle>Setup Guides</CardTitle>
           <CardDescription>
-            Learn how to get credentials for each shipping provider
+            Step-by-step instructions to get credentials for each shipping provider
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <a
-              href="https://www.shiprocket.in"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl">🚀</span>
-                <span className="font-medium">Shiprocket</span>
-                <ExternalLink className="w-4 h-4 ml-auto text-gray-400" />
-              </div>
-              <p className="text-sm text-gray-600">
-                Sign up at shiprocket.in, then use your login email and password.
+        <CardContent className="space-y-6">
+          {/* Shiprocket Guide */}
+          <div className="border rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-2xl">🚀</span>
+              <span className="font-semibold text-lg">Shiprocket</span>
+              <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Easiest Setup</span>
+            </div>
+            <div className="space-y-3 text-sm">
+              <p className="text-gray-600">
+                Shiprocket is the easiest to set up - just use your login credentials.
               </p>
-            </a>
-            <a
-              href="https://www.delhivery.com/partners"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl">📦</span>
-                <span className="font-medium">Delhivery</span>
-                <ExternalLink className="w-4 h-4 ml-auto text-gray-400" />
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <p className="font-medium text-gray-800">Steps:</p>
+                <ol className="list-decimal list-inside space-y-2 text-gray-700">
+                  <li>
+                    Go to{' '}
+                    <a
+                      href="https://app.shiprocket.in/register"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                    >
+                      app.shiprocket.in/register
+                      <ExternalLink className="w-3 h-3" />
+                    </a>{' '}
+                    and create an account
+                  </li>
+                  <li>Complete phone/email verification</li>
+                  <li>Add your pickup address in Shiprocket dashboard under <strong>Settings → Pickup Address</strong></li>
+                  <li>Come back here and enter your <strong>Shiprocket login email</strong> and <strong>password</strong></li>
+                  <li>Enter the pickup location name exactly as you created it in Shiprocket</li>
+                </ol>
               </div>
-              <p className="text-sm text-gray-600">
-                Apply for API access at partners portal. Get API token after approval.
-              </p>
-            </a>
-            <a
-              href="https://www.bluedart.com/web-services"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl">✈️</span>
-                <span className="font-medium">Blue Dart</span>
-                <ExternalLink className="w-4 h-4 ml-auto text-gray-400" />
+              <div className="flex items-start gap-2 text-amber-700 bg-amber-50 p-3 rounded-lg">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <p className="text-xs">
+                  Use the same email and password you use to login to Shiprocket. No API key required.
+                </p>
               </div>
-              <p className="text-sm text-gray-600">
-                Contact Blue Dart sales team for API credentials.
+            </div>
+          </div>
+
+          {/* Delhivery Guide */}
+          <div className="border rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-2xl">📦</span>
+              <span className="font-semibold text-lg">Delhivery</span>
+              <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Requires Approval</span>
+            </div>
+            <div className="space-y-3 text-sm">
+              <p className="text-gray-600">
+                Delhivery requires you to apply for a business account and get approved for API access.
               </p>
-            </a>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <p className="font-medium text-gray-800">Steps:</p>
+                <ol className="list-decimal list-inside space-y-2 text-gray-700">
+                  <li>
+                    Go to{' '}
+                    <a
+                      href="https://www.delhivery.com/seller-signup"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                    >
+                      delhivery.com/seller-signup
+                      <ExternalLink className="w-3 h-3" />
+                    </a>{' '}
+                    and register as a seller
+                  </li>
+                  <li>Complete KYC verification (PAN, GST, bank details)</li>
+                  <li>Wait for account approval (usually 2-3 business days)</li>
+                  <li>
+                    Once approved, login to{' '}
+                    <a
+                      href="https://track.delhivery.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                    >
+                      track.delhivery.com
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </li>
+                  <li>Go to <strong>Settings → API Setup</strong> or contact support to get your API Token</li>
+                  <li>Copy your <strong>Client Name</strong> from the dashboard</li>
+                  <li>Come back here and enter your API Token and Client Name</li>
+                </ol>
+              </div>
+              <div className="flex items-start gap-2 text-blue-700 bg-blue-50 p-3 rounded-lg">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <p className="text-xs">
+                  If you can&apos;t find API settings, email <strong>support@delhivery.com</strong> or call <strong>011-4891-1111</strong> and request API access.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Blue Dart Guide */}
+          <div className="border rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-2xl">✈️</span>
+              <span className="font-semibold text-lg">Blue Dart</span>
+              <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">Enterprise</span>
+            </div>
+            <div className="space-y-3 text-sm">
+              <p className="text-gray-600">
+                Blue Dart provides API access for business accounts with regular shipping volume.
+              </p>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <p className="font-medium text-gray-800">Steps:</p>
+                <ol className="list-decimal list-inside space-y-2 text-gray-700">
+                  <li>
+                    Visit{' '}
+                    <a
+                      href="https://www.bluedart.com/customer-service-contact-us"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                    >
+                      bluedart.com/contact-us
+                      <ExternalLink className="w-3 h-3" />
+                    </a>{' '}
+                    and fill the inquiry form
+                  </li>
+                  <li>Select &quot;I want to ship with Blue Dart&quot; as inquiry type</li>
+                  <li>A sales representative will contact you within 24-48 hours</li>
+                  <li>After signing the service agreement, request API access</li>
+                  <li>
+                    Blue Dart will provide: <strong>API Key</strong>, <strong>Client Code</strong>, <strong>License Key</strong>, and <strong>Login ID</strong>
+                  </li>
+                  <li>Come back here and enter all four credentials</li>
+                </ol>
+              </div>
+              <div className="flex items-start gap-2 text-purple-700 bg-purple-50 p-3 rounded-lg">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <p className="text-xs">
+                  You can also call Blue Dart at <strong>1860-233-1234</strong> for faster onboarding. Mention you need NetConnect API access.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Self Delivery Guide */}
+          <div className="border rounded-lg p-4 bg-gray-50">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-2xl">🏠</span>
+              <span className="font-semibold text-lg">Self Delivery</span>
+              <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full">No Setup Required</span>
+            </div>
+            <div className="text-sm text-gray-600">
+              <p>
+                Handle deliveries yourself without any shipping provider. Perfect for local deliveries,
+                in-store pickup, or if you have your own delivery staff.
+              </p>
+              <p className="mt-2">
+                Just select &quot;Self Delivery&quot; when adding a provider - no credentials needed.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
