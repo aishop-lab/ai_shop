@@ -79,6 +79,7 @@ export default function ShippingProvidersPage() {
   const [credentials, setCredentials] = useState<Record<string, string>>({})
   const [pickupLocation, setPickupLocation] = useState('')
   const [isDefault, setIsDefault] = useState(false)
+  const [skipValidation, setSkipValidation] = useState(false)
   const [validating, setValidating] = useState(false)
 
   useEffect(() => {
@@ -127,6 +128,7 @@ export default function ShippingProvidersPage() {
           credentials,
           pickupLocation,
           isDefault,
+          validate: !skipValidation,
         }),
       })
 
@@ -139,6 +141,7 @@ export default function ShippingProvidersPage() {
         setCredentials({})
         setPickupLocation('')
         setIsDefault(false)
+        setSkipValidation(false)
         fetchSettings()
       } else {
         toast.error(data.error || 'Failed to connect provider')
@@ -613,6 +616,17 @@ export default function ShippingProvidersPage() {
                 <div className="flex items-center gap-2">
                   <Switch checked={isDefault} onCheckedChange={setIsDefault} />
                   <Label>Set as default provider</Label>
+                </div>
+
+                {/* Skip Validation */}
+                <div className="flex items-center gap-2 pt-2 border-t">
+                  <Switch checked={skipValidation} onCheckedChange={setSkipValidation} />
+                  <div>
+                    <Label>Skip credential validation</Label>
+                    <p className="text-xs text-gray-500">
+                      Save without testing the connection (useful if API is temporarily unavailable)
+                    </p>
+                  </div>
                 </div>
               </>
             )}
