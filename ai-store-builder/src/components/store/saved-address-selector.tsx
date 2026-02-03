@@ -75,6 +75,15 @@ export default function SavedAddressSelector({
     fetchAddresses()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // If error or no addresses after loading, trigger the manual entry flow
+  useEffect(() => {
+    if (!isLoading && (error || addresses.length === 0)) {
+      onAddNewAddress()
+    }
+    // Only run when loading completes, not on every onAddNewAddress change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, error, addresses.length])
+
   // Get icon for address label
   const getAddressIcon = (label: string) => {
     switch (label.toLowerCase()) {
@@ -96,15 +105,6 @@ export default function SavedAddressSelector({
       </div>
     )
   }
-
-  // If error or no addresses, trigger the manual entry flow
-  useEffect(() => {
-    if (!isLoading && (error || addresses.length === 0)) {
-      onAddNewAddress()
-    }
-    // Only run when loading completes, not on every onAddNewAddress change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, error, addresses.length])
 
   if (error) {
     return null // Silently fail - user can enter address manually
