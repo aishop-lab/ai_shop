@@ -10,8 +10,9 @@
 - **Database**: Supabase (PostgreSQL + Auth + Storage + Realtime)
 - **AI**: Vercel AI SDK (Google Gemini 2.0 Flash + Claude)
 - **Payments**: Razorpay (UPI, cards, COD) with per-store credentials
-- **Shipping**: Shiprocket
-- **Email**: Resend + React Email templates
+- **Shipping**: Multi-provider (Shiprocket, Delhivery, Blue Dart, Self-delivery) with per-store credentials
+- **Email**: Resend + React Email templates (per-store credentials supported)
+- **WhatsApp**: MSG91 (per-store credentials supported)
 
 ### Core Features
 - 10-step conversational onboarding with AI analysis
@@ -21,14 +22,18 @@
 - Product variants (size/color/material)
 - Demo products on new stores (auto-removed on first upload)
 - Dynamic color contrast for accessibility
-- GST invoices, coupons, reviews, collections
+- GST invoices, coupons, reviews, collections (with tag-based auto-population)
 - Subdomain-based store routing
 - Real-time merchant notifications
 - Rate limiting & webhook security
 - Customer accounts with order history, addresses, wishlist
 - Abandoned cart recovery with 3-email sequence
 - WhatsApp order notifications (MSG91)
-- Per-store Razorpay integration (merchants use their own payment accounts)
+- Per-store integrations:
+  - Razorpay (payment processing)
+  - Shiprocket, Delhivery, Blue Dart (shipping)
+  - Resend (email notifications)
+  - MSG91 (WhatsApp notifications)
 
 ---
 
@@ -41,7 +46,7 @@ src/
 │   ├── (marketing)/      # Landing page for storeforge.site
 │   ├── dashboard/        # Products, orders, analytics, settings
 │   ├── [storeSlug]/      # Public storefront + sitemap.xml + robots.txt
-│   └── api/              # 85+ API routes
+│   └── api/              # 90+ API routes
 ├── components/
 │   ├── ui/               # Shadcn components
 │   ├── dashboard/        # Dashboard + notification-bell
@@ -55,9 +60,9 @@ src/
 │   ├── cart/             # abandoned-cart.ts (recovery system)
 │   ├── payment/          # razorpay.ts (per-store credentials support)
 │   ├── encryption.ts     # AES-256-GCM for sensitive credentials
-│   ├── shipping/         # shiprocket.ts
-│   ├── whatsapp/         # msg91.ts (WhatsApp notifications)
-│   ├── email/            # Email service + merchant notifications
+│   ├── shipping/         # provider-manager.ts, shiprocket.ts, delhivery.ts, bluedart.ts
+│   ├── whatsapp/         # msg91.ts (per-store credentials support)
+│   ├── email/            # index.ts (per-store credentials), order-confirmation.ts, merchant-notifications.ts
 │   ├── contexts/         # auth-context.tsx, customer-context.tsx
 │   ├── rate-limit.ts     # API rate limiting
 │   ├── webhook-security.ts # Razorpay/Shiprocket verification
@@ -75,28 +80,34 @@ src/
 | `lib/ai/vercel-ai-service.ts` | All AI operations (Gemini 2.0 Flash) |
 | `lib/store/queries.ts` | Database queries + `getStoreUrl()` helper |
 | `lib/store/dynamic-styles.ts` | Theme CSS variables + contrast colors |
+| `lib/shipping/provider-manager.ts` | Multi-provider shipping abstraction |
+| `lib/shipping/shiprocket.ts` | Shiprocket API integration |
+| `lib/shipping/delhivery.ts` | Delhivery API integration |
+| `lib/shipping/bluedart.ts` | Blue Dart API integration |
+| `lib/email/index.ts` | Email service with per-store Resend credentials |
+| `lib/whatsapp/msg91.ts` | WhatsApp notifications with per-store MSG91 credentials |
 | `lib/rate-limit.ts` | Rate limiting (100/min API, 10/min AI, 5/min auth) |
 | `lib/notifications.ts` | Real-time notifications via Supabase |
 | `lib/webhook-security.ts` | Razorpay signature + Shiprocket IP verification |
-| `lib/google-places.ts` | Google Places API utility for address autocomplete |
-| `components/store/address-autocomplete.tsx` | Address autocomplete component with Google Places |
-| `components/store/saved-address-selector.tsx` | Saved address selector for logged-in customers |
+| `lib/encryption.ts` | AES-256-GCM encryption for merchant secrets |
 | `middleware.ts` | Subdomain detection + auth protection |
 | `app/api/onboarding/complete/route.ts` | Store activation + AI content generation |
-| `app/api/shipping/calculate/route.ts` | Real-time shipping cost calculation |
-| `lib/encryption.ts` | AES-256-GCM encryption for Razorpay secrets |
 | `app/api/dashboard/settings/razorpay/route.ts` | Per-store Razorpay credential management |
+| `app/api/dashboard/settings/shipping-providers/route.ts` | Per-store shipping provider management |
+| `app/api/dashboard/settings/email/route.ts` | Per-store Resend credential management |
+| `app/api/dashboard/settings/whatsapp/route.ts` | Per-store MSG91 credential management |
 
 ---
 
 ## Database
 
-### Main Tables (20+)
-- **stores** - Config, blueprint (JSONB), policies, settings, cart_recovery_settings, razorpay_credentials
+### Main Tables (25+)
+- **stores** - Config, blueprint (JSONB), policies, settings, cart_recovery_settings, razorpay_credentials, shipping_providers, msg91_credentials, resend_credentials, notification_settings
 - **products** - Details, pricing, `is_demo` flag for demo products
 - **product_variants** - SKU combinations with per-variant pricing
-- **orders** / **order_items** - With Shiprocket tracking, customer_id link
-- **collections**, **coupons**, **product_reviews**
+- **orders** / **order_items** - With shipping tracking, customer_id link, courier info
+- **collections**, **collection_products** - Manual + tag-based product grouping
+- **coupons**, **product_reviews**
 - **notifications** - Merchant alerts (new orders, low stock, etc.)
 - **profiles** - Merchant profiles with 2FA settings
 - **customers** - Store-specific customer accounts
@@ -131,14 +142,15 @@ RAZORPAY_KEY_SECRET=
 RAZORPAY_WEBHOOK_SECRET=
 CREDENTIALS_ENCRYPTION_KEY=  # 32-byte base64 key for encrypting merchant secrets
 
-# Shipping
+# Shipping (Platform defaults - merchants can override)
 SHIPROCKET_EMAIL=
 SHIPROCKET_PASSWORD=
 
-# Email (Resend)
+# Email (Platform defaults - merchants can override)
 RESEND_API_KEY=
+RESEND_FROM_EMAIL=
 
-# WhatsApp (MSG91)
+# WhatsApp (Platform defaults - merchants can override)
 MSG91_AUTH_KEY=
 MSG91_WHATSAPP_INTEGRATED_NUMBER=
 
@@ -146,7 +158,7 @@ MSG91_WHATSAPP_INTEGRATED_NUMBER=
 CRON_SECRET=
 
 # Address Autocomplete (optional)
-NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=  # Google Places API for address autocomplete
+NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=
 
 # App
 NEXT_PUBLIC_APP_URL=https://storeforge.site
@@ -158,8 +170,13 @@ NEXT_PUBLIC_APP_URL=https://storeforge.site
 
 | Date | Change |
 |------|--------|
-| 2026-02-03 | **Checkout Polish**: Address autocomplete (Google Places), saved addresses for logged-in customers, guest checkout localStorage persistence, multi-step checkout with progress indicator, mobile-optimized collapsible order summary |
-| 2026-02-03 | **WhatsApp Improvements**: Retry logic with exponential backoff (3 attempts), phone validation, structured JSON logging for audit trail |
+| 2026-02-04 | **Per-Store Notifications**: MSG91 (WhatsApp) and Resend (Email) per-store credentials with platform fallback |
+| 2026-02-04 | **Multi-Provider Shipping**: Shiprocket, Delhivery, Blue Dart, Self-delivery with per-store credentials |
+| 2026-02-04 | **Bug Fix**: Customer orders now properly linked via customer_id for order history |
+| 2026-02-04 | **Bug Fix**: Collections auto-populate from product tags when no manual assignment |
+| 2026-02-04 | **Shipping Provider Setup Guides**: Step-by-step instructions with direct links for each provider |
+| 2026-02-03 | **Checkout Polish**: Address autocomplete (Google Places), saved addresses for logged-in customers, guest checkout localStorage persistence, multi-step checkout with progress indicator |
+| 2026-02-03 | **WhatsApp Improvements**: Retry logic with exponential backoff (3 attempts), phone validation, structured JSON logging |
 | 2026-02-03 | **Per-Store Razorpay**: Merchants can configure their own Razorpay credentials for direct settlement |
 | 2026-01-26 | **AI Recommendations**: Product similarity, "frequently bought together", personalized recommendations |
 | 2026-01-26 | **Abandoned Cart Recovery**: Cart persistence, 3-email recovery sequence, cron job |
@@ -168,15 +185,24 @@ NEXT_PUBLIC_APP_URL=https://storeforge.site
 | 2026-01-26 | **Email Service Complete**: Welcome email on onboarding, low stock cron, delivery triggers |
 | 2026-01-26 | **Production Infrastructure**: Subdomain routing, vercel.json, rate limiting |
 | 2026-01-26 | **SEO**: Dynamic sitemap.xml and robots.txt per store |
-| 2026-01-26 | **Reliability**: Error boundaries, webhook security, structured logging |
 | 2026-01-26 | **Notifications**: Real-time merchant alerts via Supabase + notification bell UI |
-| 2026-01-26 | **Marketing**: Landing page for storeforge.site |
-| 2026-01-21 | AI store personalization (About Us, tagline auto-generation) |
-| 2026-01-21 | Demo products system + color contrast fix |
-| 2026-01-21 | Rebuild store option in settings |
-| 2026-01-20 | Order auto-refund, variants storefront, 2FA |
-| 2026-01-20 | Collections, data export, pincode checker |
-| 2026-01-19 | Shiprocket integration, AI image enhancement |
+
+---
+
+## Per-Store Integrations
+
+Merchants can connect their own accounts for direct control:
+
+| Service | Settings Page | Credentials Needed |
+|---------|---------------|-------------------|
+| **Razorpay** | `/dashboard/settings/payments` | Key ID, Key Secret, Webhook Secret |
+| **Shiprocket** | `/dashboard/settings/shipping-providers` | Email, Password |
+| **Delhivery** | `/dashboard/settings/shipping-providers` | API Token, Client Name |
+| **Blue Dart** | `/dashboard/settings/shipping-providers` | API Key, Client Code, License Key, Login ID |
+| **Resend** | `/dashboard/settings/notifications` | API Key, From Email |
+| **MSG91** | `/dashboard/settings/notifications` | Auth Key, WhatsApp Number |
+
+All credentials are encrypted with AES-256-GCM before storage.
 
 ---
 
@@ -195,7 +221,7 @@ Stores are accessible at `{store-slug}.storeforge.site`:
 - SMS OTP verification
 - PWA support (installable stores)
 - Stripe integration for international payments
-- Multiple shipping providers (Delhivery, Blue Dart)
+- Store UI customization (fonts, layouts, custom CSS)
 
 ---
 
@@ -206,5 +232,6 @@ Stores are accessible at `{store-slug}.storeforge.site`:
 3. Add all environment variables in Vercel dashboard
 4. Enable Razorpay live mode + webhook URL
 5. Configure Shiprocket production credentials
+6. Run database migrations for new features
 
-*Last Updated: 2026-02-03*
+*Last Updated: 2026-02-04*
