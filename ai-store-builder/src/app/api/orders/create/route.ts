@@ -7,7 +7,7 @@ import { createRazorpayOrder, getStoreRazorpayCredentials, getStoreRazorpayKeyId
 import { reserveInventory } from '@/lib/orders/inventory'
 import { sendOrderConfirmationEmail } from '@/lib/email/order-confirmation'
 import { sendShipmentFailedEmail } from '@/lib/email/merchant-notifications'
-import { autoCreateShipment } from '@/lib/shipping/shiprocket'
+import { autoCreateShipmentForStore } from '@/lib/shipping/provider-manager'
 import { createNotification } from '@/lib/notifications'
 import type { StoreSettings } from '@/lib/types/store'
 import type { CreateOrderResponse, ShippingAddress } from '@/lib/types/order'
@@ -300,15 +300,57 @@ export async function POST(
         // Don't fail the order if email fails
       }
 
-      // AUTO-CREATE SHIPROCKET SHIPMENT FOR COD ORDERS
+      // AUTO-CREATE SHIPMENT FOR COD ORDERS (using store's configured provider)
       // This runs asynchronously to not block the order response
-      autoCreateShipment(supabase, orderId, { courier_preference: 'cheapest' })
+      autoCreateShipmentForStore(
+        store_id,
+        orderId,
+        {
+          orderNumber,
+          customerName: customer_details.name,
+          customerPhone: customer_details.phone,
+          customerEmail: customer_details.email,
+          deliveryAddress: `${shipping_address.address_line1}${shipping_address.address_line2 ? ', ' + shipping_address.address_line2 : ''}`,
+          deliveryCity: shipping_address.city,
+          deliveryState: shipping_address.state,
+          deliveryPincode: shipping_address.pincode,
+          items: validatedItems.map(item => ({
+            name: item.product.title,
+            sku: item.product.sku || item.product_id,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+          orderValue: totals.total,
+          paymentMode: 'cod',
+          codAmount: totals.total,
+        }
+      )
         .then(async (result) => {
-          if (result.success) {
+          if (result.success && result.provider !== 'self') {
             console.log(`[AutoShipment] COD shipment created for order ${orderNumber}:`, {
-              awb: result.awb_code,
-              courier: result.courier_name
+              provider: result.provider,
+              awb: result.awbCode,
+              courier: result.courierName
             })
+
+            // Update order with shipping details
+            if (result.awbCode) {
+              await supabase
+                .from('orders')
+                .update({
+                  shipping_provider: result.provider,
+                  awb_code: result.awbCode,
+                  courier_name: result.courierName,
+                  shiprocket_shipment_id: result.shipmentId ? parseInt(result.shipmentId) : null,
+                })
+                .eq('id', orderId)
+            }
+          } else if (result.provider === 'self') {
+            console.log(`[AutoShipment] Order ${orderNumber} marked for self-delivery (no provider configured)`)
+            await supabase
+              .from('orders')
+              .update({ shipping_provider: 'self' })
+              .eq('id', orderId)
           } else {
             // All retries failed - notify merchant
             console.error(`[AutoShipment] Failed for COD order ${orderNumber}:`, result.error)

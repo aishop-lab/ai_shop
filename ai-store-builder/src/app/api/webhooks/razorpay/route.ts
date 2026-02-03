@@ -9,7 +9,7 @@ import {
 } from '@/lib/email/order-confirmation'
 import { sendOrderConfirmationWhatsApp } from '@/lib/whatsapp/msg91'
 import { sendNewOrderMerchantEmail, sendShipmentFailedEmail } from '@/lib/email/merchant-notifications'
-import { autoCreateShipment } from '@/lib/shipping/shiprocket'
+import { autoCreateShipmentForStore } from '@/lib/shipping/provider-manager'
 import { createNotification } from '@/lib/notifications'
 import type {
   RazorpayWebhookEvent,
@@ -289,15 +289,61 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
 
   console.log('Order confirmed:', order.order_number)
 
-  // AUTO-CREATE SHIPROCKET SHIPMENT
+  // Parse shipping address
+  const shippingAddr = typeof order.shipping_address === 'string'
+    ? JSON.parse(order.shipping_address)
+    : (order.shipping_address || {})
+
+  // AUTO-CREATE SHIPMENT (using store's configured provider)
   // This runs asynchronously to not block the webhook response
-  autoCreateShipment(supabase, order.id, { courier_preference: 'cheapest' })
+  autoCreateShipmentForStore(
+    order.store_id,
+    order.id,
+    {
+      orderNumber: order.order_number,
+      customerName: order.shipping_name || order.customer_name || 'Customer',
+      customerPhone: order.shipping_phone || order.phone || '',
+      customerEmail: order.customer_email || order.email,
+      deliveryAddress: `${shippingAddr.address_line1 || shippingAddr.address || ''}${shippingAddr.address_line2 ? ', ' + shippingAddr.address_line2 : ''}`,
+      deliveryCity: shippingAddr.city || '',
+      deliveryState: shippingAddr.state || '',
+      deliveryPincode: shippingAddr.pincode || shippingAddr.zip || '',
+      items: orderItems.map(item => ({
+        name: item.product_title || 'Product',
+        sku: item.variant_sku || item.product_id,
+        quantity: item.quantity,
+        price: item.unit_price,
+      })),
+      orderValue: order.total_amount,
+      paymentMode: 'prepaid',
+    }
+  )
     .then(async (result) => {
-      if (result.success) {
+      if (result.success && result.provider !== 'self') {
         console.log(`[AutoShipment] Shipment created for order ${order.order_number}:`, {
-          awb: result.awb_code,
-          courier: result.courier_name
+          provider: result.provider,
+          awb: result.awbCode,
+          courier: result.courierName
         })
+
+        // Update order with shipping details
+        if (result.awbCode) {
+          await supabase
+            .from('orders')
+            .update({
+              shipping_provider: result.provider,
+              awb_code: result.awbCode,
+              courier_name: result.courierName,
+              shiprocket_shipment_id: result.shipmentId ? parseInt(result.shipmentId) : null,
+            })
+            .eq('id', order.id)
+        }
+      } else if (result.provider === 'self') {
+        console.log(`[AutoShipment] Order ${order.order_number} marked for self-delivery (no provider configured)`)
+        await supabase
+          .from('orders')
+          .update({ shipping_provider: 'self' })
+          .eq('id', order.id)
       } else {
         // All retries failed - notify merchant
         console.error(`[AutoShipment] Failed for order ${order.order_number}:`, result.error)

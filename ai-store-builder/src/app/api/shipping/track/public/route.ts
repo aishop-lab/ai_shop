@@ -154,8 +154,9 @@ export async function GET(request: NextRequest) {
           ...(mappedStatus === 'delivered' ? { delivered_at: new Date().toISOString() } : {})
         })
         .eq('id', order.id)
-        .then(() => {})
-        .catch(err => console.error('Failed to update order status:', err))
+        .then(({ error }) => {
+          if (error) console.error('Failed to update order status:', error)
+        })
     }
 
     // Store new tracking events (background operation)
@@ -185,8 +186,9 @@ export async function GET(request: NextRequest) {
 
       if (newEvents.length > 0) {
         supabase.from('shipment_events').insert(newEvents)
-          .then(() => {})
-          .catch(err => console.error('Failed to store events:', err))
+          .then(({ error }) => {
+            if (error) console.error('Failed to store events:', error)
+          })
       }
     }
 

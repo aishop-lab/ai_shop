@@ -137,6 +137,7 @@ export default function ShippingSettingsPage() {
     setSettings({
       ...settings,
       config: {
+        use_zones: settings.config?.use_zones ?? false,
         ...settings.config,
         zones,
       },
@@ -149,6 +150,7 @@ export default function ShippingSettingsPage() {
     setSettings({
       ...settings,
       config: {
+        use_zones: settings.config?.use_zones ?? false,
         ...settings.config,
         zones,
       },
@@ -589,6 +591,7 @@ export default function ShippingSettingsPage() {
                 setSettings({
                   ...settings,
                   config: {
+                    use_zones: settings.config?.use_zones ?? false,
                     ...settings.config,
                     weight_based: {
                       enabled: checked,
@@ -615,10 +618,13 @@ export default function ShippingSettingsPage() {
                     setSettings({
                       ...settings,
                       config: {
+                        use_zones: settings.config?.use_zones ?? false,
                         ...settings.config,
                         weight_based: {
-                          ...settings.config.weight_based!,
+                          ...settings.config?.weight_based,
+                          enabled: true,
                           base_weight: parseFloat(e.target.value) || 0,
+                          per_kg_rate: settings.config?.weight_based?.per_kg_rate ?? 30,
                         },
                       },
                     })
@@ -645,9 +651,12 @@ export default function ShippingSettingsPage() {
                       setSettings({
                         ...settings,
                         config: {
+                          use_zones: settings.config?.use_zones ?? false,
                           ...settings.config,
                           weight_based: {
-                            ...settings.config.weight_based!,
+                            ...settings.config?.weight_based,
+                            enabled: true,
+                            base_weight: settings.config?.weight_based?.base_weight ?? 0.5,
                             per_kg_rate: parseInt(e.target.value) || 0,
                           },
                         },

@@ -29,6 +29,7 @@ export interface Order {
 
   // Status
   order_status: OrderStatus
+  fulfillment_status?: string  // Database field for shipping status
 
   // Tracking
   tracking_number?: string
