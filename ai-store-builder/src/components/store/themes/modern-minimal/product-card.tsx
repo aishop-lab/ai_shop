@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { ShoppingCart, Heart, Eye, Star } from 'lucide-react'
 import type { Product } from '@/lib/types/store'
 import { useStore } from '@/lib/contexts/store-context'
@@ -14,6 +15,7 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, showQuickView = true }: ProductCardProps) {
   const { store, addToCart, formatPrice, isInCart } = useStore()
+  const router = useRouter()
   const [isAdding, setIsAdding] = useState(false)
   const [imageError, setImageError] = useState(false)
 
@@ -103,13 +105,17 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
               >
                 <Heart className="w-4 h-4 text-gray-700" />
               </button>
-              <Link
-                href={`${baseUrl}/products/${product.id}`}
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  router.push(`${baseUrl}/products/${product.id}`)
+                }}
                 className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
                 aria-label="Quick view"
               >
                 <Eye className="w-4 h-4 text-gray-700" />
-              </Link>
+              </button>
             </div>
           )}
         </div>

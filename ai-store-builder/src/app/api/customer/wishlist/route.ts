@@ -36,8 +36,10 @@ export async function GET(request: NextRequest) {
           status,
           quantity,
           product_images (
-            url,
-            alt_text
+            original_url,
+            thumbnail_url,
+            alt_text,
+            position
           )
         )
       `)
@@ -51,7 +53,11 @@ export async function GET(request: NextRequest) {
 
     // Filter out products that are no longer available
     const activeWishlist = wishlist?.filter(
-      item => item.product && (item.product as unknown as { status: string }).status === 'published'
+      item => {
+        if (!item.product) return false
+        const status = (item.product as unknown as { status: string }).status
+        return status === 'published' || status === 'active'
+      }
     ) || []
 
     return NextResponse.json({ success: true, wishlist: activeWishlist })

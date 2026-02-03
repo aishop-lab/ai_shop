@@ -203,9 +203,10 @@ export async function getStoreProducts(
 
     // Filter by category if provided
     // Use containment operator for JSONB arrays
-    if (category) {
+    if (category && category.trim()) {
       // Use the @> operator via filter to check if categories array contains the category
-      query = query.contains('categories', [category])
+      // Wrap in try-catch equivalent using filter for safer JSON handling
+      query = query.filter('categories', 'cs', `["${category.replace(/"/g, '\\"')}"]`)
     }
     
     // Apply sorting
