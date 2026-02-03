@@ -97,6 +97,15 @@ export default function SavedAddressSelector({
     )
   }
 
+  // If error or no addresses, trigger the manual entry flow
+  useEffect(() => {
+    if (!isLoading && (error || addresses.length === 0)) {
+      onAddNewAddress()
+    }
+    // Only run when loading completes, not on every onAddNewAddress change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, error, addresses.length])
+
   if (error) {
     return null // Silently fail - user can enter address manually
   }
