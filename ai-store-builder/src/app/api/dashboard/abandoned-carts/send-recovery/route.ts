@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
         abandoned_at: cart.abandoned_at,
       },
       store: {
+        id: cart.stores.id,
         name: cart.stores.name,
         slug: cart.stores.slug,
       },

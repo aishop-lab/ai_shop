@@ -4,22 +4,139 @@
  * MSG91 is a popular Indian messaging service that provides
  * WhatsApp Business API access with pre-approved templates.
  *
- * Setup:
+ * Setup (Platform or Per-Store):
  * 1. Create account at msg91.com
  * 2. Apply for WhatsApp Business API
  * 3. Create message templates and get them approved
- * 4. Set MSG91_AUTH_KEY and MSG91_WHATSAPP_INTEGRATED_NUMBER in env
+ * 4. Configure credentials in dashboard settings or env variables
  *
  * Features:
+ * - Per-store credentials with platform fallback
  * - Automatic retry with exponential backoff (3 attempts)
  * - Phone number validation and formatting
  * - Structured logging for audit trail
  * - Graceful fallback when API unavailable
  */
 
+import { createClient } from '@/lib/supabase/server'
+import { decrypt } from '@/lib/encryption'
+
 const MSG91_BASE_URL = 'https://api.msg91.com/api/v5/whatsapp'
-const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY
-const MSG91_INTEGRATED_NUMBER = process.env.MSG91_WHATSAPP_INTEGRATED_NUMBER
+
+// Platform-level credentials (fallback)
+const PLATFORM_MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY
+const PLATFORM_MSG91_INTEGRATED_NUMBER = process.env.MSG91_WHATSAPP_INTEGRATED_NUMBER
+
+// Cache for store credentials to avoid repeated DB lookups
+const credentialsCache = new Map<string, { authKey: string; integratedNumber: string; expiry: number }>()
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+
+interface MSG91Credentials {
+  authKey: string
+  integratedNumber: string
+  isStoreCredentials: boolean
+}
+
+/**
+ * Get MSG91 credentials for a store (or fall back to platform credentials)
+ */
+async function getMSG91Credentials(storeId?: string): Promise<MSG91Credentials | null> {
+  // If no storeId, use platform credentials
+  if (!storeId) {
+    if (PLATFORM_MSG91_AUTH_KEY && PLATFORM_MSG91_INTEGRATED_NUMBER) {
+      return {
+        authKey: PLATFORM_MSG91_AUTH_KEY,
+        integratedNumber: PLATFORM_MSG91_INTEGRATED_NUMBER,
+        isStoreCredentials: false,
+      }
+    }
+    return null
+  }
+
+  // Check cache first
+  const cached = credentialsCache.get(storeId)
+  if (cached && cached.expiry > Date.now()) {
+    return {
+      authKey: cached.authKey,
+      integratedNumber: cached.integratedNumber,
+      isStoreCredentials: true,
+    }
+  }
+
+  try {
+    const supabase = await createClient()
+    const { data: store, error } = await supabase
+      .from('stores')
+      .select('msg91_auth_key_encrypted, msg91_whatsapp_number, msg91_credentials_verified, whatsapp_notifications_enabled')
+      .eq('id', storeId)
+      .single()
+
+    if (error || !store) {
+      // Fall back to platform credentials
+      if (PLATFORM_MSG91_AUTH_KEY && PLATFORM_MSG91_INTEGRATED_NUMBER) {
+        return {
+          authKey: PLATFORM_MSG91_AUTH_KEY,
+          integratedNumber: PLATFORM_MSG91_INTEGRATED_NUMBER,
+          isStoreCredentials: false,
+        }
+      }
+      return null
+    }
+
+    // Check if WhatsApp notifications are enabled
+    if (!store.whatsapp_notifications_enabled) {
+      return null // Notifications disabled for this store
+    }
+
+    // Use store credentials if verified
+    if (store.msg91_credentials_verified && store.msg91_auth_key_encrypted && store.msg91_whatsapp_number) {
+      const authKey = decrypt(store.msg91_auth_key_encrypted)
+      const credentials = {
+        authKey,
+        integratedNumber: store.msg91_whatsapp_number,
+        isStoreCredentials: true,
+      }
+
+      // Cache the credentials
+      credentialsCache.set(storeId, {
+        authKey,
+        integratedNumber: store.msg91_whatsapp_number,
+        expiry: Date.now() + CACHE_TTL_MS,
+      })
+
+      return credentials
+    }
+
+    // Fall back to platform credentials
+    if (PLATFORM_MSG91_AUTH_KEY && PLATFORM_MSG91_INTEGRATED_NUMBER) {
+      return {
+        authKey: PLATFORM_MSG91_AUTH_KEY,
+        integratedNumber: PLATFORM_MSG91_INTEGRATED_NUMBER,
+        isStoreCredentials: false,
+      }
+    }
+
+    return null
+  } catch (error) {
+    console.error('Failed to get MSG91 credentials for store:', storeId, error)
+    // Fall back to platform credentials on error
+    if (PLATFORM_MSG91_AUTH_KEY && PLATFORM_MSG91_INTEGRATED_NUMBER) {
+      return {
+        authKey: PLATFORM_MSG91_AUTH_KEY,
+        integratedNumber: PLATFORM_MSG91_INTEGRATED_NUMBER,
+        isStoreCredentials: false,
+      }
+    }
+    return null
+  }
+}
+
+/**
+ * Clear cached credentials for a store (call when credentials are updated)
+ */
+export function clearMSG91CredentialsCache(storeId: string): void {
+  credentialsCache.delete(storeId)
+}
 
 // Retry configuration
 const MAX_RETRIES = 3
@@ -176,14 +293,19 @@ function isRetryableError(statusCode: number, error?: string): boolean {
 
 /**
  * Send WhatsApp message via MSG91 with retry logic
+ * Supports per-store credentials with platform fallback
  */
 async function sendWhatsAppMessage(params: {
   to: string
   templateName: string
   templateParams: Record<string, string>
+  storeId?: string
 }): Promise<WhatsAppResult> {
+  // Get credentials (per-store or platform)
+  const credentials = await getMSG91Credentials(params.storeId)
+
   // Development mode - log and return success
-  if (!MSG91_AUTH_KEY || !MSG91_INTEGRATED_NUMBER) {
+  if (!credentials) {
     logWhatsAppEvent({
       timestamp: new Date().toISOString(),
       event: 'send_success',
@@ -195,9 +317,12 @@ async function sendWhatsAppMessage(params: {
     console.log('To:', params.to)
     console.log('Template:', params.templateName)
     console.log('Params:', params.templateParams)
+    console.log('Store ID:', params.storeId || 'N/A')
     console.log('==============================================')
     return { success: true, messageId: 'dev-mode', attempts: 1 }
   }
+
+  const { authKey, integratedNumber, isStoreCredentials } = credentials
 
   // Validate and format phone number
   let formattedPhone: string
@@ -234,10 +359,10 @@ async function sendWhatsAppMessage(params: {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          authkey: MSG91_AUTH_KEY,
+          authkey: authKey,
         },
         body: JSON.stringify({
-          integrated_number: MSG91_INTEGRATED_NUMBER,
+          integrated_number: integratedNumber,
           content_type: 'template',
           payload: {
             to: formattedPhone,
@@ -353,8 +478,9 @@ export async function sendOrderConfirmationWhatsApp(params: {
   totalAmount: number
   storeName: string
   items: OrderItem[]
+  storeId?: string
 }): Promise<WhatsAppResult> {
-  const { phone, customerName, orderNumber, totalAmount, storeName, items } = params
+  const { phone, customerName, orderNumber, totalAmount, storeName, items, storeId } = params
 
   // Create items summary (first 3 items)
   const itemsSummary = items
@@ -373,6 +499,7 @@ export async function sendOrderConfirmationWhatsApp(params: {
       total_amount: formatCurrency(totalAmount),
       store_name: storeName,
     },
+    storeId,
   })
 }
 
@@ -390,8 +517,9 @@ export async function sendOrderShippedWhatsApp(params: {
   trackingNumber: string
   trackingUrl?: string
   estimatedDelivery?: string
+  storeId?: string
 }): Promise<WhatsAppResult> {
-  const { phone, customerName, orderNumber, courierName, trackingNumber, trackingUrl, estimatedDelivery } = params
+  const { phone, customerName, orderNumber, courierName, trackingNumber, trackingUrl, estimatedDelivery, storeId } = params
 
   return sendWhatsAppMessage({
     to: phone,
@@ -404,6 +532,7 @@ export async function sendOrderShippedWhatsApp(params: {
       tracking_url: trackingUrl || `https://shiprocket.co/tracking/${trackingNumber}`,
       estimated_delivery: estimatedDelivery || 'within 3-5 business days',
     },
+    storeId,
   })
 }
 
@@ -419,8 +548,9 @@ export async function sendOrderDeliveredWhatsApp(params: {
   orderNumber: string
   storeName: string
   reviewUrl?: string
+  storeId?: string
 }): Promise<WhatsAppResult> {
-  const { phone, customerName, orderNumber, storeName, reviewUrl } = params
+  const { phone, customerName, orderNumber, storeName, reviewUrl, storeId } = params
 
   return sendWhatsAppMessage({
     to: phone,
@@ -431,6 +561,7 @@ export async function sendOrderDeliveredWhatsApp(params: {
       store_name: storeName,
       review_url: reviewUrl || '#',
     },
+    storeId,
   })
 }
 
@@ -444,8 +575,9 @@ export async function sendOutForDeliveryWhatsApp(params: {
   phone: string
   customerName: string
   orderNumber: string
+  storeId?: string
 }): Promise<WhatsAppResult> {
-  const { phone, customerName, orderNumber } = params
+  const { phone, customerName, orderNumber, storeId } = params
 
   return sendWhatsAppMessage({
     to: phone,
@@ -454,6 +586,7 @@ export async function sendOutForDeliveryWhatsApp(params: {
       customer_name: customerName,
       order_number: orderNumber,
     },
+    storeId,
   })
 }
 
@@ -469,8 +602,9 @@ export async function sendAbandonedCartWhatsApp(params: {
   itemsCount: number
   cartUrl: string
   storeName: string
+  storeId?: string
 }): Promise<WhatsAppResult> {
-  const { phone, customerName, itemsCount, cartUrl, storeName } = params
+  const { phone, customerName, itemsCount, cartUrl, storeName, storeId } = params
 
   return sendWhatsAppMessage({
     to: phone,
@@ -481,6 +615,7 @@ export async function sendAbandonedCartWhatsApp(params: {
       cart_url: cartUrl,
       store_name: storeName,
     },
+    storeId,
   })
 }
 
@@ -495,8 +630,9 @@ export async function sendCODReminderWhatsApp(params: {
   customerName: string
   orderNumber: string
   totalAmount: number
+  storeId?: string
 }): Promise<WhatsAppResult> {
-  const { phone, customerName, orderNumber, totalAmount } = params
+  const { phone, customerName, orderNumber, totalAmount, storeId } = params
 
   return sendWhatsAppMessage({
     to: phone,
@@ -506,6 +642,7 @@ export async function sendCODReminderWhatsApp(params: {
       order_number: orderNumber,
       total_amount: formatCurrency(totalAmount),
     },
+    storeId,
   })
 }
 

@@ -2,10 +2,11 @@
  * Abandoned Cart Recovery Service
  *
  * Handles cart persistence, recovery email sequences, and cart restoration.
+ * Supports per-store email credentials with platform fallback.
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { Resend } from 'resend'
+import { getResendCredentials } from '@/lib/email'
 import AbandonedCartEmail from '@/../emails/abandoned-cart'
 
 const supabase = createClient(
@@ -13,11 +14,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null
-
-const fromEmail = process.env.RESEND_FROM_EMAIL || 'cart@storeforge.site'
 const PRODUCTION_DOMAIN = process.env.NEXT_PUBLIC_PRODUCTION_DOMAIN || 'storeforge.site'
 const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 
@@ -198,10 +194,11 @@ export async function getCartByToken(token: string): Promise<AbandonedCart | nul
 
 /**
  * Send abandoned cart recovery email
+ * Uses per-store Resend credentials with platform fallback
  */
 export async function sendRecoveryEmail(params: {
   cart: AbandonedCart
-  store: { name: string; slug: string }
+  store: { id: string; name: string; slug: string }
   sequenceNumber: 1 | 2 | 3
   discountCode?: string
   discountPercentage?: number
@@ -211,6 +208,17 @@ export async function sendRecoveryEmail(params: {
 
     if (!cart.email) {
       return { success: false }
+    }
+
+    // Get Resend credentials for this store
+    const credentials = await getResendCredentials(store.id)
+    if (!credentials) {
+      console.log('=== ABANDONED CART EMAIL (Resend not configured) ===')
+      console.log('To:', cart.email)
+      console.log('Store:', store.name)
+      console.log('Sequence:', sequenceNumber)
+      console.log('=================================================')
+      return { success: true }
     }
 
     const storeUrl = getStoreUrl(store.slug)
@@ -223,19 +231,11 @@ export async function sendRecoveryEmail(params: {
       3: `Last chance: Your ${store.name} cart expires soon`
     }
 
-    // Log if Resend not configured
-    if (!resend) {
-      console.log('=== ABANDONED CART EMAIL (Resend not configured) ===')
-      console.log('To:', cart.email)
-      console.log('Sequence:', sequenceNumber)
-      console.log('Recovery URL:', recoveryUrl)
-      console.log('Items:', cart.items.length)
-      console.log('=================================================')
-      return { success: true }
-    }
+    const fromName = credentials.fromName || store.name
+    const from = `${fromName} <${credentials.fromEmail}>`
 
-    const { error } = await resend.emails.send({
-      from: `${store.name} <${fromEmail}>`,
+    const { error } = await credentials.client.emails.send({
+      from,
       to: cart.email,
       subject: subjects[sequenceNumber],
       react: AbandonedCartEmail({
@@ -272,7 +272,7 @@ export async function sendRecoveryEmail(params: {
         sequence_number: sequenceNumber
       })
 
-    console.log(`[Cart Recovery] Email ${sequenceNumber} sent to ${cart.email}`)
+    console.log(`[Cart Recovery] Email ${sequenceNumber} sent to ${cart.email} (store: ${store.name}, using ${credentials.isStoreCredentials ? 'store' : 'platform'} credentials)`)
     return { success: true }
   } catch (error) {
     console.error('Send recovery email error:', error)
@@ -390,7 +390,7 @@ export async function processAbandonedCarts(): Promise<{
         if (sequenceToSend) {
           const emailResult = await sendRecoveryEmail({
             cart: cart as AbandonedCart,
-            store: { name: store.name, slug: store.slug },
+            store: { id: store.id, name: store.name, slug: store.slug },
             sequenceNumber: sequenceToSend,
             discountCode: sequenceToSend === 3 ? settings.discount_code : undefined,
             discountPercentage: sequenceToSend === 3 ? settings.discount_percentage : undefined

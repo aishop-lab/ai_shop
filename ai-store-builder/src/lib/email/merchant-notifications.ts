@@ -1,14 +1,8 @@
-import { Resend } from 'resend'
+import { sendEmailWithReact, sendEmail, getResendCredentials } from './index'
 import NewOrderMerchantEmail from '@/../emails/new-order-merchant'
 import LowStockAlertEmail from '@/../emails/low-stock-alert'
 import WelcomeMerchantEmail from '@/../emails/welcome-merchant'
 
-// Initialize Resend client
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null
-
-const fromEmail = process.env.RESEND_FROM_EMAIL || 'notifications@storeforge.site'
 const dashboardUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
 
 // Production domain configuration for store URLs
@@ -43,10 +37,12 @@ interface ShippingAddress {
 
 /**
  * Send new order notification to merchant
+ * Note: Merchant notifications use platform credentials since they're internal
  */
 export async function sendNewOrderMerchantEmail(params: {
   merchantEmail: string
   storeName: string
+  storeId?: string
   orderNumber: string
   customerName: string
   customerEmail: string
@@ -63,6 +59,7 @@ export async function sendNewOrderMerchantEmail(params: {
     const {
       merchantEmail,
       storeName,
+      storeId,
       orderNumber,
       customerName,
       customerEmail,
@@ -76,8 +73,9 @@ export async function sendNewOrderMerchantEmail(params: {
       paymentStatus
     } = params
 
-    // If Resend is not configured, log and return
-    if (!resend) {
+    // Check if we have credentials
+    const credentials = await getResendCredentials(storeId)
+    if (!credentials) {
       console.log('=== NEW ORDER MERCHANT EMAIL (Resend not configured) ===')
       console.log('To:', merchantEmail)
       console.log('Order:', orderNumber)
@@ -87,10 +85,9 @@ export async function sendNewOrderMerchantEmail(params: {
       return { success: true }
     }
 
-    const { data, error } = await resend.emails.send({
-      from: `StoreForge <${fromEmail}>`,
+    return sendEmailWithReact({
       to: merchantEmail,
-      subject: `🛒 New Order #${orderNumber} - ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(totalAmount)}`,
+      subject: `New Order #${orderNumber} - ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(totalAmount)}`,
       react: NewOrderMerchantEmail({
         orderNumber,
         customerName,
@@ -105,16 +102,10 @@ export async function sendNewOrderMerchantEmail(params: {
         paymentStatus,
         storeName,
         dashboardUrl
-      })
+      }),
+      storeId,
+      storeName: 'StoreForge', // Merchant emails always from StoreForge
     })
-
-    if (error) {
-      console.error('Failed to send new order merchant email:', error)
-      return { success: false, error: error.message }
-    }
-
-    console.log('New order merchant email sent:', data?.id)
-    return { success: true }
   } catch (error) {
     console.error('Failed to send new order merchant email:', error)
     return {
@@ -138,13 +129,15 @@ interface LowStockProduct {
 export async function sendLowStockAlertEmail(params: {
   merchantEmail: string
   storeName: string
+  storeId?: string
   products: LowStockProduct[]
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const { merchantEmail, storeName, products } = params
+    const { merchantEmail, storeName, storeId, products } = params
 
-    // If Resend is not configured, log and return
-    if (!resend) {
+    // Check if we have credentials
+    const credentials = await getResendCredentials(storeId)
+    if (!credentials) {
       console.log('=== LOW STOCK ALERT EMAIL (Resend not configured) ===')
       console.log('To:', merchantEmail)
       console.log('Products:', products.map(p => `${p.title}: ${p.current_stock}`).join(', '))
@@ -154,27 +147,20 @@ export async function sendLowStockAlertEmail(params: {
 
     const outOfStockCount = products.filter(p => p.current_stock === 0).length
     const subject = outOfStockCount > 0
-      ? `🚨 ${outOfStockCount} Product(s) Out of Stock on ${storeName}`
-      : `⚠️ Low Stock Alert: ${products.length} Product(s) Need Restocking`
+      ? `${outOfStockCount} Product(s) Out of Stock on ${storeName}`
+      : `Low Stock Alert: ${products.length} Product(s) Need Restocking`
 
-    const { data, error } = await resend.emails.send({
-      from: `StoreForge <${fromEmail}>`,
+    return sendEmailWithReact({
       to: merchantEmail,
       subject,
       react: LowStockAlertEmail({
         storeName,
         products,
         dashboardUrl
-      })
+      }),
+      storeId,
+      storeName: 'StoreForge',
     })
-
-    if (error) {
-      console.error('Failed to send low stock alert email:', error)
-      return { success: false, error: error.message }
-    }
-
-    console.log('Low stock alert email sent:', data?.id)
-    return { success: true }
   } catch (error) {
     console.error('Failed to send low stock alert email:', error)
     return {
@@ -192,14 +178,16 @@ export async function sendWelcomeMerchantEmail(params: {
   merchantName: string
   storeName: string
   storeSlug: string
+  storeId?: string
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const { merchantEmail, merchantName, storeName, storeSlug } = params
+    const { merchantEmail, merchantName, storeName, storeSlug, storeId } = params
 
     const storeUrl = getStoreUrl(storeSlug)
 
-    // If Resend is not configured, log and return
-    if (!resend) {
+    // Check if we have credentials
+    const credentials = await getResendCredentials(storeId)
+    if (!credentials) {
       console.log('=== WELCOME MERCHANT EMAIL (Resend not configured) ===')
       console.log('To:', merchantEmail)
       console.log('Store:', storeName)
@@ -208,25 +196,18 @@ export async function sendWelcomeMerchantEmail(params: {
       return { success: true }
     }
 
-    const { data, error } = await resend.emails.send({
-      from: `StoreForge <${fromEmail}>`,
+    return sendEmailWithReact({
       to: merchantEmail,
-      subject: `🎉 Welcome to StoreForge! Your store ${storeName} is ready`,
+      subject: `Welcome to StoreForge! Your store ${storeName} is ready`,
       react: WelcomeMerchantEmail({
         merchantName,
         storeName,
         storeUrl,
         dashboardUrl
-      })
+      }),
+      storeId,
+      storeName: 'StoreForge',
     })
-
-    if (error) {
-      console.error('Failed to send welcome merchant email:', error)
-      return { success: false, error: error.message }
-    }
-
-    console.log('Welcome merchant email sent:', data?.id)
-    return { success: true }
   } catch (error) {
     console.error('Failed to send welcome merchant email:', error)
     return {
@@ -242,16 +223,18 @@ export async function sendWelcomeMerchantEmail(params: {
 export async function sendShipmentFailedEmail(params: {
   merchantEmail: string
   storeName: string
+  storeId?: string
   orderNumber: string
   customerName: string
   error: string
   attempts: number
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const { merchantEmail, storeName, orderNumber, customerName, error, attempts } = params
+    const { merchantEmail, storeName, storeId, orderNumber, customerName, error, attempts } = params
 
-    // If Resend is not configured, log and return
-    if (!resend) {
+    // Check if we have credentials
+    const credentials = await getResendCredentials(storeId)
+    if (!credentials) {
       console.log('=== SHIPMENT FAILED EMAIL (Resend not configured) ===')
       console.log('To:', merchantEmail)
       console.log('Order:', orderNumber)
@@ -261,10 +244,9 @@ export async function sendShipmentFailedEmail(params: {
       return { success: true }
     }
 
-    const { data, error: sendError } = await resend.emails.send({
-      from: `StoreForge <${fromEmail}>`,
+    return sendEmail({
       to: merchantEmail,
-      subject: `⚠️ Action Required: Shipment Failed for Order #${orderNumber}`,
+      subject: `Action Required: Shipment Failed for Order #${orderNumber}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #dc2626;">Automatic Shipment Creation Failed</h2>
@@ -292,19 +274,13 @@ export async function sendShipmentFailedEmail(params: {
 
           <p style="color: #6b7280; font-size: 14px;">
             This is an automated message from StoreForge. If the issue persists,
-            please check your Shiprocket account settings or contact support.
+            please check your shipping provider settings or contact support.
           </p>
         </div>
-      `
+      `,
+      storeId,
+      storeName: 'StoreForge',
     })
-
-    if (sendError) {
-      console.error('Failed to send shipment failed email:', sendError)
-      return { success: false, error: sendError.message }
-    }
-
-    console.log('Shipment failed email sent:', data?.id)
-    return { success: true }
   } catch (error) {
     console.error('Failed to send shipment failed email:', error)
     return {

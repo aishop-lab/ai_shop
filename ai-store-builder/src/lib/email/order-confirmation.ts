@@ -1,17 +1,11 @@
-import { Resend } from 'resend'
 import type { Order, OrderItem, ShippingAddress } from '@/lib/types/order'
+import { sendEmailWithReact, getResendCredentials } from './index'
 import OrderConfirmationEmail from '@/../emails/order-confirmation'
 import OrderShippedEmail from '@/../emails/order-shipped'
 import OrderDeliveredEmail from '@/../emails/order-delivered'
 import RefundProcessedEmail from '@/../emails/refund-processed'
 import OrderCancelledEmail from '@/../emails/order-cancelled'
 
-// Initialize Resend client
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null
-
-const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
 // Production domain configuration for subdomain URLs
@@ -30,9 +24,11 @@ function getStoreUrl(storeSlug: string): string {
 
 interface OrderWithStore extends Order {
   store?: {
+    id?: string
     name: string
     contact_email?: string
     logo_url?: string
+    slug?: string
   }
 }
 
@@ -47,6 +43,7 @@ export async function sendOrderConfirmationEmail(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const storeName = order.store?.name || 'Store'
+    const storeId = order.store?.id || (order.store_id as string)
     const items = (order.order_items || []) as (OrderItem & Record<string, unknown>)[]
 
     // Handle both database column names and type names
@@ -55,8 +52,9 @@ export async function sendOrderConfirmationEmail(
     const shippingCost = (order.shipping_amount ?? order.shipping_cost ?? 0) as number
     const totalAmount = (order.total ?? order.total_amount ?? 0) as number
 
-    // If Resend is not configured, log and return
-    if (!resend) {
+    // Check if we have credentials
+    const credentials = await getResendCredentials(storeId)
+    if (!credentials) {
       console.log('=== ORDER CONFIRMATION EMAIL (Resend not configured) ===')
       console.log('To:', customerEmail)
       console.log('Order:', order.order_number)
@@ -64,8 +62,7 @@ export async function sendOrderConfirmationEmail(
       return { success: true }
     }
 
-    const { data, error } = await resend.emails.send({
-      from: `${storeName} <${fromEmail}>`,
+    return sendEmailWithReact({
       to: customerEmail,
       subject: `Order Confirmed - #${order.order_number}`,
       react: OrderConfirmationEmail({
@@ -88,25 +85,9 @@ export async function sendOrderConfirmationEmail(
         storeName,
         trackingUrl: `${baseUrl}/orders/${order.order_number}`,
       }),
+      storeId,
+      storeName,
     })
-
-    if (error) {
-      console.error('Failed to send order confirmation email:', {
-        error: error.message,
-        name: error.name,
-        to: customerEmail,
-        from: fromEmail,
-        orderNumber: order.order_number
-      })
-      return { success: false, error: error.message }
-    }
-
-    console.log('Order confirmation email sent successfully:', {
-      emailId: data?.id,
-      to: customerEmail,
-      orderNumber: order.order_number
-    })
-    return { success: true }
   } catch (error) {
     console.error('Failed to send order confirmation email:', error)
     return {
@@ -124,10 +105,12 @@ export async function sendOrderShippedEmail(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const storeName = order.store?.name || 'Store'
+    const storeId = order.store?.id || (order.store_id as string)
     const customerEmail = (order.email || order.customer_email) as string
 
-    // If Resend is not configured, log and return
-    if (!resend) {
+    // Check if we have credentials
+    const credentials = await getResendCredentials(storeId)
+    if (!credentials) {
       console.log('=== ORDER SHIPPED EMAIL (Resend not configured) ===')
       console.log('To:', customerEmail)
       console.log('Order:', order.order_number)
@@ -141,8 +124,7 @@ export async function sendOrderShippedEmail(
       order.tracking_number || ''
     )
 
-    const { data, error } = await resend.emails.send({
-      from: `${storeName} <${fromEmail}>`,
+    return sendEmailWithReact({
       to: customerEmail,
       subject: `Your Order Has Shipped - #${order.order_number}`,
       react: OrderShippedEmail({
@@ -153,15 +135,9 @@ export async function sendOrderShippedEmail(
         trackingUrl,
         storeName,
       }),
+      storeId,
+      storeName,
     })
-
-    if (error) {
-      console.error('Failed to send shipping email:', error)
-      return { success: false, error: error.message }
-    }
-
-    console.log('Shipping notification email sent:', data?.id)
-    return { success: true }
   } catch (error) {
     console.error('Failed to send shipping email:', error)
     return {
@@ -179,10 +155,12 @@ export async function sendOrderDeliveredEmail(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const storeName = order.store?.name || 'Store'
+    const storeId = order.store?.id || (order.store_id as string)
     const customerEmail = (order.email || order.customer_email) as string
 
-    // If Resend is not configured, log and return
-    if (!resend) {
+    // Check if we have credentials
+    const credentials = await getResendCredentials(storeId)
+    if (!credentials) {
       console.log('=== ORDER DELIVERED EMAIL (Resend not configured) ===')
       console.log('To:', customerEmail)
       console.log('Order:', order.order_number)
@@ -190,8 +168,7 @@ export async function sendOrderDeliveredEmail(
       return { success: true }
     }
 
-    const { data, error } = await resend.emails.send({
-      from: `${storeName} <${fromEmail}>`,
+    return sendEmailWithReact({
       to: customerEmail,
       subject: `Your Order Was Delivered - #${order.order_number}`,
       react: OrderDeliveredEmail({
@@ -200,15 +177,9 @@ export async function sendOrderDeliveredEmail(
         storeName,
         // TODO: Add review URL when review system is integrated
       }),
+      storeId,
+      storeName,
     })
-
-    if (error) {
-      console.error('Failed to send delivery email:', error)
-      return { success: false, error: error.message }
-    }
-
-    console.log('Delivery notification email sent:', data?.id)
-    return { success: true }
   } catch (error) {
     console.error('Failed to send delivery email:', error)
     return {
@@ -227,10 +198,12 @@ export async function sendOrderCancelledEmail(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const storeName = order.store?.name || 'Store'
+    const storeId = order.store?.id || (order.store_id as string)
     const customerEmail = (order.email || order.customer_email) as string
 
-    // If Resend is not configured, log and return
-    if (!resend) {
+    // Check if we have credentials
+    const credentials = await getResendCredentials(storeId)
+    if (!credentials) {
       console.log('=== ORDER CANCELLED EMAIL (Resend not configured) ===')
       console.log('To:', customerEmail)
       console.log('Order Number:', order.order_number)
@@ -239,8 +212,7 @@ export async function sendOrderCancelledEmail(
       return { success: true }
     }
 
-    const { data, error } = await resend.emails.send({
-      from: `${storeName} <${fromEmail}>`,
+    return sendEmailWithReact({
       to: customerEmail,
       subject: `Order Cancelled - #${order.order_number}`,
       react: OrderCancelledEmail({
@@ -250,15 +222,9 @@ export async function sendOrderCancelledEmail(
         refundMessage,
         supportEmail: order.store?.contact_email,
       }),
+      storeId,
+      storeName,
     })
-
-    if (error) {
-      console.error('Failed to send cancellation email:', error)
-      return { success: false, error: error.message }
-    }
-
-    console.log('Cancellation notification email sent:', data?.id)
-    return { success: true }
   } catch (error) {
     console.error('Failed to send order cancelled email:', error)
     return {
@@ -277,10 +243,12 @@ export async function sendRefundProcessedEmail(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const storeName = order.store?.name || 'Store'
+    const storeId = order.store?.id || (order.store_id as string)
     const customerEmail = (order.email || order.customer_email) as string
 
-    // If Resend is not configured, log and return
-    if (!resend) {
+    // Check if we have credentials
+    const credentials = await getResendCredentials(storeId)
+    if (!credentials) {
       console.log('=== REFUND PROCESSED EMAIL (Resend not configured) ===')
       console.log('To:', customerEmail)
       console.log('Order:', order.order_number)
@@ -289,8 +257,7 @@ export async function sendRefundProcessedEmail(
       return { success: true }
     }
 
-    const { data, error } = await resend.emails.send({
-      from: `${storeName} <${fromEmail}>`,
+    return sendEmailWithReact({
       to: customerEmail,
       subject: `Refund Processed - #${order.order_number}`,
       react: RefundProcessedEmail({
@@ -300,15 +267,9 @@ export async function sendRefundProcessedEmail(
         storeName,
         supportEmail: order.store?.contact_email,
       }),
+      storeId,
+      storeName,
     })
-
-    if (error) {
-      console.error('Failed to send refund email:', error)
-      return { success: false, error: error.message }
-    }
-
-    console.log('Refund notification email sent:', data?.id)
-    return { success: true }
   } catch (error) {
     console.error('Failed to send refund email:', error)
     return {

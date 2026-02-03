@@ -1,12 +1,5 @@
-import { Resend } from 'resend'
+import { sendEmailWithReact, getResendCredentials } from './index'
 import TwoFactorOTPEmail from '@/../emails/two-factor-otp'
-
-// Initialize Resend client
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null
-
-const fromEmail = process.env.RESEND_FROM_EMAIL || 'security@storeforge.site'
 
 interface SendTwoFactorOTPEmailParams {
   email: string
@@ -17,6 +10,7 @@ interface SendTwoFactorOTPEmailParams {
 
 /**
  * Send 2FA OTP verification email
+ * Note: 2FA emails always use platform credentials since they're security-related
  */
 export async function sendTwoFactorOTPEmail(params: SendTwoFactorOTPEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
@@ -36,8 +30,9 @@ export async function sendTwoFactorOTPEmail(params: SendTwoFactorOTPEmailParams)
       }
     }
 
-    // If Resend is not configured, log and return
-    if (!resend) {
+    // Check if we have credentials (use platform credentials for 2FA)
+    const credentials = await getResendCredentials()
+    if (!credentials) {
       console.log('=== 2FA OTP EMAIL (Resend not configured) ===')
       console.log('To:', email)
       console.log('Action:', action)
@@ -46,8 +41,7 @@ export async function sendTwoFactorOTPEmail(params: SendTwoFactorOTPEmailParams)
       return { success: true }
     }
 
-    const { data, error } = await resend.emails.send({
-      from: `StoreForge Security <${fromEmail}>`,
+    return sendEmailWithReact({
       to: email,
       subject: getSubject(),
       react: TwoFactorOTPEmail({
@@ -55,16 +49,9 @@ export async function sendTwoFactorOTPEmail(params: SendTwoFactorOTPEmailParams)
         otpCode,
         expiresInMinutes: 10,
         action
-      })
+      }),
+      storeName: 'StoreForge Security', // Always use StoreForge for security emails
     })
-
-    if (error) {
-      console.error('Failed to send 2FA OTP email:', error)
-      return { success: false, error: error.message }
-    }
-
-    console.log('2FA OTP email sent:', data?.id)
-    return { success: true }
   } catch (error) {
     console.error('Failed to send 2FA OTP email:', error)
     return {

@@ -23,7 +23,8 @@ import {
   Database,
   Shield,
   AlertTriangle,
-  Globe
+  Globe,
+  Bell
 } from 'lucide-react'
 import { RebuildStoreDialog } from '@/components/dashboard/rebuild-store-dialog'
 import { ColorAccessibilityChecker } from '@/components/ui/color-accessibility-checker'
@@ -593,6 +594,31 @@ export default function SettingsPage() {
             <Link href="/dashboard/settings/security">
               <Button variant="outline">
                 Security Settings
+                <ExternalLink className="h-3 w-3 ml-2" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Notifications */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notifications
+            </CardTitle>
+            <CardDescription>
+              Email & WhatsApp notification settings
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Connect your own Resend and MSG91 accounts for branded notifications,
+              or use platform credentials. Configure which notifications to send.
+            </p>
+            <Link href="/dashboard/settings/notifications">
+              <Button variant="outline">
+                Notification Settings
                 <ExternalLink className="h-3 w-3 ml-2" />
               </Button>
             </Link>
