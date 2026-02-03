@@ -661,8 +661,8 @@ export default function StoreCheckoutPage() {
                   />
                 )}
 
-                {/* Manual Address Form */}
-                {(!isAuthenticated || !useSavedAddress) && (
+                {/* Manual Address Form - Always show for guests, or when logged-in user chooses new address */}
+                {(!isAuthenticated || !useSavedAddress || !selectedAddressId) && (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
