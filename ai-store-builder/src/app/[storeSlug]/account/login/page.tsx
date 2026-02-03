@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useCustomer } from '@/lib/contexts/customer-context'
+import { GoogleSignInButton } from '@/components/store/google-sign-in-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -39,11 +40,12 @@ export default function CustomerLoginPage() {
   const storeSlug = params.storeSlug as string
   const redirectTo = searchParams.get('redirect') || `/${storeSlug}/account`
 
-  const { login, register, isAuthenticated, isLoading: customerLoading } = useCustomer()
+  const { login, loginWithGoogle, register, isAuthenticated, isLoading: customerLoading } = useCustomer()
   const { toast } = useToast()
 
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [storeId, setStoreId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('login')
 
@@ -128,6 +130,30 @@ export default function CustomerLoginPage() {
     }
   }
 
+  const onGoogleSuccess = async (idToken: string) => {
+    if (!storeId) {
+      toast({ title: 'Error', description: 'Store not found', variant: 'destructive' })
+      return
+    }
+
+    setIsGoogleLoading(true)
+    try {
+      const result = await loginWithGoogle(idToken, storeId)
+      if (result.success) {
+        toast({ title: 'Welcome!', description: 'You have been signed in with Google.' })
+        router.push(redirectTo)
+      } else {
+        toast({ title: 'Sign in failed', description: result.error, variant: 'destructive' })
+      }
+    } finally {
+      setIsGoogleLoading(false)
+    }
+  }
+
+  const onGoogleError = (error: string) => {
+    toast({ title: 'Google Sign-In Error', description: error, variant: 'destructive' })
+  }
+
   if (customerLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -151,8 +177,27 @@ export default function CustomerLoginPage() {
             </TabsList>
 
             <TabsContent value="login">
+              {/* Google Sign-In */}
+              <div className="space-y-4">
+                <GoogleSignInButton
+                  onSuccess={onGoogleSuccess}
+                  onError={onGoogleError}
+                  disabled={isGoogleLoading || isSubmitting}
+                  text="signin_with"
+                />
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
+                  </div>
+                </div>
+              </div>
+
               <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
+                <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4 mt-4">
                   <FormField
                     control={loginForm.control}
                     name="email"
@@ -224,8 +269,27 @@ export default function CustomerLoginPage() {
             </TabsContent>
 
             <TabsContent value="register">
+              {/* Google Sign-In */}
+              <div className="space-y-4">
+                <GoogleSignInButton
+                  onSuccess={onGoogleSuccess}
+                  onError={onGoogleError}
+                  disabled={isGoogleLoading || isSubmitting}
+                  text="signup_with"
+                />
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Or register with email</span>
+                  </div>
+                </div>
+              </div>
+
               <Form {...registerForm}>
-                <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
+                <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4 mt-4">
                   <FormField
                     control={registerForm.control}
                     name="fullName"

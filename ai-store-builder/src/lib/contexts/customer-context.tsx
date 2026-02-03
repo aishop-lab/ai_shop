@@ -8,6 +8,7 @@ interface Customer {
   email: string
   phone?: string
   full_name?: string
+  avatar_url?: string
   email_verified: boolean
   total_orders: number
   total_spent: number
@@ -19,6 +20,7 @@ interface CustomerContextType {
   isLoading: boolean
   isAuthenticated: boolean
   login: (email: string, password: string, storeId: string) => Promise<{ success: boolean; error?: string }>
+  loginWithGoogle: (idToken: string, storeId: string) => Promise<{ success: boolean; error?: string }>
   register: (data: RegisterData) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   refreshCustomer: () => Promise<void>
@@ -86,6 +88,28 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const loginWithGoogle = async (idToken: string, storeId: string) => {
+    try {
+      const response = await fetch('/api/customer/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_token: idToken, store_id: storeId })
+      })
+
+      const data = await response.json()
+
+      if (data.success && data.customer) {
+        setCustomer(data.customer)
+        return { success: true }
+      }
+
+      return { success: false, error: data.error || 'Google login failed' }
+    } catch (error) {
+      console.error('Google login error:', error)
+      return { success: false, error: 'Google login failed. Please try again.' }
+    }
+  }
+
   const register = async (registerData: RegisterData) => {
     try {
       const response = await fetch('/api/customer/register', {
@@ -130,6 +154,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: !!customer,
         login,
+        loginWithGoogle,
         register,
         logout,
         refreshCustomer

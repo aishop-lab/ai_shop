@@ -66,6 +66,7 @@ export interface Customer {
   email_verified: boolean
   phone_verified: boolean
   avatar_url?: string
+  google_id?: string
   preferences: Record<string, unknown>
   marketing_consent: boolean
   total_orders: number
@@ -353,6 +354,93 @@ export async function changePassword(
   } catch (error) {
     console.error('Password change error:', error)
     return { success: false, error: 'Failed to change password' }
+  }
+}
+
+/**
+ * Login or register customer via Google OAuth
+ */
+export async function loginWithGoogle(params: {
+  storeId: string
+  email: string
+  fullName?: string
+  avatarUrl?: string
+  googleId: string
+  deviceInfo?: Record<string, unknown>
+  ipAddress?: string
+}): Promise<AuthResult> {
+  try {
+    const { storeId, email, fullName, avatarUrl, googleId, deviceInfo, ipAddress } = params
+
+    // Try to find existing customer by email
+    const { data: existing } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('store_id', storeId)
+      .eq('email', email.toLowerCase())
+      .single()
+
+    let customer = existing
+
+    if (existing) {
+      // Update Google ID and avatar if not set
+      if (!existing.google_id || !existing.avatar_url) {
+        const { data: updated } = await supabase
+          .from('customers')
+          .update({
+            google_id: existing.google_id || googleId,
+            avatar_url: existing.avatar_url || avatarUrl,
+            email_verified: true, // Google emails are verified
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+          .select()
+          .single()
+
+        if (updated) customer = updated
+      }
+    } else {
+      // Create new customer
+      const { data: newCustomer, error: createError } = await supabase
+        .from('customers')
+        .insert({
+          store_id: storeId,
+          email: email.toLowerCase(),
+          full_name: fullName,
+          avatar_url: avatarUrl,
+          google_id: googleId,
+          email_verified: true, // Google emails are verified
+          marketing_consent: false
+        })
+        .select()
+        .single()
+
+      if (createError || !newCustomer) {
+        console.error('Failed to create Google customer:', createError)
+        return { success: false, error: 'Failed to create account' }
+      }
+
+      customer = newCustomer
+    }
+
+    if (!customer) {
+      return { success: false, error: 'Failed to find or create customer' }
+    }
+
+    // Create session
+    const session = await createSession(customer.id, deviceInfo, ipAddress)
+    if (!session) {
+      return { success: false, error: 'Failed to create session' }
+    }
+
+    return {
+      success: true,
+      customer: sanitizeCustomer(customer),
+      session
+    }
+  } catch (error) {
+    console.error('Google login error:', error)
+    return { success: false, error: 'Google login failed' }
   }
 }
 

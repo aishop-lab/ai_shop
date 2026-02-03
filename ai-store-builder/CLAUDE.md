@@ -26,7 +26,7 @@
 - Subdomain-based store routing
 - Real-time merchant notifications
 - Rate limiting & webhook security
-- Customer accounts with order history, addresses, wishlist
+- Customer accounts with order history, addresses, wishlist, Google OAuth login
 - Abandoned cart recovery with 3-email sequence
 - WhatsApp order notifications (MSG91)
 - Per-store integrations:
@@ -157,8 +157,9 @@ MSG91_WHATSAPP_INTEGRATED_NUMBER=
 # Cron Jobs
 CRON_SECRET=
 
-# Address Autocomplete (optional)
-NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=
+# Google APIs
+NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=  # Address autocomplete (optional)
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=       # Customer Google Sign-In
 
 # App
 NEXT_PUBLIC_APP_URL=https://storeforge.site
@@ -170,6 +171,7 @@ NEXT_PUBLIC_APP_URL=https://storeforge.site
 
 | Date | Change |
 |------|--------|
+| 2026-02-04 | **Google Sign-In for Customers**: Customers can sign in with Google on any store |
 | 2026-02-04 | **Per-Store Notifications**: MSG91 (WhatsApp) and Resend (Email) per-store credentials with platform fallback |
 | 2026-02-04 | **Multi-Provider Shipping**: Shiprocket, Delhivery, Blue Dart, Self-delivery with per-store credentials |
 | 2026-02-04 | **Bug Fix**: Customer orders now properly linked via customer_id for order history |
