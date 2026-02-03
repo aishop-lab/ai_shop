@@ -382,6 +382,11 @@ export default function ShippingProvidersPage() {
               <p className="text-sm text-gray-500 mt-0.5">
                 Automatically create shipments when orders are placed
               </p>
+              {!settings?.providers.length && (
+                <p className="text-xs text-orange-600 mt-1">
+                  Add a shipping provider first to enable this feature
+                </p>
+              )}
             </div>
             <Switch
               checked={settings?.autoCreateShipment || false}

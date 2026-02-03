@@ -78,6 +78,9 @@ src/
 | `lib/rate-limit.ts` | Rate limiting (100/min API, 10/min AI, 5/min auth) |
 | `lib/notifications.ts` | Real-time notifications via Supabase |
 | `lib/webhook-security.ts` | Razorpay signature + Shiprocket IP verification |
+| `lib/google-places.ts` | Google Places API utility for address autocomplete |
+| `components/store/address-autocomplete.tsx` | Address autocomplete component with Google Places |
+| `components/store/saved-address-selector.tsx` | Saved address selector for logged-in customers |
 | `middleware.ts` | Subdomain detection + auth protection |
 | `app/api/onboarding/complete/route.ts` | Store activation + AI content generation |
 | `app/api/shipping/calculate/route.ts` | Real-time shipping cost calculation |
@@ -142,6 +145,9 @@ MSG91_WHATSAPP_INTEGRATED_NUMBER=
 # Cron Jobs
 CRON_SECRET=
 
+# Address Autocomplete (optional)
+NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=  # Google Places API for address autocomplete
+
 # App
 NEXT_PUBLIC_APP_URL=https://storeforge.site
 ```
@@ -152,6 +158,8 @@ NEXT_PUBLIC_APP_URL=https://storeforge.site
 
 | Date | Change |
 |------|--------|
+| 2026-02-03 | **Checkout Polish**: Address autocomplete (Google Places), saved addresses for logged-in customers, guest checkout localStorage persistence, multi-step checkout with progress indicator, mobile-optimized collapsible order summary |
+| 2026-02-03 | **WhatsApp Improvements**: Retry logic with exponential backoff (3 attempts), phone validation, structured JSON logging for audit trail |
 | 2026-02-03 | **Per-Store Razorpay**: Merchants can configure their own Razorpay credentials for direct settlement |
 | 2026-01-26 | **AI Recommendations**: Product similarity, "frequently bought together", personalized recommendations |
 | 2026-01-26 | **Abandoned Cart Recovery**: Cart persistence, 3-email recovery sequence, cron job |
