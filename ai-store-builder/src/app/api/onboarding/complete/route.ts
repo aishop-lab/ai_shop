@@ -153,27 +153,43 @@ export async function POST(request: Request) {
 
     // Create demo products for the store
     try {
-      const blueprint = store.blueprint as { business_category?: string[] } | null
-      const category = blueprint?.business_category?.[0]
-      const demoProducts = getDemoProducts(category)
+      const blueprintForDemo = store.blueprint as {
+        category?: { primary?: string; niche?: string; business_type?: string }
+        business_category?: string[]
+      } | null
+      // Try multiple possible paths for category
+      const categoryForDemo = blueprintForDemo?.category?.primary ||
+        blueprintForDemo?.category?.niche ||
+        blueprintForDemo?.category?.business_type ||
+        blueprintForDemo?.business_category?.[0]
+      const demoProducts = getDemoProducts(categoryForDemo)
 
-      console.log(`[Complete] Creating ${demoProducts.length} demo products for store: ${store_id}`)
+      console.log(`[Complete] Creating ${demoProducts.length} demo products for store: ${store_id}, category: ${categoryForDemo || 'default'}`)
 
       for (let i = 0; i < demoProducts.length; i++) {
         const demo = demoProducts[i]
+
+        // Generate handle from title (URL-friendly slug)
+        const handle = demo.title
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .trim()
 
         // Create the product
         const { data: product, error: productError } = await supabase
           .from('products')
           .insert({
             store_id: store_id,
+            handle: `${handle}-${Date.now()}-${i}`, // Ensure uniqueness
             title: demo.title,
             description: demo.description,
             price: demo.price,
             compare_at_price: demo.compare_at_price || null,
             categories: demo.categories,
             tags: demo.tags,
-            status: 'published',
+            status: 'active',
             is_demo: true,
             quantity: 100,
             track_quantity: false,
@@ -192,7 +208,6 @@ export async function POST(request: Request) {
           .from('product_images')
           .insert({
             product_id: product.id,
-            url: demo.image,
             original_url: demo.image,
             alt_text: demo.title,
             position: 0

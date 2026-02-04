@@ -171,6 +171,8 @@ NEXT_PUBLIC_APP_URL=https://storeforge.site
 
 | Date | Change |
 |------|--------|
+| 2026-02-04 | **Logo Regeneration Improvements**: User feedback now properly incorporated - parses color/text requests, places feedback prominently in prompt |
+| 2026-02-04 | **Demo Product Images Fix**: Added Unsplash to Next.js image remote patterns, fixed `original_url` column usage |
 | 2026-02-04 | **Google Sign-In for Customers**: Customers can sign in with Google on any store |
 | 2026-02-04 | **Per-Store Notifications**: MSG91 (WhatsApp) and Resend (Email) per-store credentials with platform fallback |
 | 2026-02-04 | **Multi-Provider Shipping**: Shiprocket, Delhivery, Blue Dart, Self-delivery with per-store credentials |

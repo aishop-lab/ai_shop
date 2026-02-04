@@ -147,12 +147,137 @@ export async function generateLogo(params: LogoGenerationParams): Promise<Genera
  */
 function getStyleGuide(style: 'modern' | 'classic' | 'playful' | 'minimal'): string {
   const guides: Record<typeof style, string> = {
-    modern: 'Clean lines, geometric shapes, bold colors, sans-serif typography if any text. Contemporary and professional.',
-    classic: 'Elegant, timeless design, subtle gradients or shadows, sophisticated color palette, serif elements if any text.',
-    playful: 'Rounded shapes, vibrant colors, friendly and approachable, creative and unique elements.',
-    minimal: 'Ultra-clean, simple geometric shapes, monochromatic or limited color palette, maximum whitespace.'
+    modern: 'Contemporary logo mark with clean geometric shapes, bold confident lines, vibrant yet professional colors (deep blue, teal, coral, or electric purple). Think Apple, Airbnb, Spotify style logos.',
+    classic: 'Timeless, elegant logo mark with refined details, sophisticated color palette (navy, burgundy, gold, forest green). Think luxury brands like Rolex, Hermès style logos.',
+    playful: 'Friendly, approachable logo mark with soft rounded shapes, warm inviting colors (orange, yellow, pink, turquoise). Think Mailchimp, Slack style logos.',
+    minimal: 'Ultra-simple iconic mark, single geometric shape or clever negative space design, monochromatic (black, white, single accent). Think Nike swoosh, Target bullseye simplicity.'
   }
   return guides[style]
+}
+
+/**
+ * Get industry-specific icon concepts
+ */
+function getIndustryConcepts(category?: string): string {
+  if (!category) return ''
+
+  const cat = category.toLowerCase()
+
+  const concepts: Record<string, string> = {
+    fashion: 'Consider: stylized hanger, dress form silhouette, needle & thread, fabric fold, fashion mannequin abstract, bow/ribbon, elegant curve',
+    clothing: 'Consider: stylized hanger, shirt collar shape, stitching pattern, fabric texture abstract, fashion mannequin silhouette',
+    electronics: 'Consider: circuit pattern, power symbol, signal waves, chip/processor abstract, lightning bolt, connected dots',
+    tech: 'Consider: abstract circuit, code brackets, pixel grid, connection nodes, infinity loop, abstract data flow',
+    food: 'Consider: chef hat, spoon/fork abstract, leaf for fresh, steam rising, plate silhouette, ingredient shapes',
+    restaurant: 'Consider: plate with cutlery, chef hat, dining table abstract, food dome/cloche, flame for cooking',
+    beauty: 'Consider: mirror reflection, lipstick shape, flower petal, beauty mark, elegant feminine curve, sparkle',
+    cosmetics: 'Consider: lipstick silhouette, compact mirror, brush stroke, flower/botanical, dewdrop, feminine curve',
+    jewelry: 'Consider: diamond facets, ring circle, pendant drop, gem cut abstract, sparkle/shine, crown element',
+    home: 'Consider: house roofline, door/window, key, heart + home, cozy elements, plant/leaf',
+    furniture: 'Consider: chair silhouette, sofa shape abstract, lamp, geometric furniture shapes, wood grain abstract',
+    health: 'Consider: heart pulse, cross symbol, leaf for natural, human figure abstract, wellness circle, lotus',
+    fitness: 'Consider: dumbbell abstract, running figure, muscle flex, heartbeat, motion lines, athletic pose',
+    sports: 'Consider: ball shape, trophy, motion swoosh, athletic figure, victory pose, energy burst',
+    books: 'Consider: open book pages, bookmark, reading glasses, quill/pen, stack of books, knowledge lightbulb',
+    education: 'Consider: graduation cap, book, lightbulb idea, pencil, brain abstract, growth arrow',
+    pets: 'Consider: paw print, pet silhouette (dog/cat), bone, heart + paw, collar/tag, animal face abstract',
+    kids: 'Consider: playful star, balloon, building blocks, happy face, rainbow arc, toy abstract',
+    toys: 'Consider: building blocks, teddy bear silhouette, pinwheel, playful shapes, star, robot friendly',
+    travel: 'Consider: airplane, globe, compass, suitcase, road/path, mountain/destination, hot air balloon',
+    cafe: 'Consider: coffee cup steam, coffee bean, mug silhouette, cafe table, brewing abstract',
+    bakery: 'Consider: bread loaf, croissant, wheat stalk, rolling pin, oven mitt, chef hat'
+  }
+
+  // Find matching category
+  for (const [key, value] of Object.entries(concepts)) {
+    if (cat.includes(key)) {
+      return `\nIcon Inspiration: ${value}`
+    }
+  }
+
+  return ''
+}
+
+/**
+ * Extract brand personality keywords from description
+ */
+function extractBrandKeywords(description?: string): string {
+  if (!description) return ''
+
+  const keywords: string[] = []
+  const desc = description.toLowerCase()
+
+  // Quality indicators
+  if (desc.includes('premium') || desc.includes('luxury') || desc.includes('high-end')) {
+    keywords.push('premium', 'luxurious')
+  }
+  if (desc.includes('affordable') || desc.includes('budget')) {
+    keywords.push('accessible', 'value-focused')
+  }
+  if (desc.includes('handmade') || desc.includes('artisan') || desc.includes('craft')) {
+    keywords.push('artisanal', 'handcrafted')
+  }
+  if (desc.includes('organic') || desc.includes('natural') || desc.includes('eco')) {
+    keywords.push('natural', 'eco-conscious')
+  }
+  if (desc.includes('fast') || desc.includes('quick') || desc.includes('instant')) {
+    keywords.push('swift', 'efficient')
+  }
+  if (desc.includes('tradition') || desc.includes('heritage') || desc.includes('authentic')) {
+    keywords.push('heritage', 'authentic')
+  }
+  if (desc.includes('innovat') || desc.includes('cutting-edge') || desc.includes('advanced')) {
+    keywords.push('innovative', 'forward-thinking')
+  }
+  if (desc.includes('trust') || desc.includes('reliable') || desc.includes('quality')) {
+    keywords.push('trustworthy', 'reliable')
+  }
+
+  if (keywords.length === 0) return ''
+  return `\nBrand Personality: ${keywords.slice(0, 3).join(', ')}`
+}
+
+/**
+ * Parse feedback to extract specific requests
+ */
+function parseFeedback(feedback: string): {
+  wantsText: boolean
+  textContent: string | null
+  colorRequest: string | null
+  otherFeedback: string
+} {
+  const lower = feedback.toLowerCase()
+
+  // Check for text requests
+  const wantsText = lower.includes('text') || lower.includes('letter') || lower.includes('word') ||
+                    lower.includes('name') || lower.includes('initial') || lower.includes('write')
+
+  // Try to extract specific text content (e.g., "add text 'ABC'" or "use text: ABC")
+  let textContent: string | null = null
+  const textMatch = feedback.match(/["']([^"']+)["']|text[:\s]+(\w+)|name[:\s]+(\w+)/i)
+  if (textMatch) {
+    textContent = textMatch[1] || textMatch[2] || textMatch[3]
+  }
+
+  // Check for color requests
+  let colorRequest: string | null = null
+  const colorKeywords = ['pink', 'red', 'blue', 'green', 'yellow', 'orange', 'purple', 'violet',
+                         'black', 'white', 'gold', 'silver', 'teal', 'coral', 'navy', 'maroon',
+                         '#[0-9a-fA-F]{3,6}']
+  for (const color of colorKeywords) {
+    const colorMatch = feedback.match(new RegExp(color, 'i'))
+    if (colorMatch) {
+      colorRequest = colorMatch[0]
+      break
+    }
+  }
+
+  return {
+    wantsText,
+    textContent,
+    colorRequest,
+    otherFeedback: feedback
+  }
 }
 
 /**
@@ -167,38 +292,79 @@ function buildLogoPrompt(params: {
 }): string {
   const { business_name, business_category, description, styleGuide, feedback } = params
 
-  let context = `Business Name: ${business_name}`
+  // Get industry-specific concepts
+  const industryConcepts = getIndustryConcepts(business_category)
+
+  // Extract brand personality from description
+  const brandKeywords = extractBrandKeywords(description)
+
+  // Parse feedback for specific requests
+  const feedbackParsed = feedback ? parseFeedback(feedback) : null
+
+  // Build context
+  let brandContext = `Brand: "${business_name}"`
   if (business_category) {
-    context += `\nCategory: ${business_category}`
+    brandContext += ` | Industry: ${business_category}`
   }
-  if (description) {
-    context += `\nDescription: ${description.substring(0, 200)}`
+  if (description && description.length > 10) {
+    brandContext += `\nBrand Story: ${description.substring(0, 150)}`
   }
 
+  // Determine if we should include text in the logo
+  const includeText = feedbackParsed?.wantsText || false
+  const textToInclude = feedbackParsed?.textContent || business_name
+
+  // Build color directive
+  let colorDirective = 'Maximum 2-3 colors, harmonious palette'
+  if (feedbackParsed?.colorRequest) {
+    colorDirective = `PRIMARY COLOR MUST BE ${feedbackParsed.colorRequest.toUpperCase()}. Use ${feedbackParsed.colorRequest} as the dominant color with 1-2 complementary colors.`
+  }
+
+  // Build logo type specification
+  let logoTypeSpec: string
+  if (includeText) {
+    logoTypeSpec = `Type: Logo mark WITH text "${textToInclude}" - incorporate the text elegantly into the design`
+  } else {
+    logoTypeSpec = 'Type: Symbol/Icon mark only (NO text, NO letters, NO initials, NO words)'
+  }
+
+  // Build feedback section - put it prominently at the top
   let feedbackSection = ''
   if (feedback) {
-    feedbackSection = `\n\nUser Feedback for this iteration:
-${feedback}
-Please incorporate this feedback while maintaining professional quality.`
+    feedbackSection = `
+*** USER FEEDBACK - HIGHEST PRIORITY ***
+The user specifically requested: "${feedback}"
+You MUST incorporate this feedback into the design. This is the most important instruction.
+***
+
+`
   }
 
-  return `Create a professional logo for a business.
-
-${context}
-
-Design Requirements:
-- Style: ${styleGuide}
-- Format: Square logo, suitable for use as a favicon and social media profile
-- Create an ICON-ONLY logo (no text, no letters, no words)
-- Simple, recognizable symbol or icon that represents the business
-- Clean, solid shapes that work well at small sizes
-- Professional quality, suitable for e-commerce
-- Flat design with no complex gradients or 3D effects
-- Maximum 2-3 colors
-- White or transparent background
-- The icon should be centered and well-balanced
+  return `Professional Logo Design Brief
 ${feedbackSection}
-Important: Generate ONLY an icon/symbol logo. Do NOT include any text, letters, or typography.`
+${brandContext}${brandKeywords}
+
+DESIGN DIRECTION:
+${styleGuide}
+${industryConcepts}
+
+LOGO SPECIFICATIONS:
+${logoTypeSpec}
+Format: Square, centered, balanced composition
+Colors: ${colorDirective}
+Style: Vector-style flat design, clean edges, no gradients or shadows
+Scale: Must be recognizable at 32x32px (favicon) and look great at 512x512px
+Background: Pure white (#FFFFFF)
+
+DESIGN PRINCIPLES:
+- Create a MEANINGFUL design that captures the brand's essence
+- Use NEGATIVE SPACE cleverly if possible
+- Ensure INSTANT RECOGNITION - the logo should tell a story at a glance
+- Design for MEMORABILITY - simple enough to sketch from memory
+- Professional quality suitable for a real e-commerce brand
+- Think like a top design agency (Pentagram, Landor, Wolff Olins)
+
+Generate a single, polished, professional logo.`
 }
 
 /**

@@ -474,7 +474,7 @@ function transformProductData(data: Record<string, unknown>): Product {
     .map(img => ({
       id: img.id as string,
       product_id: img.product_id as string,
-      url: (img.original_url || img.url) as string,
+      url: img.original_url as string,
       thumbnail_url: img.thumbnail_url as string | undefined,
       position: img.position as number,
       alt_text: img.alt_text as string | undefined
