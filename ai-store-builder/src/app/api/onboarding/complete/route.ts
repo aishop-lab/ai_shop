@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { completeOnboardingSchema } from '@/lib/validations/onboarding'
-import { getDemoProducts, getDemoProductImageUrl } from '@/lib/products/demo-products'
+import { getDemoProducts } from '@/lib/products/demo-products'
 import { vercelAI } from '@/lib/ai/vercel-ai-service'
 import { sendWelcomeMerchantEmail } from '@/lib/email/merchant-notifications'
 import { generateStorePolicies } from '@/lib/store/policies'
@@ -187,13 +187,13 @@ export async function POST(request: Request) {
           continue
         }
 
-        // Create product image
-        const imageUrl = getDemoProductImageUrl(i)
+        // Create product image using the template's image URL
         await supabase
           .from('product_images')
           .insert({
             product_id: product.id,
-            url: imageUrl,
+            url: demo.image,
+            original_url: demo.image,
             alt_text: demo.title,
             position: 0
           })
