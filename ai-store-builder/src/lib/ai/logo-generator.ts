@@ -1,13 +1,9 @@
-// Logo Generation Service using Google Gemini 2.0 Flash
+// Logo Generation Service using Google Vertex AI Imagen 3.0
 // Generates minimalist, professional logos based on business information
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleAuth } from 'google-auth-library'
 
-// Initialize Google Generative AI client
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
-
-// The model that supports image generation
-const IMAGE_MODEL = 'gemini-2.0-flash-exp'
+const VERTEX_AI_ENDPOINT = 'https://us-central1-aiplatform.googleapis.com'
 
 export interface LogoGenerationParams {
   business_name: string
@@ -23,15 +19,63 @@ export interface GeneratedLogo {
   prompt_used: string
 }
 
+// Singleton auth instance
+let auth: GoogleAuth | null = null
+let projectId: string | null = null
+
 /**
- * Generate a professional logo using Gemini 2.0 Flash image generation
+ * Initialize Google Cloud auth
+ */
+async function initializeAuth(): Promise<{ auth: GoogleAuth; projectId: string }> {
+  if (auth && projectId) {
+    return { auth, projectId }
+  }
+
+  const credentials = process.env.GOOGLE_CLOUD_CREDENTIALS
+  const keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS
+  projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || null
+
+  if (!projectId && credentials) {
+    try {
+      const parsed = JSON.parse(credentials)
+      projectId = parsed.project_id
+    } catch (e) {
+      // Ignore parse errors
+    }
+  }
+
+  if (!projectId) {
+    throw new Error('GOOGLE_CLOUD_PROJECT_ID is required for logo generation')
+  }
+
+  if (credentials) {
+    const parsedCredentials = JSON.parse(credentials)
+    auth = new GoogleAuth({
+      credentials: parsedCredentials,
+      scopes: ['https://www.googleapis.com/auth/cloud-platform']
+    })
+  } else if (keyFile) {
+    auth = new GoogleAuth({
+      keyFilename: keyFile,
+      scopes: ['https://www.googleapis.com/auth/cloud-platform']
+    })
+  } else {
+    auth = new GoogleAuth({
+      scopes: ['https://www.googleapis.com/auth/cloud-platform']
+    })
+  }
+
+  return { auth, projectId }
+}
+
+/**
+ * Generate a professional logo using Vertex AI Imagen 3.0
  */
 export async function generateLogo(params: LogoGenerationParams): Promise<GeneratedLogo> {
   const { business_name, business_category, description, style_preference = 'modern', feedback } = params
 
   // Build a detailed prompt for logo generation
   const styleGuide = getStyleGuide(style_preference)
-
   const prompt = buildLogoPrompt({
     business_name,
     business_category,
@@ -40,40 +84,57 @@ export async function generateLogo(params: LogoGenerationParams): Promise<Genera
     feedback
   })
 
-  console.log('[Logo Generator] Generating logo with prompt:', prompt.substring(0, 200) + '...')
+  console.log('[Logo Generator] Generating logo with Imagen 3.0, prompt:', prompt.substring(0, 200) + '...')
 
   try {
-    const model = genAI.getGenerativeModel({
-      model: IMAGE_MODEL,
-      generationConfig: {
-        // Request image generation
-        responseModalities: ['IMAGE', 'TEXT'] as unknown as undefined,
-      } as Record<string, unknown>
+    const { auth: googleAuth, projectId: project } = await initializeAuth()
+
+    const client = await googleAuth.getClient()
+    const accessToken = await client.getAccessToken()
+
+    if (!accessToken.token) {
+      throw new Error('Failed to get access token')
+    }
+
+    const url = `${VERTEX_AI_ENDPOINT}/v1/projects/${project}/locations/us-central1/publishers/google/models/imagen-3.0-generate-001:predict`
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        instances: [{ prompt }],
+        parameters: {
+          sampleCount: 1,
+          aspectRatio: '1:1',
+          safetySetting: 'block_some'
+        }
+      })
     })
 
-    const result = await model.generateContent(prompt)
-    const response = result.response
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[Logo Generator] Imagen API error:', response.status, errorText)
+      throw new Error(`Imagen API error: ${response.status}`)
+    }
 
-    // Extract the image from the response
-    const parts = response.candidates?.[0]?.content?.parts || []
+    const data = await response.json() as {
+      predictions?: Array<{ bytesBase64Encoded?: string; mimeType?: string }>
+    }
 
-    for (const part of parts) {
-      // Check if this part contains inline data (image)
-      if ('inlineData' in part && part.inlineData) {
-        const { data, mimeType } = part.inlineData
-        const imageBuffer = Buffer.from(data, 'base64')
+    if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
+      const imageBuffer = Buffer.from(data.predictions[0].bytesBase64Encoded, 'base64')
+      console.log('[Logo Generator] Logo generated successfully, size:', imageBuffer.length)
 
-        console.log('[Logo Generator] Logo generated successfully, size:', imageBuffer.length)
-
-        return {
-          imageData: imageBuffer,
-          mimeType: mimeType || 'image/png',
-          prompt_used: prompt
-        }
+      return {
+        imageData: imageBuffer,
+        mimeType: data.predictions[0].mimeType || 'image/png',
+        prompt_used: prompt
       }
     }
 
-    // If no image was generated, throw an error
     throw new Error('No image generated in response')
   } catch (error) {
     console.error('[Logo Generator] Generation failed:', error)
@@ -141,8 +202,12 @@ Important: Generate ONLY an icon/symbol logo. Do NOT include any text, letters, 
 }
 
 /**
- * Check if logo generation is available (API key configured)
+ * Check if logo generation is available (credentials configured)
  */
 export function isLogoGenerationAvailable(): boolean {
-  return !!process.env.GEMINI_API_KEY
+  return !!(
+    process.env.GOOGLE_CLOUD_PROJECT_ID ||
+    process.env.GOOGLE_CLOUD_CREDENTIALS ||
+    process.env.GOOGLE_APPLICATION_CREDENTIALS
+  )
 }
