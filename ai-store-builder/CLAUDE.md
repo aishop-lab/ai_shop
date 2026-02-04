@@ -171,7 +171,7 @@ NEXT_PUBLIC_APP_URL=https://storeforge.site
 
 | Date | Change |
 |------|--------|
-| 2026-02-04 | **Comprehensive E2E Tests**: 218 Playwright tests covering API routes (97), inventory management (18), email functionality (29), cart, customer auth, products, storefront |
+| 2026-02-04 | **Comprehensive E2E Tests**: 405 Playwright tests covering shipping (56), payment/Razorpay (56), products (75), API routes (97), inventory (18), email (29), cart, auth, storefront |
 | 2026-02-04 | **Gemini Model Fix**: Updated from deprecated `gemini-2.0-flash-exp` to stable `gemini-2.0-flash` for product image AI analysis |
 | 2026-02-04 | **Logo Regeneration Improvements**: User feedback now properly incorporated - parses color/text requests, places feedback prominently in prompt |
 | 2026-02-04 | **Demo Product Images Fix**: Added Unsplash to Next.js image remote patterns, fixed `original_url` column usage |
