@@ -22,9 +22,9 @@ export const google = createGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
 })
 
-// Gemini models
-export const geminiFlash = google('gemini-2.0-flash-exp')
-export const geminiFlashVision = google('gemini-2.0-flash-exp')
+// Gemini models - using stable versions
+export const geminiFlash = google('gemini-2.0-flash')
+export const geminiFlashVision = google('gemini-2.0-flash')
 
 // ============================================
 // ANTHROPIC CLAUDE PROVIDER
