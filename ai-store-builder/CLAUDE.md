@@ -131,10 +131,14 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 
-# AI
+# AI (Text generation - Gemini/Claude)
 AI_PROVIDER=google
 GOOGLE_GENERATIVE_AI_API_KEY=
 ANTHROPIC_API_KEY=
+
+# Logo Generation (Vertex AI Imagen 3.0) - Required for AI logo generation
+GOOGLE_CLOUD_PROJECT_ID=           # GCP project ID
+GOOGLE_CLOUD_CREDENTIALS=          # Service account JSON key (as string)
 
 # Payments (Platform defaults - merchants can override with their own)
 RAZORPAY_KEY_ID=

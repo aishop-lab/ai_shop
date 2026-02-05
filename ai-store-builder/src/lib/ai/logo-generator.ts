@@ -35,12 +35,20 @@ async function initializeAuth(): Promise<{ auth: GoogleAuth; projectId: string }
   const keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS
   projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || null
 
+  console.log('[Logo Generator] Initializing auth...', {
+    hasCredentials: !!credentials,
+    hasKeyFile: !!keyFile,
+    projectId: projectId || 'not set'
+  })
+
   if (!projectId && credentials) {
     try {
       const parsed = JSON.parse(credentials)
       projectId = parsed.project_id
+      console.log('[Logo Generator] Extracted project_id from credentials:', projectId)
     } catch (e) {
-      // Ignore parse errors
+      console.error('[Logo Generator] Failed to parse GOOGLE_CLOUD_CREDENTIALS:', e)
+      throw new Error('Invalid GOOGLE_CLOUD_CREDENTIALS JSON format')
     }
   }
 
@@ -49,17 +57,25 @@ async function initializeAuth(): Promise<{ auth: GoogleAuth; projectId: string }
   }
 
   if (credentials) {
-    const parsedCredentials = JSON.parse(credentials)
-    auth = new GoogleAuth({
-      credentials: parsedCredentials,
-      scopes: ['https://www.googleapis.com/auth/cloud-platform']
-    })
+    try {
+      const parsedCredentials = JSON.parse(credentials)
+      console.log('[Logo Generator] Using service account:', parsedCredentials.client_email)
+      auth = new GoogleAuth({
+        credentials: parsedCredentials,
+        scopes: ['https://www.googleapis.com/auth/cloud-platform']
+      })
+    } catch (e) {
+      console.error('[Logo Generator] Failed to initialize GoogleAuth:', e)
+      throw new Error('Failed to initialize Google Cloud auth with credentials')
+    }
   } else if (keyFile) {
+    console.log('[Logo Generator] Using key file:', keyFile)
     auth = new GoogleAuth({
       keyFilename: keyFile,
       scopes: ['https://www.googleapis.com/auth/cloud-platform']
     })
   } else {
+    console.log('[Logo Generator] Using default credentials (ADC)')
     auth = new GoogleAuth({
       scopes: ['https://www.googleapis.com/auth/cloud-platform']
     })
@@ -89,11 +105,18 @@ export async function generateLogo(params: LogoGenerationParams): Promise<Genera
   try {
     const { auth: googleAuth, projectId: project } = await initializeAuth()
 
-    const client = await googleAuth.getClient()
-    const accessToken = await client.getAccessToken()
+    let accessToken: { token?: string | null }
+    try {
+      const client = await googleAuth.getClient()
+      accessToken = await client.getAccessToken()
+      console.log('[Logo Generator] Access token obtained successfully')
+    } catch (tokenError) {
+      console.error('[Logo Generator] Failed to get access token:', tokenError)
+      throw new Error('Failed to authenticate with Google Cloud. Check service account credentials.')
+    }
 
     if (!accessToken.token) {
-      throw new Error('Failed to get access token')
+      throw new Error('Failed to get access token - token is empty')
     }
 
     const url = `${VERTEX_AI_ENDPOINT}/v1/projects/${project}/locations/us-central1/publishers/google/models/imagen-3.0-generate-001:predict`
@@ -117,6 +140,20 @@ export async function generateLogo(params: LogoGenerationParams): Promise<Genera
     if (!response.ok) {
       const errorText = await response.text()
       console.error('[Logo Generator] Imagen API error:', response.status, errorText)
+
+      // Provide helpful error messages for common issues
+      if (response.status === 403) {
+        console.error('[Logo Generator] 403 Forbidden - Check: 1) Vertex AI API enabled? 2) Service account has aiplatform.user role? 3) Billing enabled?')
+        throw new Error('Vertex AI access denied. Check API permissions and billing.')
+      }
+      if (response.status === 404) {
+        console.error('[Logo Generator] 404 Not Found - Imagen 3.0 may not be available in this project/region')
+        throw new Error('Imagen model not found. Ensure Vertex AI is enabled and Imagen is available.')
+      }
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.')
+      }
+
       throw new Error(`Imagen API error: ${response.status}`)
     }
 
