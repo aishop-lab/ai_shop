@@ -158,7 +158,7 @@ export function StoreBuildingPreview({ storeData, onBuildComplete, onError }: St
             )}
             <div>
               <h2 className="text-2xl font-bold">{storeData.business_name || 'Your Store'}</h2>
-              <p className="text-white/70 text-sm">{storeData.slug}.aistore.app</p>
+              <p className="text-white/70 text-sm">{storeData.slug}.storeforge.site</p>
             </div>
           </div>
           
@@ -258,7 +258,7 @@ export function StoreBuildingPreview({ storeData, onBuildComplete, onError }: St
             </div>
             <div>
               <p className="text-muted-foreground">URL</p>
-              <p className="font-medium">{blueprint.identity.slug}.aistore.app</p>
+              <p className="font-medium">{blueprint.identity.slug}.storeforge.site</p>
             </div>
             <div>
               <p className="text-muted-foreground">Theme</p>

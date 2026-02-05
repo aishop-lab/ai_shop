@@ -5,6 +5,15 @@ import Link from 'next/link'
 import { X, ExternalLink, Plus, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
+// Get store URL based on environment
+function getStoreUrl(slug: string): string {
+  const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
+  if (isProd) {
+    return `https://${slug}.storeforge.site`
+  }
+  return `/${slug}`
+}
+
 interface WelcomeBannerProps {
   storeName: string
   storeSlug: string
@@ -60,7 +69,7 @@ export function WelcomeBanner({ storeName, storeSlug, isFirstVisit }: WelcomeBan
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Link href={`/${storeSlug}`} target="_blank">
+          <Link href={getStoreUrl(storeSlug)} target="_blank">
             <Button variant="outline" size="sm" className="gap-2">
               View Store
               <ExternalLink className="h-3.5 w-3.5" />

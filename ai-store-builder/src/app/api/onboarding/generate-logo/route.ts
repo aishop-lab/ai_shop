@@ -100,8 +100,13 @@ export async function POST(request: Request) {
         )
       }
 
+      // Return more specific error for debugging (temporarily exposed for troubleshooting)
       return NextResponse.json(
-        { success: false, error: 'Failed to generate logo. Please try again or upload your own.' },
+        {
+          success: false,
+          error: 'Failed to generate logo. Please try again or upload your own.',
+          debug_error: errorMessage
+        },
         { status: 500 }
       )
     }

@@ -3,6 +3,17 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+
+// Get store URL based on environment
+function getStoreUrl(slug: string): string {
+  const isProd = process.env.NODE_ENV === 'production' ||
+    (typeof window !== 'undefined' && !window.location.hostname.includes('localhost'))
+
+  if (isProd) {
+    return `https://${slug}.storeforge.site`
+  }
+  return `/${slug}`
+}
 import {
   Home,
   Package,
@@ -219,7 +230,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
               items={[
                 {
                   label: 'View Store',
-                  href: `/${store.slug}`,
+                  href: getStoreUrl(store.slug),
                   icon: ExternalLink,
                   external: true
                 },
