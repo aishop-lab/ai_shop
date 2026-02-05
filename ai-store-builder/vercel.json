@@ -8,7 +8,7 @@
     },
     {
       "path": "/api/cron/process-abandoned-carts",
-      "schedule": "0 * * * *"
+      "schedule": "0 10 * * *"
     }
   ],
   "headers": [

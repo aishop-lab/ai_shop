@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { validateSession } from '@/lib/customer/auth'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // Get wishlist
 export async function GET(request: NextRequest) {
@@ -22,7 +17,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Session expired' }, { status: 401 })
     }
 
-    const { data: wishlist, error } = await supabase
+    const { data: wishlist, error } = await getSupabaseAdmin()
       .from('wishlists')
       .select(`
         id,
@@ -93,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify product exists and belongs to the same store
-    const { data: product } = await supabase
+    const { data: product } = await getSupabaseAdmin()
       .from('products')
       .select('id, store_id')
       .eq('id', validation.data.productId)
@@ -108,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Add to wishlist (upsert to handle duplicates gracefully)
-    const { data: wishlistItem, error } = await supabase
+    const { data: wishlistItem, error } = await getSupabaseAdmin()
       .from('wishlists')
       .upsert(
         {
@@ -159,7 +154,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
     }
 
-    const { error } = await supabase
+    const { error } = await getSupabaseAdmin()
       .from('wishlists')
       .delete()
       .eq('customer_id', sessionResult.customer.id)

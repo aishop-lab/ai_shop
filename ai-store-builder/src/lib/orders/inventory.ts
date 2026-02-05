@@ -1,9 +1,17 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Lazy initialization to avoid build-time errors
+let supabase: SupabaseClient | null = null
+
+function getSupabase(): SupabaseClient {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+  }
+  return supabase
+}
 
 interface OrderItem {
   product_id: string
@@ -19,7 +27,7 @@ export async function reduceInventory(orderItems: OrderItem[]): Promise<void> {
   for (const item of orderItems) {
     // If variant_id is provided, reduce variant inventory
     if (item.variant_id) {
-      const { data: variant } = await supabase
+      const { data: variant } = await getSupabase()
         .from('product_variants')
         .select('quantity, track_quantity')
         .eq('id', item.variant_id)
@@ -29,7 +37,7 @@ export async function reduceInventory(orderItems: OrderItem[]): Promise<void> {
 
       const newQuantity = Math.max(0, variant.quantity - item.quantity)
 
-      await supabase
+      await getSupabase()
         .from('product_variants')
         .update({
           quantity: newQuantity,
@@ -38,7 +46,7 @@ export async function reduceInventory(orderItems: OrderItem[]): Promise<void> {
         .eq('id', item.variant_id)
     } else {
       // Reduce product inventory
-      const { data: product } = await supabase
+      const { data: product } = await getSupabase()
         .from('products')
         .select('quantity, track_quantity')
         .eq('id', item.product_id)
@@ -48,7 +56,7 @@ export async function reduceInventory(orderItems: OrderItem[]): Promise<void> {
 
       const newQuantity = Math.max(0, product.quantity - item.quantity)
 
-      await supabase
+      await getSupabase()
         .from('products')
         .update({
           quantity: newQuantity,
@@ -66,7 +74,7 @@ export async function restoreInventory(orderItems: OrderItem[]): Promise<void> {
   for (const item of orderItems) {
     // If variant_id is provided, restore variant inventory
     if (item.variant_id) {
-      const { data: variant } = await supabase
+      const { data: variant } = await getSupabase()
         .from('product_variants')
         .select('quantity, track_quantity')
         .eq('id', item.variant_id)
@@ -76,7 +84,7 @@ export async function restoreInventory(orderItems: OrderItem[]): Promise<void> {
 
       const newQuantity = variant.quantity + item.quantity
 
-      await supabase
+      await getSupabase()
         .from('product_variants')
         .update({
           quantity: newQuantity,
@@ -85,7 +93,7 @@ export async function restoreInventory(orderItems: OrderItem[]): Promise<void> {
         .eq('id', item.variant_id)
     } else {
       // Restore product inventory
-      const { data: product } = await supabase
+      const { data: product } = await getSupabase()
         .from('products')
         .select('quantity, track_quantity')
         .eq('id', item.product_id)
@@ -95,7 +103,7 @@ export async function restoreInventory(orderItems: OrderItem[]): Promise<void> {
 
       const newQuantity = product.quantity + item.quantity
 
-      await supabase
+      await getSupabase()
         .from('products')
         .update({
           quantity: newQuantity,
@@ -132,7 +140,7 @@ export async function checkStockAvailability(
 
   for (const item of orderItems) {
     // First get the product
-    const { data: product } = await supabase
+    const { data: product } = await getSupabase()
       .from('products')
       .select('quantity, track_quantity, title, has_variants')
       .eq('id', item.product_id)
@@ -151,7 +159,7 @@ export async function checkStockAvailability(
 
     // If variant_id is provided, check variant stock
     if (item.variant_id) {
-      const { data: variant } = await supabase
+      const { data: variant } = await getSupabase()
         .from('product_variants')
         .select('quantity, track_quantity, attributes, status')
         .eq('id', item.variant_id)
@@ -262,7 +270,7 @@ export async function reserveInventory(
     expires_at: expiresAt,
   }))
 
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('inventory_reservations')
     .insert(reservations)
 
@@ -282,7 +290,7 @@ export async function reserveInventory(
  * Called when order is completed or cancelled
  */
 export async function releaseReservation(orderId: string): Promise<void> {
-  await supabase
+  await getSupabase()
     .from('inventory_reservations')
     .delete()
     .eq('order_id', orderId)
@@ -293,7 +301,7 @@ export async function releaseReservation(orderId: string): Promise<void> {
  * Should be run periodically (e.g., via cron job)
  */
 export async function cleanupExpiredReservations(): Promise<number> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('inventory_reservations')
     .delete()
     .lt('expires_at', new Date().toISOString())
@@ -317,7 +325,7 @@ export async function getEffectiveAvailability(
 ): Promise<number> {
   // If variant specified, check variant availability
   if (variantId) {
-    const { data: variant } = await supabase
+    const { data: variant } = await getSupabase()
       .from('product_variants')
       .select('quantity, track_quantity')
       .eq('id', variantId)
@@ -328,7 +336,7 @@ export async function getEffectiveAvailability(
     }
 
     // Get active reservations for this variant
-    const { data: reservations } = await supabase
+    const { data: reservations } = await getSupabase()
       .from('inventory_reservations')
       .select('quantity')
       .eq('variant_id', variantId)
@@ -341,7 +349,7 @@ export async function getEffectiveAvailability(
   }
 
   // Product availability
-  const { data: product } = await supabase
+  const { data: product } = await getSupabase()
     .from('products')
     .select('quantity, track_quantity, has_variants')
     .eq('id', productId)
@@ -357,7 +365,7 @@ export async function getEffectiveAvailability(
   }
 
   // Get active reservations for this product (no variant)
-  const { data: reservations } = await supabase
+  const { data: reservations } = await getSupabase()
     .from('inventory_reservations')
     .select('quantity')
     .eq('product_id', productId)

@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-// Initialize Supabase with service role for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 interface RouteParams {
   params: Promise<{ orderNumber: string }>
@@ -23,7 +17,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Fetch order with items
-    const { data: order, error } = await supabase
+    const { data: order, error } = await getSupabaseAdmin()
       .from('orders')
       .select(`
         *,

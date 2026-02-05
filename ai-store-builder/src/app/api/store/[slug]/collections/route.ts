@@ -1,11 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-// Use anon client for public access
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 // GET /api/store/[slug]/collections - Get all visible collections for a store
 export async function GET(
@@ -18,7 +12,7 @@ export async function GET(
     const featured = searchParams.get('featured')
 
     // Get store by slug
-    const { data: store, error: storeError } = await supabase
+    const { data: store, error: storeError } = await getSupabaseAdmin()
       .from('stores')
       .select('id')
       .eq('slug', storeSlug)
@@ -30,7 +24,7 @@ export async function GET(
     }
 
     // Build query for collections
-    let query = supabase
+    let query = getSupabaseAdmin()
       .from('collections')
       .select(`
         id,

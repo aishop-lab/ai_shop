@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { getCurrentUser } from '@/lib/auth/utils'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,7 +20,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user owns the store
-    const { data: store, error: storeError } = await supabase
+    const { data: store, error: storeError } = await getSupabaseAdmin()
       .from('stores')
       .select('id')
       .eq('id', storeId)
@@ -37,7 +32,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build query
-    let query = supabase
+    let query = getSupabaseAdmin()
       .from('abandoned_carts')
       .select('*')
       .eq('store_id', storeId)
@@ -61,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate stats
-    const { data: statsData } = await supabase
+    const { data: statsData } = await getSupabaseAdmin()
       .from('abandoned_carts')
       .select('recovery_status, subtotal')
       .eq('store_id', storeId)

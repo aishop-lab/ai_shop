@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import type { OrdersListResponse } from '@/lib/types/dashboard'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
@@ -26,7 +21,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    let query = supabase
+    let query = getSupabaseAdmin()
       .from('orders')
       .select('*, order_items(*)', { count: 'exact' })
       .eq('store_id', storeId)

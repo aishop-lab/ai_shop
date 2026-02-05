@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import type { ProductsListResponse } from '@/lib/types/dashboard'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 export async function GET(request: NextRequest): Promise<NextResponse<ProductsListResponse | { error: string }>> {
   try {
@@ -28,7 +23,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ProductsLi
       )
     }
 
-    let query = supabase
+    let query = getSupabaseAdmin()
       .from('products')
       .select('*, product_images(*)', { count: 'exact' })
       .eq('store_id', storeId)
@@ -115,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     if (action === 'get_categories') {
       // Get unique categories for the store
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseAdmin()
         .from('products')
         .select('category')
         .eq('store_id', store_id)
@@ -135,25 +130,25 @@ export async function POST(request: NextRequest) {
 
     if (action === 'get_stats') {
       // Get product statistics
-      const { count: total } = await supabase
+      const { count: total } = await getSupabaseAdmin()
         .from('products')
         .select('*', { count: 'exact', head: true })
         .eq('store_id', store_id)
         .neq('status', 'archived')
 
-      const { count: published } = await supabase
+      const { count: published } = await getSupabaseAdmin()
         .from('products')
         .select('*', { count: 'exact', head: true })
         .eq('store_id', store_id)
         .eq('status', 'published')
 
-      const { count: draft } = await supabase
+      const { count: draft } = await getSupabaseAdmin()
         .from('products')
         .select('*', { count: 'exact', head: true })
         .eq('store_id', store_id)
         .eq('status', 'draft')
 
-      const { count: lowStock } = await supabase
+      const { count: lowStock } = await getSupabaseAdmin()
         .from('products')
         .select('*', { count: 'exact', head: true })
         .eq('store_id', store_id)
@@ -161,7 +156,7 @@ export async function POST(request: NextRequest) {
         .lte('quantity', 5)
         .neq('status', 'archived')
 
-      const { count: outOfStock } = await supabase
+      const { count: outOfStock } = await getSupabaseAdmin()
         .from('products')
         .select('*', { count: 'exact', head: true })
         .eq('store_id', store_id)

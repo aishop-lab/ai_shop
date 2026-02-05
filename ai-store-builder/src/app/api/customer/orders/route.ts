@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { validateSession } from '@/lib/customer/auth'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // Get customer order history
 export async function GET(request: NextRequest) {
@@ -27,7 +22,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') // optional filter
 
     // Build query
-    let query = supabase
+    let query = getSupabaseAdmin()
       .from('orders')
       .select(`
         id,

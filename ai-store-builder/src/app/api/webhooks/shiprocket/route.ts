@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { mapShiprocketStatus } from '@/lib/shipping/shiprocket'
 import {
   sendOrderShippedEmail,
@@ -10,12 +10,6 @@ import {
   sendOrderDeliveredWhatsApp,
   sendOutForDeliveryWhatsApp,
 } from '@/lib/whatsapp/msg91'
-
-// Use service role for webhooks (no user context)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // Shiprocket webhook payload types
 interface ShiprocketWebhookPayload {
@@ -49,7 +43,7 @@ export async function POST(request: Request) {
     })
 
     // Find the order by order_number (Shiprocket's order_id is our order_number)
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await getSupabaseAdmin()
       .from('orders')
       .select('*, order_items(*)')
       .eq('order_number', payload.order_id)
@@ -62,7 +56,7 @@ export async function POST(request: Request) {
     }
 
     // Fetch store info for email notifications
-    const { data: store } = await supabase
+    const { data: store } = await getSupabaseAdmin()
       .from('stores')
       .select('name, contact_email')
       .eq('id', order.store_id)
@@ -84,7 +78,7 @@ export async function POST(request: Request) {
     }
 
     // Update order status
-    const { error: updateError } = await supabase
+    const { error: updateError } = await getSupabaseAdmin()
       .from('orders')
       .update(updateData)
       .eq('id', order.id)
@@ -94,7 +88,7 @@ export async function POST(request: Request) {
     }
 
     // Log the event
-    await supabase.from('shipment_events').insert({
+    await getSupabaseAdmin().from('shipment_events').insert({
       order_id: order.id,
       awb_code: payload.awb,
       event_date: payload.current_timestamp || new Date().toISOString(),
@@ -106,7 +100,7 @@ export async function POST(request: Request) {
     // Store all scan events if provided
     if (payload.scans && payload.scans.length > 0) {
       // Get existing events to avoid duplicates
-      const { data: existingEvents } = await supabase
+      const { data: existingEvents } = await getSupabaseAdmin()
         .from('shipment_events')
         .select('event_date, status')
         .eq('order_id', order.id)
@@ -130,7 +124,7 @@ export async function POST(request: Request) {
         }))
 
       if (newEvents.length > 0) {
-        await supabase.from('shipment_events').insert(newEvents)
+        await getSupabaseAdmin().from('shipment_events').insert(newEvents)
       }
     }
 
@@ -139,7 +133,7 @@ export async function POST(request: Request) {
 
     if (mappedStatus === 'shipped') {
       // Update tracking info from webhook
-      await supabase
+      await getSupabaseAdmin()
         .from('orders')
         .update({
           tracking_number: payload.awb,

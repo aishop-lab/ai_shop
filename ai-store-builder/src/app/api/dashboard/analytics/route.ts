@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import type { DashboardAnalytics, AnalyticsPeriod, RevenueTrendItem } from '@/lib/types/dashboard'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 interface OrderRow {
   id: string
@@ -56,7 +51,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 1. Revenue metrics - fetch orders
-    const { data: orders } = await supabase
+    const { data: orders } = await getSupabaseAdmin()
       .from('orders')
       .select('id, total, payment_status, fulfillment_status, created_at')
       .eq('store_id', storeId)
@@ -71,13 +66,13 @@ export async function GET(request: NextRequest) {
     const pendingOrders = typedOrders.filter(o => o.payment_status === 'pending').length
 
     // 2. Product metrics (check for both 'active' and 'published' status)
-    const { count: totalProducts } = await supabase
+    const { count: totalProducts } = await getSupabaseAdmin()
       .from('products')
       .select('*', { count: 'exact', head: true })
       .eq('store_id', storeId)
       .in('status', ['active', 'published'])
 
-    const { data: lowStockProducts } = await supabase
+    const { data: lowStockProducts } = await getSupabaseAdmin()
       .from('products')
       .select('id, title, quantity')
       .eq('store_id', storeId)
@@ -92,7 +87,7 @@ export async function GET(request: NextRequest) {
     let topSellingProducts: DashboardAnalytics['topSellingProducts'] = []
     
     if (paidOrderIds.length > 0) {
-      const { data: orderItems } = await supabase
+      const { data: orderItems } = await getSupabaseAdmin()
         .from('order_items')
         .select('product_id, title, image_url, quantity, total')
         .in('order_id', paidOrderIds)
@@ -130,7 +125,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Recent orders
-    const { data: recentOrders } = await supabase
+    const { data: recentOrders } = await getSupabaseAdmin()
       .from('orders')
       .select('*')
       .eq('store_id', storeId)

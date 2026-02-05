@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { shiprocket, getCheapestCourier, getFastestCourier } from '@/lib/shipping/shiprocket'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // Default pickup pincode if store doesn't have one configured
 const DEFAULT_PICKUP_PINCODE = process.env.DEFAULT_PICKUP_PINCODE || '110001'
@@ -43,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     if (storeId) {
       try {
-        const { data: store } = await supabase
+        const { data: store } = await getSupabaseAdmin()
           .from('stores')
           .select('settings')
           .eq('id', storeId)

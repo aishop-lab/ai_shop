@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { validateCartItems } from '@/lib/cart/validation'
 import { calculateCartTotal } from '@/lib/cart/calculations'
 import { createRazorpayOrder, getStoreRazorpayCredentials, getStoreRazorpayKeyId } from '@/lib/payment/razorpay'
@@ -13,12 +13,6 @@ import { createNotification } from '@/lib/notifications'
 import { validateSession } from '@/lib/customer/auth'
 import type { StoreSettings } from '@/lib/types/store'
 import type { CreateOrderResponse, ShippingAddress } from '@/lib/types/order'
-
-// Initialize Supabase with service role for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // Validation schema for order creation (variant-aware)
 const createOrderSchema = z.object({
@@ -114,7 +108,7 @@ export async function POST(
     }
 
     // 2. Get store settings
-    const { data: store, error: storeError } = await supabase
+    const { data: store, error: storeError } = await getSupabaseAdmin()
       .from('stores')
       .select('settings, owner_id, name')
       .eq('id', store_id)
@@ -171,7 +165,7 @@ export async function POST(
     }
 
     // 7. Create order in database
-    const { error: orderError } = await supabase.from('orders').insert({
+    const { error: orderError } = await getSupabaseAdmin().from('orders').insert({
       id: orderId,
       order_number: orderNumber,
       store_id,
@@ -221,14 +215,14 @@ export async function POST(
       }
     })
 
-    const { error: itemsError } = await supabase
+    const { error: itemsError } = await getSupabaseAdmin()
       .from('order_items')
       .insert(orderItems)
 
     if (itemsError) {
       console.error('Order items creation error:', itemsError)
       // Clean up order if items failed
-      await supabase.from('orders').delete().eq('id', orderId)
+      await getSupabaseAdmin().from('orders').delete().eq('id', orderId)
       return NextResponse.json(
         { success: false, error: 'Failed to create order items' },
         { status: 500 }
@@ -241,7 +235,7 @@ export async function POST(
     if (payment_method === 'razorpay') {
       try {
         // Fetch store-specific Razorpay credentials (if configured)
-        const storeCredentials = await getStoreRazorpayCredentials(store_id, supabase)
+        const storeCredentials = await getStoreRazorpayCredentials(store_id, getSupabaseAdmin())
 
         razorpayOrder = await createRazorpayOrder(
           totals.total,
@@ -259,15 +253,15 @@ export async function POST(
         razorpayKeyId = storeCredentials?.key_id || process.env.RAZORPAY_KEY_ID
 
         // Update order with Razorpay order ID
-        await supabase
+        await getSupabaseAdmin()
           .from('orders')
           .update({ razorpay_order_id: razorpayOrder.id })
           .eq('id', orderId)
       } catch (razorpayError) {
         console.error('Razorpay order creation failed:', razorpayError)
         // Clean up order and items
-        await supabase.from('order_items').delete().eq('order_id', orderId)
-        await supabase.from('orders').delete().eq('id', orderId)
+        await getSupabaseAdmin().from('order_items').delete().eq('order_id', orderId)
+        await getSupabaseAdmin().from('orders').delete().eq('id', orderId)
         return NextResponse.json(
           { success: false, error: 'Failed to initialize payment' },
           { status: 500 }
@@ -277,7 +271,7 @@ export async function POST(
 
     // 10. For COD orders, mark as processing and send confirmation email
     if (payment_method === 'cod') {
-      await supabase
+      await getSupabaseAdmin()
         .from('orders')
         .update({
           fulfillment_status: 'processing',
@@ -357,7 +351,7 @@ export async function POST(
 
             // Update order with shipping details
             if (result.awbCode) {
-              await supabase
+              await getSupabaseAdmin()
                 .from('orders')
                 .update({
                   shipping_provider: result.provider,
@@ -369,7 +363,7 @@ export async function POST(
             }
           } else if (result.provider === 'self') {
             console.log(`[AutoShipment] Order ${orderNumber} marked for self-delivery (no provider configured)`)
-            await supabase
+            await getSupabaseAdmin()
               .from('orders')
               .update({ shipping_provider: 'self' })
               .eq('id', orderId)
@@ -378,7 +372,7 @@ export async function POST(
             console.error(`[AutoShipment] Failed for COD order ${orderNumber}:`, result.error)
 
             // Get merchant email for notification
-            const { data: authUser } = await supabase.auth.admin.getUserById(store.owner_id)
+            const { data: authUser } = await getSupabaseAdmin().auth.admin.getUserById(store.owner_id)
             const merchantEmail = authUser?.user?.email
 
             // Create dashboard notification

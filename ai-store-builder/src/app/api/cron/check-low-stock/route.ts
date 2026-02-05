@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { sendLowStockAlertEmail } from '@/lib/email/merchant-notifications'
-
-// Use service role for cron jobs
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // Default low stock threshold
 const DEFAULT_LOW_STOCK_THRESHOLD = 5
@@ -24,7 +18,7 @@ export async function GET(request: Request) {
     console.log('[Cron] Starting low stock check...')
 
     // Get all active stores with their owner's email
-    const { data: stores, error: storesError } = await supabaseAdmin
+    const { data: stores, error: storesError } = await getSupabaseAdmin()
       .from('stores')
       .select(`
         id,
@@ -58,7 +52,7 @@ export async function GET(request: Request) {
         const threshold = settings?.low_stock_threshold || DEFAULT_LOW_STOCK_THRESHOLD
 
         // Find products with low stock
-        const { data: lowStockProducts, error: productsError } = await supabaseAdmin
+        const { data: lowStockProducts, error: productsError } = await getSupabaseAdmin()
           .from('products')
           .select('id, title, sku, quantity')
           .eq('store_id', store.id)
@@ -78,7 +72,7 @@ export async function GET(request: Request) {
         }
 
         // Get merchant email from auth
-        const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(store.owner_id)
+        const { data: authUser } = await getSupabaseAdmin().auth.admin.getUserById(store.owner_id)
         const merchantEmail = authUser?.user?.email
 
         if (!merchantEmail) {
@@ -87,7 +81,7 @@ export async function GET(request: Request) {
         }
 
         // Check if we've already sent an alert for these products recently (within 24h)
-        const { data: recentNotification } = await supabaseAdmin
+        const { data: recentNotification } = await getSupabaseAdmin()
           .from('notifications')
           .select('id')
           .eq('store_id', store.id)
@@ -120,7 +114,7 @@ export async function GET(request: Request) {
           alertsSent++
 
           // Create notification record
-          await supabaseAdmin.from('notifications').insert({
+          await getSupabaseAdmin().from('notifications').insert({
             store_id: store.id,
             user_id: store.owner_id,
             type: 'low_stock',

@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { shiprocket, mapShiprocketStatus } from '@/lib/shipping/shiprocket'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 /**
  * GET /api/shipping/track/public
@@ -36,7 +31,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch order
-    let query = supabase
+    let query = getSupabaseAdmin()
       .from('orders')
       .select(`
         id,
@@ -89,7 +84,7 @@ export async function GET(request: NextRequest) {
     // Check if Shiprocket is configured
     if (!shiprocket.isConfigured()) {
       // Return local tracking data if Shiprocket is not configured
-      const { data: events } = await supabase
+      const { data: events } = await getSupabaseAdmin()
         .from('shipment_events')
         .select('*')
         .eq('order_id', order.id)
@@ -147,7 +142,7 @@ export async function GET(request: NextRequest) {
 
     // Update order status if changed (background operation)
     if (mappedStatus !== order.fulfillment_status) {
-      supabase
+      getSupabaseAdmin()
         .from('orders')
         .update({
           fulfillment_status: mappedStatus,
@@ -161,7 +156,7 @@ export async function GET(request: NextRequest) {
 
     // Store new tracking events (background operation)
     if (activities.length > 0) {
-      const { data: existingEvents } = await supabase
+      const { data: existingEvents } = await getSupabaseAdmin()
         .from('shipment_events')
         .select('event_date, status')
         .eq('order_id', order.id)
@@ -185,7 +180,7 @@ export async function GET(request: NextRequest) {
         }))
 
       if (newEvents.length > 0) {
-        supabase.from('shipment_events').insert(newEvents)
+        getSupabaseAdmin().from('shipment_events').insert(newEvents)
           .then(({ error }) => {
             if (error) console.error('Failed to store events:', error)
           })

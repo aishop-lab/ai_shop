@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { getCurrentUser } from '@/lib/auth/utils'
 import { sendRecoveryEmail } from '@/lib/cart/abandoned-cart'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch the cart with store info
-    const { data: cart, error: cartError } = await supabase
+    const { data: cart, error: cartError } = await getSupabaseAdmin()
       .from('abandoned_carts')
       .select(`
         *,
@@ -66,7 +61,7 @@ export async function POST(request: NextRequest) {
     let discountPercentage: number | undefined
 
     if (emailNumber === 3) {
-      const { data: storeData } = await supabase
+      const { data: storeData } = await getSupabaseAdmin()
         .from('stores')
         .select('cart_recovery_settings')
         .eq('id', cart.stores.id)

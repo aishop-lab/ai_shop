@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { z } from 'zod'
 import type { BulkActionRequest, BulkActionResponse } from '@/lib/types/dashboard'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // Validation schema
 const bulkActionSchema = z.object({
@@ -69,7 +64,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkActio
           }
         }
 
-        result = await supabase
+        result = await getSupabaseAdmin()
           .from(resource)
           .update({
             status: data.status,
@@ -81,7 +76,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkActio
       case 'delete':
       case 'archive':
         // Soft delete - set status to archived
-        result = await supabase
+        result = await getSupabaseAdmin()
           .from(resource)
           .update({
             status: 'archived',
@@ -92,7 +87,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkActio
 
       case 'restore':
         // Restore archived items - set status to draft
-        result = await supabase
+        result = await getSupabaseAdmin()
           .from(resource)
           .update({
             status: 'draft',
@@ -109,7 +104,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkActio
           )
         }
 
-        result = await supabase
+        result = await getSupabaseAdmin()
           .from('products')
           .update({
             featured: true,
@@ -126,7 +121,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkActio
           )
         }
 
-        result = await supabase
+        result = await getSupabaseAdmin()
           .from('products')
           .update({
             featured: false,

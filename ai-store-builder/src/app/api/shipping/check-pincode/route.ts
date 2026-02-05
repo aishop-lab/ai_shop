@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { shiprocket } from '@/lib/shipping/shiprocket'
-
-// Use anon client for public access
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 interface CheckPincodeRequest {
   pincode: string
@@ -34,7 +28,7 @@ export async function POST(request: Request) {
     }
 
     // Get store settings
-    const { data: store, error: storeError } = await supabase
+    const { data: store, error: storeError } = await getSupabaseAdmin()
       .from('stores')
       .select('settings, shipping_settings')
       .eq('id', store_id)

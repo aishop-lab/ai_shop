@@ -9,13 +9,21 @@
 
 import { generateObject } from 'ai'
 import { z } from 'zod'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { getFastModel } from './provider'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Lazy initialization to avoid build-time errors
+let supabase: SupabaseClient | null = null
+
+function getSupabase(): SupabaseClient {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+  }
+  return supabase
+}
 
 // Schema for AI-generated recommendations
 const recommendationSchema = z.object({
@@ -63,7 +71,7 @@ export async function getSimilarProducts(
 ): Promise<RecommendationResult[]> {
   try {
     // Get the source product
-    const { data: sourceProduct, error: sourceError } = await supabase
+    const { data: sourceProduct, error: sourceError } = await getSupabase()
       .from('products')
       .select('id, title, description, price, categories, tags')
       .eq('id', productId)
@@ -76,7 +84,7 @@ export async function getSimilarProducts(
     }
 
     // Get other products from the same store
-    const { data: candidates, error: candidatesError } = await supabase
+    const { data: candidates, error: candidatesError } = await getSupabase()
       .from('products')
       .select('id, title, description, price, categories, tags')
       .eq('store_id', storeId)
@@ -204,7 +212,7 @@ export async function getFrequentlyBoughtTogether(
 ): Promise<RecommendationResult[]> {
   try {
     // Find orders containing this product
-    const { data: orderItems, error: ordersError } = await supabase
+    const { data: orderItems, error: ordersError } = await getSupabase()
       .from('order_items')
       .select('order_id')
       .eq('product_id', productId)
@@ -218,7 +226,7 @@ export async function getFrequentlyBoughtTogether(
     const orderIds = orderItems.map(oi => oi.order_id)
 
     // Find other products in those orders
-    const { data: relatedItems, error: relatedError } = await supabase
+    const { data: relatedItems, error: relatedError } = await getSupabase()
       .from('order_items')
       .select('product_id, products(id, title, price, categories, tags, status, is_demo)')
       .in('order_id', orderIds)
@@ -276,7 +284,7 @@ export async function getPersonalizedRecommendations(
     }
 
     // Get customer's purchase history
-    let orderQuery = supabase
+    let orderQuery = getSupabase()
       .from('orders')
       .select('id')
       .eq('store_id', storeId)
@@ -297,7 +305,7 @@ export async function getPersonalizedRecommendations(
     }
 
     // Get purchased products
-    const { data: purchasedItems } = await supabase
+    const { data: purchasedItems } = await getSupabase()
       .from('order_items')
       .select('product_id')
       .in('order_id', orders.map(o => o.id))
@@ -346,7 +354,7 @@ export async function getTrendingProducts(
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    const { data: topProducts, error } = await supabase
+    const { data: topProducts, error } = await getSupabase()
       .from('order_items')
       .select(`
         product_id,
@@ -359,7 +367,7 @@ export async function getTrendingProducts(
 
     if (error || !topProducts) {
       // Fallback to featured products
-      const { data: featured } = await supabase
+      const { data: featured } = await getSupabase()
         .from('products')
         .select('id, title, price, categories, tags')
         .eq('store_id', storeId)

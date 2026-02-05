@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { validateSession } from '@/lib/customer/auth'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 const updateSchema = z.object({
   label: z.string().max(50).optional(),
@@ -40,7 +35,7 @@ export async function PATCH(
     }
 
     // Verify ownership
-    const { data: existing } = await supabase
+    const { data: existing } = await getSupabaseAdmin()
       .from('customer_addresses')
       .select('customer_id')
       .eq('id', addressId)
@@ -72,7 +67,7 @@ export async function PATCH(
     if (validation.data.country !== undefined) updateData.country = validation.data.country
     if (validation.data.isDefault !== undefined) updateData.is_default = validation.data.isDefault
 
-    const { data: address, error } = await supabase
+    const { data: address, error } = await getSupabaseAdmin()
       .from('customer_addresses')
       .update(updateData)
       .eq('id', addressId)
@@ -110,7 +105,7 @@ export async function DELETE(
     }
 
     // Verify ownership and delete
-    const { error } = await supabase
+    const { error } = await getSupabaseAdmin()
       .from('customer_addresses')
       .delete()
       .eq('id', addressId)

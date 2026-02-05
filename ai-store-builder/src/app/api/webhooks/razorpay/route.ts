@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { verifyWebhookSignature } from '@/lib/payment/razorpay'
 import { decrypt } from '@/lib/encryption'
 import { reduceInventory, releaseReservation, restoreInventory } from '@/lib/orders/inventory'
@@ -19,12 +19,6 @@ import type {
   OrderItem,
 } from '@/lib/types/order'
 
-// Initialize Supabase with service role for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 /**
  * Get the webhook secret to use for verification.
  * Tries to find store-specific secret based on store_id in payment notes,
@@ -39,7 +33,7 @@ async function getWebhookSecret(event: RazorpayWebhookEvent): Promise<string | n
   } else if (event.payload.refund?.entity?.notes?.store_id) {
     // For refund events, try to find the order first
     const paymentId = event.payload.refund.entity.payment_id
-    const { data: order } = await supabase
+    const { data: order } = await getSupabaseAdmin()
       .from('orders')
       .select('store_id')
       .eq('razorpay_payment_id', paymentId)
@@ -49,7 +43,7 @@ async function getWebhookSecret(event: RazorpayWebhookEvent): Promise<string | n
 
   // If we have a store_id, try to get store-specific webhook secret
   if (storeId) {
-    const { data: store } = await supabase
+    const { data: store } = await getSupabaseAdmin()
       .from('stores')
       .select('razorpay_webhook_secret_encrypted, razorpay_credentials_verified')
       .eq('id', storeId)
@@ -162,7 +156,7 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
   console.log('Payment captured:', payment.id, 'for order:', razorpayOrderId)
 
   // Find order by Razorpay order ID
-  const { data: order, error: findError } = await supabase
+  const { data: order, error: findError } = await getSupabaseAdmin()
     .from('orders')
     .select(
       `
@@ -185,7 +179,7 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
   }
 
   // Update order status
-  const { error: updateError } = await supabase
+  const { error: updateError } = await getSupabaseAdmin()
     .from('orders')
     .update({
       payment_status: 'paid',
@@ -213,7 +207,7 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
   await releaseReservation(order.id)
 
   // Get store and owner info for notifications
-  const { data: store } = await supabase
+  const { data: store } = await getSupabaseAdmin()
     .from('stores')
     .select('name, owner_id, contact_email')
     .eq('id', order.store_id)
@@ -222,7 +216,7 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
   // Get merchant email from auth
   let merchantEmail: string | undefined
   if (store?.owner_id) {
-    const { data: authUser } = await supabase.auth.admin.getUserById(store.owner_id)
+    const { data: authUser } = await getSupabaseAdmin().auth.admin.getUserById(store.owner_id)
     merchantEmail = authUser?.user?.email || store.contact_email || undefined
   }
 
@@ -328,7 +322,7 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
 
         // Update order with shipping details
         if (result.awbCode) {
-          await supabase
+          await getSupabaseAdmin()
             .from('orders')
             .update({
               shipping_provider: result.provider,
@@ -340,7 +334,7 @@ async function handlePaymentCaptured(payment: RazorpayPayment): Promise<void> {
         }
       } else if (result.provider === 'self') {
         console.log(`[AutoShipment] Order ${order.order_number} marked for self-delivery (no provider configured)`)
-        await supabase
+        await getSupabaseAdmin()
           .from('orders')
           .update({ shipping_provider: 'self' })
           .eq('id', order.id)
@@ -393,7 +387,7 @@ async function handlePaymentFailed(payment: RazorpayPayment): Promise<void> {
   console.log('Payment failed:', payment.id, 'for order:', razorpayOrderId)
 
   // Find order by Razorpay order ID
-  const { data: order, error: findError } = await supabase
+  const { data: order, error: findError } = await getSupabaseAdmin()
     .from('orders')
     .select('id, order_items(*)')
     .eq('razorpay_order_id', razorpayOrderId)
@@ -405,7 +399,7 @@ async function handlePaymentFailed(payment: RazorpayPayment): Promise<void> {
   }
 
   // Update order status
-  await supabase
+  await getSupabaseAdmin()
     .from('orders')
     .update({
       payment_status: 'failed',
@@ -430,7 +424,7 @@ async function handleRefundCreated(refund: RazorpayRefund): Promise<void> {
   console.log('Refund created:', refund.id, 'for payment:', paymentId)
 
   // Find order by payment ID
-  const { data: order, error: findError } = await supabase
+  const { data: order, error: findError } = await getSupabaseAdmin()
     .from('orders')
     .select('*')
     .eq('razorpay_payment_id', paymentId)
@@ -442,7 +436,7 @@ async function handleRefundCreated(refund: RazorpayRefund): Promise<void> {
   }
 
   // Create refund record
-  await supabase.from('refunds').insert({
+  await getSupabaseAdmin().from('refunds').insert({
     order_id: order.id,
     razorpay_refund_id: refund.id,
     amount: refund.amount / 100, // Convert from paise
@@ -462,7 +456,7 @@ async function handleRefundProcessed(refund: RazorpayRefund): Promise<void> {
   console.log('Refund processed:', refund.id, 'for payment:', paymentId)
 
   // Find order by payment ID
-  const { data: order, error: findError } = await supabase
+  const { data: order, error: findError } = await getSupabaseAdmin()
     .from('orders')
     .select('*, order_items(*)')
     .eq('razorpay_payment_id', paymentId)
@@ -477,7 +471,7 @@ async function handleRefundProcessed(refund: RazorpayRefund): Promise<void> {
   const isFullRefund = refundAmount >= order.total_amount
 
   // Update refund record
-  await supabase
+  await getSupabaseAdmin()
     .from('refunds')
     .update({
       status: 'processed',
@@ -487,7 +481,7 @@ async function handleRefundProcessed(refund: RazorpayRefund): Promise<void> {
 
   // Update order status for full refunds
   if (isFullRefund) {
-    await supabase
+    await getSupabaseAdmin()
       .from('orders')
       .update({
         payment_status: 'refunded',
@@ -518,7 +512,7 @@ async function handleRefundFailed(refund: RazorpayRefund): Promise<void> {
   console.log('Refund failed:', refund.id)
 
   // Update refund record
-  await supabase
+  await getSupabaseAdmin()
     .from('refunds')
     .update({
       status: 'failed',

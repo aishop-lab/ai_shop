@@ -5,14 +5,21 @@
  * Uses secure password hashing and JWT-like tokens stored in database.
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
-// Use service role for server operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Lazy initialization to avoid build-time errors
+let supabase: SupabaseClient | null = null
+
+function getSupabase(): SupabaseClient {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+  }
+  return supabase
+}
 
 // Session duration: 30 days
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000
@@ -104,7 +111,7 @@ export async function registerCustomer(params: {
     const { storeId, email, password, fullName, phone, marketingConsent } = params
 
     // Check if customer already exists
-    const { data: existing } = await supabase
+    const { data: existing } = await getSupabase()
       .from('customers')
       .select('id')
       .eq('store_id', storeId)
@@ -119,7 +126,7 @@ export async function registerCustomer(params: {
     const passwordHash = await hashPassword(password)
 
     // Create customer
-    const { data: customer, error: createError } = await supabase
+    const { data: customer, error: createError } = await getSupabase()
       .from('customers')
       .insert({
         store_id: storeId,
@@ -168,7 +175,7 @@ export async function loginCustomer(params: {
     const { storeId, email, password, deviceInfo, ipAddress } = params
 
     // Find customer
-    const { data: customer, error: findError } = await supabase
+    const { data: customer, error: findError } = await getSupabase()
       .from('customers')
       .select('*')
       .eq('store_id', storeId)
@@ -214,7 +221,7 @@ export async function validateSession(token: string): Promise<AuthResult> {
     const tokenHash = hashToken(token)
 
     // Find session
-    const { data: session, error: sessionError } = await supabase
+    const { data: session, error: sessionError } = await getSupabase()
       .from('customer_sessions')
       .select('*, customer:customers(*)')
       .eq('token_hash', tokenHash)
@@ -247,7 +254,7 @@ export async function logoutCustomer(token: string): Promise<{ success: boolean 
   try {
     const tokenHash = hashToken(token)
 
-    await supabase
+    await getSupabase()
       .from('customer_sessions')
       .delete()
       .eq('token_hash', tokenHash)
@@ -264,7 +271,7 @@ export async function logoutCustomer(token: string): Promise<{ success: boolean 
  */
 export async function logoutAllSessions(customerId: string): Promise<{ success: boolean }> {
   try {
-    await supabase
+    await getSupabase()
       .from('customer_sessions')
       .delete()
       .eq('customer_id', customerId)
@@ -288,7 +295,7 @@ export async function updateCustomerProfile(
   }
 ): Promise<AuthResult> {
   try {
-    const { data: customer, error } = await supabase
+    const { data: customer, error } = await getSupabase()
       .from('customers')
       .update({
         full_name: updates.fullName,
@@ -321,7 +328,7 @@ export async function changePassword(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Get current password hash
-    const { data: customer } = await supabase
+    const { data: customer } = await getSupabase()
       .from('customers')
       .select('password_hash')
       .eq('id', customerId)
@@ -339,7 +346,7 @@ export async function changePassword(
 
     // Hash and update new password
     const newHash = await hashPassword(newPassword)
-    await supabase
+    await getSupabase()
       .from('customers')
       .update({
         password_hash: newHash,
@@ -373,7 +380,7 @@ export async function loginWithGoogle(params: {
     const { storeId, email, fullName, avatarUrl, googleId, deviceInfo, ipAddress } = params
 
     // Try to find existing customer by email
-    const { data: existing } = await supabase
+    const { data: existing } = await getSupabase()
       .from('customers')
       .select('*')
       .eq('store_id', storeId)
@@ -385,7 +392,7 @@ export async function loginWithGoogle(params: {
     if (existing) {
       // Update Google ID and avatar if not set
       if (!existing.google_id || !existing.avatar_url) {
-        const { data: updated } = await supabase
+        const { data: updated } = await getSupabase()
           .from('customers')
           .update({
             google_id: existing.google_id || googleId,
@@ -401,7 +408,7 @@ export async function loginWithGoogle(params: {
       }
     } else {
       // Create new customer
-      const { data: newCustomer, error: createError } = await supabase
+      const { data: newCustomer, error: createError } = await getSupabase()
         .from('customers')
         .insert({
           store_id: storeId,
@@ -457,7 +464,7 @@ export async function findOrCreateCustomerFromOrder(params: {
     const { storeId, email, fullName, phone } = params
 
     // Try to find existing customer
-    const { data: existing } = await supabase
+    const { data: existing } = await getSupabase()
       .from('customers')
       .select('*')
       .eq('store_id', storeId)
@@ -469,7 +476,7 @@ export async function findOrCreateCustomerFromOrder(params: {
     }
 
     // Create new customer without password (guest conversion)
-    const { data: customer, error } = await supabase
+    const { data: customer, error } = await getSupabase()
       .from('customers')
       .insert({
         store_id: storeId,
@@ -504,7 +511,7 @@ async function createSession(
     const tokenHash = hashToken(token)
     const expiresAt = new Date(Date.now() + SESSION_DURATION_MS)
 
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('customer_sessions')
       .insert({
         customer_id: customerId,
@@ -520,7 +527,7 @@ async function createSession(
     }
 
     // Get customer
-    const { data: customer } = await supabase
+    const { data: customer } = await getSupabase()
       .from('customers')
       .select('*')
       .eq('id', customerId)

@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,7 +29,7 @@ export async function GET(request: NextRequest) {
     let filename = ''
 
     if (type === 'orders') {
-      let query = supabase
+      let query = getSupabaseAdmin()
         .from('orders')
         .select('*')
         .eq('store_id', storeId)
@@ -87,7 +82,7 @@ export async function GET(request: NextRequest) {
       filename = `orders-export-${new Date().toISOString().split('T')[0]}.${format}`
 
     } else if (type === 'products') {
-      let query = supabase
+      let query = getSupabaseAdmin()
         .from('products')
         .select('*')
         .eq('store_id', storeId)

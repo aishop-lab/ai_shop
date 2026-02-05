@@ -1,11 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-// Use anon client for public access
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 // GET /api/store/[slug]/collections/[collectionSlug] - Get a single collection with products
 export async function GET(
@@ -20,7 +14,7 @@ export async function GET(
     const sort = searchParams.get('sort') || 'position'
 
     // Get store by slug
-    const { data: store, error: storeError } = await supabase
+    const { data: store, error: storeError } = await getSupabaseAdmin()
       .from('stores')
       .select('id')
       .eq('slug', storeSlug)
@@ -32,7 +26,7 @@ export async function GET(
     }
 
     // Get collection
-    const { data: collection, error: collectionError } = await supabase
+    const { data: collection, error: collectionError } = await getSupabaseAdmin()
       .from('collections')
       .select(`
         id,
@@ -54,7 +48,7 @@ export async function GET(
     }
 
     // Get total product count from manual assignments
-    const { count: manualCount } = await supabase
+    const { count: manualCount } = await getSupabaseAdmin()
       .from('collection_products')
       .select('*', { count: 'exact', head: true })
       .eq('collection_id', collection.id)
@@ -74,7 +68,7 @@ export async function GET(
 
     // First try: Get manually assigned products
     if (manualCount && manualCount > 0) {
-      let productsQuery = supabase
+      let productsQuery = getSupabaseAdmin()
         .from('collection_products')
         .select(`
           position,
@@ -146,7 +140,7 @@ export async function GET(
       const collectionTitle = collection.title.toLowerCase()
 
       // Query products that have matching tags or categories
-      const { data: taggedProducts, error: tagError, count: tagCount } = await supabase
+      const { data: taggedProducts, error: tagError, count: tagCount } = await getSupabaseAdmin()
         .from('products')
         .select(`
           id,

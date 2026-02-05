@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { validateSession } from '@/lib/customer/auth'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 const addressSchema = z.object({
   label: z.string().max(50).optional().default('Home'),
@@ -35,7 +30,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Session expired' }, { status: 401 })
     }
 
-    const { data: addresses, error } = await supabase
+    const { data: addresses, error } = await getSupabaseAdmin()
       .from('customer_addresses')
       .select('*')
       .eq('customer_id', sessionResult.customer.id)
@@ -78,7 +73,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data: address, error } = await supabase
+    const { data: address, error } = await getSupabaseAdmin()
       .from('customer_addresses')
       .insert({
         customer_id: sessionResult.customer.id,

@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import PDFDocument from 'pdfkit'
-
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 interface RouteParams {
     params: Promise<{ orderId: string }>
@@ -19,7 +14,7 @@ export async function GET(
         const { orderId } = await params
 
         // Fetch order with items
-        const { data: order, error: orderError } = await supabase
+        const { data: order, error: orderError } = await getSupabaseAdmin()
             .from('orders')
             .select(`
         *,
@@ -33,7 +28,7 @@ export async function GET(
         }
 
         // Fetch store details
-        const { data: store, error: storeError } = await supabase
+        const { data: store, error: storeError } = await getSupabaseAdmin()
             .from('stores')
             .select('*')
             .eq('id', order.store_id)
@@ -47,7 +42,7 @@ export async function GET(
         let invoiceNumber = order.invoice_number
         if (!invoiceNumber) {
             invoiceNumber = `INV-${new Date().getFullYear()}-${order.order_number.replace('ORD-', '')}`
-            await supabase
+            await getSupabaseAdmin()
                 .from('orders')
                 .update({ invoice_number: invoiceNumber })
                 .eq('id', orderId)

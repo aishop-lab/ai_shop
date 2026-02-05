@@ -5,14 +5,22 @@
  * Supports per-store email credentials with platform fallback.
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { getResendCredentials } from '@/lib/email'
 import AbandonedCartEmail from '@/../emails/abandoned-cart'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Lazy initialization to avoid build-time errors when env vars are not available
+let supabase: SupabaseClient | null = null
+
+function getSupabase(): SupabaseClient {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+  }
+  return supabase
+}
 
 const PRODUCTION_DOMAIN = process.env.NEXT_PUBLIC_PRODUCTION_DOMAIN || 'storeforge.site'
 const IS_PRODUCTION = process.env.NODE_ENV === 'production'
@@ -77,7 +85,7 @@ export async function saveCart(params: SaveCartParams): Promise<{ success: boole
     // Check for existing active cart
     let existingCart = null
     if (email) {
-      const { data } = await supabase
+      const { data } = await getSupabase()
         .from('abandoned_carts')
         .select('id')
         .eq('store_id', storeId)
@@ -86,7 +94,7 @@ export async function saveCart(params: SaveCartParams): Promise<{ success: boole
         .single()
       existingCart = data
     } else if (customerId) {
-      const { data } = await supabase
+      const { data } = await getSupabase()
         .from('abandoned_carts')
         .select('id')
         .eq('store_id', storeId)
@@ -98,7 +106,7 @@ export async function saveCart(params: SaveCartParams): Promise<{ success: boole
 
     if (existingCart) {
       // Update existing cart
-      const { error } = await supabase
+      const { error } = await getSupabase()
         .from('abandoned_carts')
         .update({
           items,
@@ -119,7 +127,7 @@ export async function saveCart(params: SaveCartParams): Promise<{ success: boole
     }
 
     // Create new cart
-    const { data: newCart, error } = await supabase
+    const { data: newCart, error } = await getSupabase()
       .from('abandoned_carts')
       .insert({
         store_id: storeId,
@@ -154,7 +162,7 @@ export async function markCartRecovered(params: {
   orderId: string
 }): Promise<void> {
   try {
-    await supabase
+    await getSupabase()
       .from('abandoned_carts')
       .update({
         recovery_status: 'recovered',
@@ -174,7 +182,7 @@ export async function markCartRecovered(params: {
  */
 export async function getCartByToken(token: string): Promise<AbandonedCart | null> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('abandoned_carts')
       .select('*')
       .eq('recovery_token', token)
@@ -257,7 +265,7 @@ export async function sendRecoveryEmail(params: {
     }
 
     // Update cart and log email
-    await supabase
+    await getSupabase()
       .from('abandoned_carts')
       .update({
         recovery_emails_sent: cart.recovery_emails_sent + 1,
@@ -265,7 +273,7 @@ export async function sendRecoveryEmail(params: {
       })
       .eq('id', cart.id)
 
-    await supabase
+    await getSupabase()
       .from('cart_recovery_emails')
       .insert({
         cart_id: cart.id,
@@ -295,7 +303,7 @@ export async function processAbandonedCarts(): Promise<{
     const now = new Date()
 
     // Get all active stores with cart recovery enabled
-    const { data: stores, error: storesError } = await supabase
+    const { data: stores, error: storesError } = await getSupabase()
       .from('stores')
       .select('id, name, slug, cart_recovery_settings')
       .eq('status', 'active')
@@ -319,7 +327,7 @@ export async function processAbandonedCarts(): Promise<{
       // Cart is considered abandoned if not updated for 1 hour
       const abandonedThreshold = new Date(now.getTime() - 60 * 60 * 1000).toISOString()
 
-      const { data: carts, error: cartsError } = await supabase
+      const { data: carts, error: cartsError } = await getSupabase()
         .from('abandoned_carts')
         .select('*')
         .eq('store_id', store.id)
@@ -340,7 +348,7 @@ export async function processAbandonedCarts(): Promise<{
 
         // Mark as abandoned if not already
         if (!cart.abandoned_at) {
-          await supabase
+          await getSupabase()
             .from('abandoned_carts')
             .update({
               abandoned_at: cart.updated_at,
@@ -353,7 +361,7 @@ export async function processAbandonedCarts(): Promise<{
 
         // Check if cart has expired
         if (cart.expires_at && new Date(cart.expires_at) < now) {
-          await supabase
+          await getSupabase()
             .from('abandoned_carts')
             .update({ recovery_status: 'expired' })
             .eq('id', cart.id)
@@ -417,7 +425,7 @@ export async function processAbandonedCarts(): Promise<{
  */
 export async function unsubscribeCart(token: string): Promise<{ success: boolean }> {
   try {
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('abandoned_carts')
       .update({ recovery_status: 'unsubscribed' })
       .eq('recovery_token', token)

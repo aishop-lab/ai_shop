@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { z } from 'zod'
 import type { OrderUpdateRequest } from '@/lib/types/dashboard'
 import {
@@ -9,11 +9,6 @@ import {
 } from '@/lib/email/order-confirmation'
 import { restoreInventory, releaseReservation } from '@/lib/orders/inventory'
 import { refundPayment } from '@/lib/payment/razorpay'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 interface RouteParams {
   params: Promise<{ orderId: string }>
@@ -43,7 +38,7 @@ export async function GET(
   try {
     const { orderId } = await params
 
-    const { data: order, error } = await supabase
+    const { data: order, error } = await getSupabaseAdmin()
       .from('orders')
       .select('*, order_items(*)')
       .eq('id', orderId)
@@ -109,7 +104,7 @@ export async function PATCH(
 
     // Get current order to check status transition validity
     // Database column is 'fulfillment_status', not 'order_status'
-    const { data: currentOrder, error: fetchError } = await supabase
+    const { data: currentOrder, error: fetchError } = await getSupabaseAdmin()
       .from('orders')
       .select('fulfillment_status, payment_status')
       .eq('id', orderId)
@@ -162,7 +157,7 @@ export async function PATCH(
     if (notes !== undefined) updates.notes = notes
 
     // Update order
-    const { data: order, error: updateError } = await supabase
+    const { data: order, error: updateError } = await getSupabaseAdmin()
       .from('orders')
       .update(updates)
       .eq('id', orderId)
@@ -172,7 +167,7 @@ export async function PATCH(
     if (updateError) throw updateError
 
     // Get store info for emails
-    const { data: store } = await supabase
+    const { data: store } = await getSupabaseAdmin()
       .from('stores')
       .select('name, contact_email')
       .eq('id', order.store_id)
@@ -209,7 +204,7 @@ export async function PATCH(
           )
 
           // Create refund record
-          await supabase.from('refunds').insert({
+          await getSupabaseAdmin().from('refunds').insert({
             order_id: orderId,
             store_id: order.store_id,
             razorpay_refund_id: refundResult.id,
@@ -221,7 +216,7 @@ export async function PATCH(
           })
 
           // Update payment status to refunded
-          await supabase
+          await getSupabaseAdmin()
             .from('orders')
             .update({ payment_status: 'refunded' })
             .eq('id', orderId)
@@ -275,7 +270,7 @@ export async function DELETE(
     const { orderId } = await params
 
     // Fetch full order with items for inventory restoration
-    const { data: order, error: fetchError } = await supabase
+    const { data: order, error: fetchError } = await getSupabaseAdmin()
       .from('orders')
       .select('*, order_items(*)')
       .eq('id', orderId)
@@ -310,7 +305,7 @@ export async function DELETE(
         )
 
         // Create refund record in database
-        await supabase.from('refunds').insert({
+        await getSupabaseAdmin().from('refunds').insert({
           order_id: orderId,
           store_id: order.store_id,
           razorpay_refund_id: refundResult.id,
@@ -330,7 +325,7 @@ export async function DELETE(
     }
 
     // Update order status (database column is 'fulfillment_status')
-    const { error: updateError } = await supabase
+    const { error: updateError } = await getSupabaseAdmin()
       .from('orders')
       .update({
         fulfillment_status: 'cancelled',
@@ -357,7 +352,7 @@ export async function DELETE(
     await releaseReservation(orderId)
 
     // Fetch store info for email
-    const { data: store } = await supabase
+    const { data: store } = await getSupabaseAdmin()
       .from('stores')
       .select('name, contact_email')
       .eq('id', order.store_id)

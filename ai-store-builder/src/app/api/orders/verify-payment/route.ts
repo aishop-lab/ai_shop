@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { verifyRazorpaySignature, getStoreRazorpayCredentials } from '@/lib/payment/razorpay'
 import { reduceInventory, releaseReservation } from '@/lib/orders/inventory'
 import { sendOrderConfirmationEmail } from '@/lib/email/order-confirmation'
 import type { VerifyPaymentResponse, Order, OrderItem } from '@/lib/types/order'
-
-// Initialize Supabase with service role for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // Validation schema for payment verification
 const verifyPaymentSchema = z.object({
@@ -46,7 +40,7 @@ export async function POST(
     } = validationResult.data
 
     // 1. Get order details first (we need store_id to fetch credentials)
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await getSupabaseAdmin()
       .from('orders')
       .select(
         `
@@ -66,7 +60,7 @@ export async function POST(
     }
 
     // 2. Fetch store-specific Razorpay credentials (if configured)
-    const storeCredentials = await getStoreRazorpayCredentials(order.store_id, supabase)
+    const storeCredentials = await getStoreRazorpayCredentials(order.store_id, getSupabaseAdmin())
 
     // 3. Verify Razorpay signature (using store credentials if available)
     const isValid = verifyRazorpaySignature(
@@ -105,7 +99,7 @@ export async function POST(
     }
 
     // 6. Update order status
-    const { error: updateError } = await supabase
+    const { error: updateError } = await getSupabaseAdmin()
       .from('orders')
       .update({
         payment_status: 'paid',
@@ -143,7 +137,7 @@ export async function POST(
     }
 
     // Get store name for email
-    const { data: store } = await supabase
+    const { data: store } = await getSupabaseAdmin()
       .from('stores')
       .select('name')
       .eq('id', order.store_id)
