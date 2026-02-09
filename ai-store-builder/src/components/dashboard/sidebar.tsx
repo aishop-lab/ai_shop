@@ -3,13 +3,14 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/lib/contexts/auth-context'
+import { ADMIN_EMAIL } from '@/lib/admin/constants'
 
-// Get store URL based on environment
+// Get store URL - always use subdomain in production
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+
 function getStoreUrl(slug: string): string {
-  const isProd = process.env.NODE_ENV === 'production' ||
-    (typeof window !== 'undefined' && !window.location.hostname.includes('localhost'))
-
-  if (isProd) {
+  if (IS_PRODUCTION) {
     return `https://${slug}.storeforge.site`
   }
   return `/${slug}`
@@ -33,6 +34,7 @@ import {
   Folder,
   FileSpreadsheet,
   PackageX,
+  Shield,
 } from 'lucide-react'
 import { UserDropdown } from './user-dropdown'
 import { Button } from '@/components/ui/button'
@@ -54,6 +56,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
+  const { user } = useAuth()
+  const isAdmin = user?.email === ADMIN_EMAIL
   const isLive = store?.status === 'active'
 
   return (
@@ -242,6 +246,20 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
 
         {/* Bottom Section */}
         <div className="mt-auto border-t">
+          {/* Admin Panel - only visible for admin */}
+          {isAdmin && (
+            <div className="px-3 py-2">
+              <Link
+                href="/admin"
+                onClick={onClose}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <Shield className="h-5 w-5" />
+                Admin Panel
+              </Link>
+            </div>
+          )}
+
           {/* Settings */}
           <div className="px-3 py-2">
             <NavSection

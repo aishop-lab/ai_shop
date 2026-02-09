@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const protectedRoutes = ['/dashboard', '/onboarding']
+const protectedRoutes = ['/dashboard', '/onboarding', '/admin']
 const authRoutes = ['/sign-in', '/sign-up']
 
 // Production domain for subdomain routing

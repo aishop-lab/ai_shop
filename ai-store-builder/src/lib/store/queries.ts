@@ -59,6 +59,19 @@ export async function getStore(slug: string): Promise<Store | null> {
     // Use admin client for public storefront queries to bypass RLS
     const supabase = await createAdminClient()
 
+    // First check if store exists at all (for debugging)
+    const { data: anyStore, error: checkError } = await supabase
+      .from('stores')
+      .select('id, slug, status')
+      .eq('slug', slug)
+      .single()
+
+    if (checkError) {
+      console.error('[getStore] Store lookup failed:', checkError.message, 'slug:', slug)
+    } else if (anyStore && anyStore.status !== 'active') {
+      console.log('[getStore] Store found but not active:', slug, 'status:', anyStore.status)
+    }
+
     const { data, error } = await supabase
       .from('stores')
       .select('*')
@@ -67,14 +80,14 @@ export async function getStore(slug: string): Promise<Store | null> {
       .single()
 
     if (error || !data) {
-      console.error('Error fetching store:', error?.message, 'slug:', slug)
+      console.error('[getStore] Error fetching active store:', error?.message, 'slug:', slug)
       return null
     }
 
     // Transform database record to Store type
     return transformStoreData(data)
   } catch (error) {
-    console.error('Store query failed:', error)
+    console.error('[getStore] Store query failed:', error)
     return null
   }
 }

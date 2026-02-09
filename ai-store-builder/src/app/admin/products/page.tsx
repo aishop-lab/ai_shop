@@ -1,0 +1,196 @@
+'use client'
+
+import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { Search, RefreshCw } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { AdminDataTable } from '@/components/admin/admin-data-table'
+import { formatCurrency } from '@/lib/utils'
+import { format } from 'date-fns'
+import type { ProductWithStore } from '@/lib/admin/queries'
+
+function getStatusBadge(status: string) {
+  switch (status) {
+    case 'published':
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Published</Badge>
+    case 'draft':
+      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Draft</Badge>
+    case 'archived':
+      return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Archived</Badge>
+    default:
+      return <Badge variant="secondary">{status}</Badge>
+  }
+}
+
+export default function AdminProductsPage() {
+  const [products, setProducts] = useState<ProductWithStore[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('all')
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
+
+  const fetchProducts = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: '20'
+      })
+
+      if (status !== 'all') params.append('status', status)
+      if (search) params.append('search', search)
+
+      const response = await fetch(`/api/admin/products?${params}`)
+      const data = await response.json()
+
+      setProducts(data.products || [])
+      setTotalPages(data.totalPages || 1)
+      setTotal(data.total || 0)
+    } catch (error) {
+      console.error('Failed to fetch products:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [status, search, page])
+
+  useEffect(() => {
+    fetchProducts()
+  }, [fetchProducts])
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  const columns = [
+    {
+      key: 'product',
+      header: 'Product',
+      render: (product: ProductWithStore) => (
+        <div className="flex items-center gap-3">
+          {product.image_url ? (
+            <Image
+              src={product.image_url}
+              alt={product.title}
+              width={40}
+              height={40}
+              className="w-10 h-10 rounded-lg object-cover"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+              <span className="text-xs text-muted-foreground">No img</span>
+            </div>
+          )}
+          <span className="font-medium text-sm line-clamp-1">{product.title}</span>
+        </div>
+      )
+    },
+    {
+      key: 'store',
+      header: 'Store',
+      render: (product: ProductWithStore) => (
+        <Link
+          href={`/admin/stores`}
+          className="text-sm hover:text-primary hover:underline"
+        >
+          {product.store_name}
+        </Link>
+      )
+    },
+    {
+      key: 'price',
+      header: 'Price',
+      render: (product: ProductWithStore) => (
+        <span className="text-sm font-medium">
+          {formatCurrency(product.price, 'INR')}
+        </span>
+      )
+    },
+    {
+      key: 'stock',
+      header: 'Stock',
+      hideOnMobile: true,
+      render: (product: ProductWithStore) => (
+        <span className={`text-sm ${product.stock_quantity <= 5 ? 'text-red-600 font-medium' : ''}`}>
+          {product.stock_quantity}
+        </span>
+      )
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (product: ProductWithStore) => getStatusBadge(product.status)
+    },
+    {
+      key: 'created',
+      header: 'Created',
+      hideOnMobile: true,
+      render: (product: ProductWithStore) => (
+        <span className="text-sm text-muted-foreground">
+          {format(new Date(product.created_at), 'MMM dd, yyyy')}
+        </span>
+      )
+    }
+  ]
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Products</h1>
+          <p className="text-muted-foreground">
+            {total} total products across all stores
+          </p>
+        </div>
+        <Button variant="outline" onClick={fetchProducts} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search products by title..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Status Tabs */}
+      <Tabs value={status} onValueChange={(v) => { setStatus(v); setPage(1) }}>
+        <TabsList>
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="published">Published</TabsTrigger>
+          <TabsTrigger value="draft">Draft</TabsTrigger>
+          <TabsTrigger value="archived">Archived</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Table */}
+      <AdminDataTable
+        columns={columns}
+        data={products}
+        keyExtractor={(product) => product.id}
+        isLoading={loading}
+        emptyMessage="No products found"
+        emptyDescription={search ? 'Try a different search term' : undefined}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+      />
+    </div>
+  )
+}

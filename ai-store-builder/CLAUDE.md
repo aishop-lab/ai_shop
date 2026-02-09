@@ -23,6 +23,12 @@
   - 25+ tools: products, orders, coupons, collections, analytics, settings
   - Auto-execute for creates/updates, confirmation for destructive actions
   - Context-aware (current page, selected items, recent actions)
+- **Platform Admin Dashboard** (`/admin`) - Full platform management
+  - Access restricted to hardcoded admin email (`aishop@middlefieldbrands.com`)
+  - Overview with platform stats, revenue/signup charts
+  - Stores management with suspend/unsuspend functionality
+  - Sellers, customers, orders, products list views
+  - Analytics with configurable time periods
 - Product variants (size/color/material)
 - Demo products on new stores (auto-removed on first upload)
 - Dynamic color contrast for accessibility
@@ -48,19 +54,22 @@ src/
 ├── app/
 │   ├── (auth)/           # Sign-in, sign-up
 │   ├── (marketing)/      # Landing page for storeforge.site
+│   ├── admin/            # Platform admin dashboard
 │   ├── dashboard/        # Products, orders, analytics, settings
 │   ├── [storeSlug]/      # Public storefront + sitemap.xml + robots.txt
-│   └── api/              # 90+ API routes
+│   └── api/              # 100+ API routes
 ├── components/
 │   ├── ui/               # Shadcn components
 │   ├── dashboard/        # Dashboard + notification-bell
 │   │   └── ai-bot/       # AI Bot sidebar panel (provider, messages, input, confirmation)
+│   ├── admin/            # Admin dashboard components (sidebar, charts, tables)
 │   ├── store/            # Storefront themes
 │   ├── products/         # Product forms, uploaders
 │   └── error-boundary.tsx
 ├── lib/
 │   ├── ai/               # vercel-ai-service.ts, recommendations.ts, schemas
 │   │   └── bot/          # AI Bot tools, executor, system prompt
+│   ├── admin/            # constants.ts (ADMIN_EMAIL), auth.ts, queries.ts
 │   ├── store/            # queries.ts, dynamic-styles.ts
 │   ├── customer/         # auth.ts (customer authentication)
 │   ├── cart/             # abandoned-cart.ts (recovery system)
@@ -106,6 +115,12 @@ src/
 | `app/api/dashboard/settings/shipping-providers/route.ts` | Per-store shipping provider management |
 | `app/api/dashboard/settings/email/route.ts` | Per-store Resend credential management |
 | `app/api/dashboard/settings/whatsapp/route.ts` | Per-store MSG91 credential management |
+| `lib/admin/constants.ts` | Admin email constant (`aishop@middlefieldbrands.com`) |
+| `lib/admin/auth.ts` | Admin authentication verification |
+| `lib/admin/queries.ts` | Platform-wide database queries for admin |
+| `app/admin/layout.tsx` | Admin dashboard layout with sidebar |
+| `app/api/admin/stats/route.ts` | Platform stats API endpoint |
+| `app/api/admin/stores/route.ts` | Stores list + detail + status update |
 
 ---
 
@@ -185,6 +200,7 @@ NEXT_PUBLIC_APP_URL=https://storeforge.site
 
 | Date | Change |
 |------|--------|
+| 2026-02-09 | **Platform Admin Dashboard**: Full admin panel at `/admin` for platform owner. Stores, sellers, customers, orders, products management. Revenue and signups charts. Store suspend/unsuspend. Access restricted to hardcoded admin email. |
 | 2026-02-09 | **AI Bot for Sellers**: Natural language store management via sidebar panel (Cmd+K). 25+ tools for products, orders, coupons, collections, analytics, settings, branding. Auto-execute for creates/updates, confirmation dialogs for destructive actions. Context-aware of current page. |
 | 2026-02-04 | **Comprehensive E2E Tests**: 405 Playwright tests covering shipping (56), payment/Razorpay (56), products (75), API routes (97), inventory (18), email (29), cart, auth, storefront |
 | 2026-02-04 | **Gemini Model Fix**: Updated from deprecated `gemini-2.0-flash-exp` to stable `gemini-2.0-flash` for product image AI analysis |
@@ -237,7 +253,6 @@ Stores are accessible at `{store-slug}.storeforge.site`:
 ---
 
 ## Pending
-- Admin panel for platform management
 - Multi-language support (Hindi at minimum)
 - SMS OTP verification
 - PWA support (installable stores)
