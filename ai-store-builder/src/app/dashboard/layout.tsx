@@ -5,6 +5,7 @@ import { useRequireAuth } from '@/lib/hooks/use-require-auth'
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { Navbar } from '@/components/dashboard/navbar'
 import { FullPageLoader } from '@/components/ui/loading-spinner'
+import { AIBotProvider, AIBotPanel, AIBotTrigger } from '@/components/dashboard/ai-bot'
 
 interface StoreInfo {
   id: string
@@ -42,20 +43,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        store={store}
-      />
+    <AIBotProvider>
+      <div className="flex min-h-screen">
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          store={store}
+        />
 
-      <div className="flex-1 flex flex-col lg:ml-0">
-        <Navbar onMenuClick={() => setSidebarOpen(true)} />
+        <div className="flex-1 flex flex-col lg:ml-0">
+          <Navbar onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="flex-1 p-4 lg:p-6">
-          {children}
-        </main>
+          <main className="flex-1 p-4 lg:p-6">
+            {children}
+          </main>
+        </div>
+
+        {/* AI Bot Components */}
+        <AIBotTrigger />
+        <AIBotPanel />
       </div>
-    </div>
+    </AIBotProvider>
   )
 }

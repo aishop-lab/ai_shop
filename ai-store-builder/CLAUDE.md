@@ -19,6 +19,10 @@
 - 4 store themes (modern, classic, playful, minimal)
 - AI product analysis from images (title, description, price suggestion)
 - AI-powered product recommendations ("You might also like", "Frequently bought together")
+- **AI Bot for Sellers** - Natural language store management (Cmd+K to open)
+  - 25+ tools: products, orders, coupons, collections, analytics, settings
+  - Auto-execute for creates/updates, confirmation for destructive actions
+  - Context-aware (current page, selected items, recent actions)
 - Product variants (size/color/material)
 - Demo products on new stores (auto-removed on first upload)
 - Dynamic color contrast for accessibility
@@ -50,11 +54,13 @@ src/
 ├── components/
 │   ├── ui/               # Shadcn components
 │   ├── dashboard/        # Dashboard + notification-bell
+│   │   └── ai-bot/       # AI Bot sidebar panel (provider, messages, input, confirmation)
 │   ├── store/            # Storefront themes
 │   ├── products/         # Product forms, uploaders
 │   └── error-boundary.tsx
 ├── lib/
 │   ├── ai/               # vercel-ai-service.ts, recommendations.ts, schemas
+│   │   └── bot/          # AI Bot tools, executor, system prompt
 │   ├── store/            # queries.ts, dynamic-styles.ts
 │   ├── customer/         # auth.ts (customer authentication)
 │   ├── cart/             # abandoned-cart.ts (recovery system)
@@ -78,6 +84,10 @@ src/
 | File | Purpose |
 |------|---------|
 | `lib/ai/vercel-ai-service.ts` | All AI operations (Gemini 2.0 Flash) |
+| `lib/ai/bot/tools.ts` | AI Bot tool definitions (25+ tools) |
+| `lib/ai/bot/tool-executor.ts` | AI Bot tool execution logic |
+| `app/api/ai/bot/route.ts` | AI Bot streaming chat endpoint |
+| `components/dashboard/ai-bot/` | AI Bot UI (panel, messages, input, confirmation) |
 | `lib/store/queries.ts` | Database queries + `getStoreUrl()` helper |
 | `lib/store/dynamic-styles.ts` | Theme CSS variables + contrast colors |
 | `lib/shipping/provider-manager.ts` | Multi-provider shipping abstraction |
@@ -175,6 +185,7 @@ NEXT_PUBLIC_APP_URL=https://storeforge.site
 
 | Date | Change |
 |------|--------|
+| 2026-02-09 | **AI Bot for Sellers**: Natural language store management via sidebar panel (Cmd+K). 25+ tools for products, orders, coupons, collections, analytics, settings, branding. Auto-execute for creates/updates, confirmation dialogs for destructive actions. Context-aware of current page. |
 | 2026-02-04 | **Comprehensive E2E Tests**: 405 Playwright tests covering shipping (56), payment/Razorpay (56), products (75), API routes (97), inventory (18), email (29), cart, auth, storefront |
 | 2026-02-04 | **Gemini Model Fix**: Updated from deprecated `gemini-2.0-flash-exp` to stable `gemini-2.0-flash` for product image AI analysis |
 | 2026-02-04 | **Logo Regeneration Improvements**: User feedback now properly incorporated - parses color/text requests, places feedback prominently in prompt |
@@ -244,4 +255,4 @@ Stores are accessible at `{store-slug}.storeforge.site`:
 5. Configure Shiprocket production credentials
 6. Run database migrations for new features
 
-*Last Updated: 2026-02-04*
+*Last Updated: 2026-02-09*
