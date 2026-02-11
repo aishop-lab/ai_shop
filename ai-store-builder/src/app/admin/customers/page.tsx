@@ -2,21 +2,37 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Search, RefreshCw } from 'lucide-react'
+import { Search, RefreshCw, Trash2, AlertTriangle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { AdminDataTable } from '@/components/admin/admin-data-table'
 import { formatCurrency } from '@/lib/utils'
 import { format } from 'date-fns'
+import { useToast } from '@/lib/hooks/use-toast'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import type { CustomerDetails } from '@/lib/admin/queries'
 
 export default function AdminCustomersPage() {
+  const { toast } = useToast()
   const [customers, setCustomers] = useState<CustomerDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true)
@@ -34,6 +50,7 @@ export default function AdminCustomersPage() {
       setCustomers(data.customers || [])
       setTotalPages(data.totalPages || 1)
       setTotal(data.total || 0)
+      setSelectedIds(new Set())
     } catch (error) {
       console.error('Failed to fetch customers:', error)
     } finally {
@@ -53,7 +70,72 @@ export default function AdminCustomersPage() {
     return () => clearTimeout(timer)
   }, [search])
 
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedIds(newSelected)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === customers.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(customers.map(c => c.id)))
+    }
+  }
+
+  const handleDelete = async () => {
+    if (selectedIds.size === 0) return
+
+    setDeleting(true)
+    try {
+      const response = await fetch('/api/admin/customers', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      })
+
+      if (!response.ok) throw new Error('Failed to delete')
+
+      toast({
+        title: 'Customers deleted',
+        description: `Successfully deleted ${selectedIds.size} customer(s)`
+      })
+
+      setShowDeleteDialog(false)
+      fetchCustomers()
+    } catch (error) {
+      console.error('Delete failed:', error)
+      toast({
+        title: 'Delete failed',
+        description: 'Failed to delete customers. Please try again.',
+        variant: 'destructive'
+      })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const columns = [
+    {
+      key: 'select',
+      header: (
+        <Checkbox
+          checked={customers.length > 0 && selectedIds.size === customers.length}
+          onCheckedChange={toggleSelectAll}
+        />
+      ),
+      render: (customer: CustomerDetails) => (
+        <Checkbox
+          checked={selectedIds.has(customer.id)}
+          onCheckedChange={() => toggleSelect(customer.id)}
+        />
+      )
+    },
     {
       key: 'customer',
       header: 'Customer',
@@ -115,10 +197,21 @@ export default function AdminCustomersPage() {
             {total} total customers across all stores
           </p>
         </div>
-        <Button variant="outline" onClick={fetchCustomers} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <Button
+              variant="destructive"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete ({selectedIds.size})
+            </Button>
+          )}
+          <Button variant="outline" onClick={fetchCustomers} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -144,6 +237,33 @@ export default function AdminCustomersPage() {
         totalPages={totalPages}
         onPageChange={setPage}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Customers
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete {selectedIds.size} customer(s)?
+              This will also delete their addresses, sessions, and wishlists.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

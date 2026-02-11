@@ -3,20 +3,33 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Search, RefreshCw } from 'lucide-react'
+import { Search, RefreshCw, Trash2, AlertTriangle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { AdminDataTable } from '@/components/admin/admin-data-table'
 import { formatCurrency } from '@/lib/utils'
 import { format } from 'date-fns'
+import { useToast } from '@/lib/hooks/use-toast'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import type { ProductWithStore } from '@/lib/admin/queries'
 
 function getStatusBadge(status: string) {
   switch (status) {
+    case 'active':
     case 'published':
-      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Published</Badge>
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
     case 'draft':
       return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Draft</Badge>
     case 'archived':
@@ -27,6 +40,7 @@ function getStatusBadge(status: string) {
 }
 
 export default function AdminProductsPage() {
+  const { toast } = useToast()
   const [products, setProducts] = useState<ProductWithStore[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -34,6 +48,9 @@ export default function AdminProductsPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchProducts = useCallback(async () => {
     setLoading(true)
@@ -52,6 +69,7 @@ export default function AdminProductsPage() {
       setProducts(data.products || [])
       setTotalPages(data.totalPages || 1)
       setTotal(data.total || 0)
+      setSelectedIds(new Set())
     } catch (error) {
       console.error('Failed to fetch products:', error)
     } finally {
@@ -71,7 +89,72 @@ export default function AdminProductsPage() {
     return () => clearTimeout(timer)
   }, [search])
 
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedIds(newSelected)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === products.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(products.map(p => p.id)))
+    }
+  }
+
+  const handleDelete = async () => {
+    if (selectedIds.size === 0) return
+
+    setDeleting(true)
+    try {
+      const response = await fetch('/api/admin/products', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      })
+
+      if (!response.ok) throw new Error('Failed to delete')
+
+      toast({
+        title: 'Products deleted',
+        description: `Successfully deleted ${selectedIds.size} product(s)`
+      })
+
+      setShowDeleteDialog(false)
+      fetchProducts()
+    } catch (error) {
+      console.error('Delete failed:', error)
+      toast({
+        title: 'Delete failed',
+        description: 'Failed to delete products. Please try again.',
+        variant: 'destructive'
+      })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const columns = [
+    {
+      key: 'select',
+      header: (
+        <Checkbox
+          checked={products.length > 0 && selectedIds.size === products.length}
+          onCheckedChange={toggleSelectAll}
+        />
+      ),
+      render: (product: ProductWithStore) => (
+        <Checkbox
+          checked={selectedIds.has(product.id)}
+          onCheckedChange={() => toggleSelect(product.id)}
+        />
+      )
+    },
     {
       key: 'product',
       header: 'Product',
@@ -120,8 +203,8 @@ export default function AdminProductsPage() {
       header: 'Stock',
       hideOnMobile: true,
       render: (product: ProductWithStore) => (
-        <span className={`text-sm ${product.stock_quantity <= 5 ? 'text-red-600 font-medium' : ''}`}>
-          {product.stock_quantity}
+        <span className={`text-sm ${product.total_inventory <= 5 ? 'text-red-600 font-medium' : ''}`}>
+          {product.total_inventory}
         </span>
       )
     },
@@ -152,10 +235,21 @@ export default function AdminProductsPage() {
             {total} total products across all stores
           </p>
         </div>
-        <Button variant="outline" onClick={fetchProducts} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <Button
+              variant="destructive"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete ({selectedIds.size})
+            </Button>
+          )}
+          <Button variant="outline" onClick={fetchProducts} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -173,7 +267,7 @@ export default function AdminProductsPage() {
       <Tabs value={status} onValueChange={(v) => { setStatus(v); setPage(1) }}>
         <TabsList>
           <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="published">Published</TabsTrigger>
+          <TabsTrigger value="published">Active</TabsTrigger>
           <TabsTrigger value="draft">Draft</TabsTrigger>
           <TabsTrigger value="archived">Archived</TabsTrigger>
         </TabsList>
@@ -191,6 +285,33 @@ export default function AdminProductsPage() {
         totalPages={totalPages}
         onPageChange={setPage}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Products
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete {selectedIds.size} product(s)?
+              This will also delete all associated images and variants.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

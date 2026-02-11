@@ -19,7 +19,12 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (storeError || !store) {
-      return NextResponse.json({ error: 'Store not found' }, { status: 404 })
+      // No store found - return empty response
+      return NextResponse.json({
+        refunds: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+        stats: { totalRefunded: 0, pendingRefunds: 0, processedRefunds: 0, failedRefunds: 0 }
+      })
     }
 
     // Parse query params

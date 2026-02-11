@@ -80,7 +80,7 @@ export interface ProductWithStore {
   id: string
   title: string
   price: number
-  stock_quantity: number
+  total_inventory: number
   status: string
   created_at: string
   store_id: string
@@ -409,14 +409,14 @@ export async function getCustomers(options: {
 
   let query = supabase
     .from('customers')
-    .select('id, email, name, phone, created_at, store_id', { count: 'exact' })
+    .select('id, email, full_name, phone, created_at, store_id', { count: 'exact' })
 
   if (storeId) {
     query = query.eq('store_id', storeId)
   }
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`)
+    query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`)
   }
 
   query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1)
@@ -466,7 +466,7 @@ export async function getCustomers(options: {
     return {
       id: customer.id,
       email: customer.email,
-      name: customer.name,
+      name: customer.full_name || 'Unknown',
       phone: customer.phone,
       created_at: customer.created_at,
       store_id: customer.store_id,
@@ -573,14 +573,19 @@ export async function getAdminProducts(options: {
 
   let query = supabase
     .from('products')
-    .select('id, title, price, stock_quantity, status, created_at, store_id', { count: 'exact' })
+    .select('id, title, price, status, created_at, store_id, quantity, track_quantity', { count: 'exact' })
 
   if (storeId) {
     query = query.eq('store_id', storeId)
   }
 
   if (status && status !== 'all') {
-    query = query.eq('status', status)
+    // Map UI status names to database status values
+    // UI: 'published' -> DB: 'active'
+    // UI: 'draft' -> DB: 'draft' (if exists)
+    // UI: 'archived' -> DB: 'archived'
+    const dbStatus = status === 'published' ? 'active' : status
+    query = query.eq('status', dbStatus)
   }
 
   if (search) {
@@ -596,6 +601,7 @@ export async function getAdminProducts(options: {
     return { products: [], total: 0 }
   }
 
+
   if (!products || products.length === 0) {
     return { products: [], total: count || 0 }
   }
@@ -604,10 +610,11 @@ export async function getAdminProducts(options: {
   const storeIds = [...new Set(products.map(p => p.store_id))]
   const productIds = products.map(p => p.id)
 
-  // Fetch stores and images in parallel
-  const [storesResult, imagesResult] = await Promise.all([
+  // Fetch stores, images, and variants in parallel
+  const [storesResult, imagesResult, variantsResult] = await Promise.all([
     supabase.from('stores').select('id, name, slug').in('id', storeIds),
-    supabase.from('product_images').select('product_id, url').in('product_id', productIds).order('position', { ascending: true })
+    supabase.from('product_images').select('product_id, original_url').in('product_id', productIds).order('position', { ascending: true }),
+    supabase.from('product_variants').select('product_id, quantity').in('product_id', productIds)
   ])
 
   // Build lookup maps
@@ -619,17 +626,29 @@ export async function getAdminProducts(options: {
   const imagesByProductId: Record<string, string> = {}
   for (const img of imagesResult.data || []) {
     if (!imagesByProductId[img.product_id]) {
-      imagesByProductId[img.product_id] = img.url
+      imagesByProductId[img.product_id] = img.original_url
     }
+  }
+
+  // Calculate total inventory per product from variants (for products with variants)
+  const variantInventoryByProductId: Record<string, number> = {}
+  for (const v of variantsResult.data || []) {
+    variantInventoryByProductId[v.product_id] = (variantInventoryByProductId[v.product_id] || 0) + (v.quantity || 0)
   }
 
   const result: ProductWithStore[] = products.map(product => {
     const store = storesById[product.store_id]
+    // Use variant inventory if product has variants, otherwise use product quantity
+    const hasVariants = variantInventoryByProductId[product.id] !== undefined
+    const totalInventory = hasVariants
+      ? variantInventoryByProductId[product.id]
+      : (product.quantity || 0)
+
     return {
       id: product.id,
       title: product.title,
       price: product.price,
-      stock_quantity: product.stock_quantity,
+      total_inventory: totalInventory,
       status: product.status,
       created_at: product.created_at,
       store_id: product.store_id,

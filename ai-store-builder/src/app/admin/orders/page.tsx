@@ -2,14 +2,26 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Search, RefreshCw } from 'lucide-react'
+import { Search, RefreshCw, Trash2, AlertTriangle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { AdminDataTable } from '@/components/admin/admin-data-table'
 import { formatCurrency } from '@/lib/utils'
 import { format } from 'date-fns'
+import { useToast } from '@/lib/hooks/use-toast'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import type { OrderWithDetails } from '@/lib/admin/queries'
 
 function getPaymentBadge(status: string) {
@@ -46,6 +58,7 @@ function getStatusBadge(status: string) {
 }
 
 export default function AdminOrdersPage() {
+  const { toast } = useToast()
   const [orders, setOrders] = useState<OrderWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -53,6 +66,9 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -71,6 +87,7 @@ export default function AdminOrdersPage() {
       setOrders(data.orders || [])
       setTotalPages(data.totalPages || 1)
       setTotal(data.total || 0)
+      setSelectedIds(new Set())
     } catch (error) {
       console.error('Failed to fetch orders:', error)
     } finally {
@@ -90,7 +107,72 @@ export default function AdminOrdersPage() {
     return () => clearTimeout(timer)
   }, [search])
 
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedIds(newSelected)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === orders.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(orders.map(o => o.id)))
+    }
+  }
+
+  const handleDelete = async () => {
+    if (selectedIds.size === 0) return
+
+    setDeleting(true)
+    try {
+      const response = await fetch('/api/admin/orders', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      })
+
+      if (!response.ok) throw new Error('Failed to delete')
+
+      toast({
+        title: 'Orders deleted',
+        description: `Successfully deleted ${selectedIds.size} order(s)`
+      })
+
+      setShowDeleteDialog(false)
+      fetchOrders()
+    } catch (error) {
+      console.error('Delete failed:', error)
+      toast({
+        title: 'Delete failed',
+        description: 'Failed to delete orders. Please try again.',
+        variant: 'destructive'
+      })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const columns = [
+    {
+      key: 'select',
+      header: (
+        <Checkbox
+          checked={orders.length > 0 && selectedIds.size === orders.length}
+          onCheckedChange={toggleSelectAll}
+        />
+      ),
+      render: (order: OrderWithDetails) => (
+        <Checkbox
+          checked={selectedIds.has(order.id)}
+          onCheckedChange={() => toggleSelect(order.id)}
+        />
+      )
+    },
     {
       key: 'order',
       header: 'Order',
@@ -163,10 +245,21 @@ export default function AdminOrdersPage() {
             {total} total orders across all stores
           </p>
         </div>
-        <Button variant="outline" onClick={fetchOrders} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <Button
+              variant="destructive"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete ({selectedIds.size})
+            </Button>
+          )}
+          <Button variant="outline" onClick={fetchOrders} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -204,6 +297,33 @@ export default function AdminOrdersPage() {
         totalPages={totalPages}
         onPageChange={setPage}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Orders
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete {selectedIds.size} order(s)?
+              This will also delete all order items and refunds.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
