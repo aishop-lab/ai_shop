@@ -294,6 +294,7 @@ export function OnboardingChat({ onComplete, onStepChange }: OnboardingChatProps
           3: 'select',    // category_confirmation
           31: 'select',   // manual_category (fallback)
           4: 'select',    // target_geography
+          41: 'select',   // currency_selection (for international)
           5: 'file',      // logo_url
           6: 'select',    // brand_vibe
           7: 'color',     // primary_color

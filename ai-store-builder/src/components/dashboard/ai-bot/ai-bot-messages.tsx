@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Bot, User, Loader2, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import ReactMarkdown from 'react-markdown'
 import type { UIMessage } from '@ai-sdk/react'
 
 export function AIBotMessages() {
@@ -128,9 +129,11 @@ function MessageBubble({ message }: { message: UIMessage }) {
             : 'bg-muted'
         )}
       >
-        {/* Text content */}
+        {/* Text content with markdown rendering */}
         {displayContent && (
-          <div className="text-sm whitespace-pre-wrap">{displayContent}</div>
+          <div className="text-sm prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-headings:text-sm prose-h2:text-base prose-code:text-xs prose-code:bg-black/10 prose-code:dark:bg-white/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
+            <ReactMarkdown>{displayContent}</ReactMarkdown>
+          </div>
         )}
 
         {/* Tool results */}

@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Card } from '@/components/ui/card'
 import { Check, Loader2, Store, Palette, Settings, Globe, Sparkles } from 'lucide-react'
 import type { StoreData, StoreBlueprint } from '@/lib/types/onboarding'
+import { OnboardingMigrationStep } from '@/components/migration/onboarding-migration-step'
 
 interface BuildStep {
   id: string
@@ -30,6 +31,8 @@ export function StoreBuildingPreview({ storeData, onBuildComplete, onError }: St
   const [, setCurrentStepIndex] = useState(0)
   const [blueprint, setBlueprint] = useState<StoreBlueprint | null>(null)
   const [isBuilding, setIsBuilding] = useState(true)
+  const [showMigration, setShowMigration] = useState(false)
+  const [storeIdForMigration, setStoreIdForMigration] = useState<string | null>(null)
 
   // Simulate build progress and actually build the store
   useEffect(() => {
@@ -80,16 +83,22 @@ export function StoreBuildingPreview({ storeData, onBuildComplete, onError }: St
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ store_id: data.store_id })
           })
-          
+
           const completeData = await completeResponse.json()
           console.log('Complete onboarding response:', completeData)
 
-          // Wait a moment to show completion, then redirect to the store
-          setTimeout(() => {
-            if (isMounted) {
-              onBuildComplete(data.slug)
-            }
-          }, 1500)
+          // Show migration option instead of immediately redirecting
+          if (isMounted) {
+            setStoreIdForMigration(data.store_id)
+            setShowMigration(true)
+
+            // Auto-redirect after 30 seconds if no action taken
+            setTimeout(() => {
+              if (isMounted) {
+                onBuildComplete(data.slug)
+              }
+            }, 30000)
+          }
         } else {
           // Provide more helpful error messages
           let errorMsg = data.error || 'Failed to create store'
@@ -250,7 +259,7 @@ export function StoreBuildingPreview({ storeData, onBuildComplete, onError }: St
             <Sparkles className="h-4 w-4" />
             Your Store Blueprint
           </h3>
-          
+
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Store Name</p>
@@ -271,8 +280,8 @@ export function StoreBuildingPreview({ storeData, onBuildComplete, onError }: St
             <div>
               <p className="text-muted-foreground">Primary Color</p>
               <div className="flex items-center gap-2">
-                <div 
-                  className="h-4 w-4 rounded" 
+                <div
+                  className="h-4 w-4 rounded"
                   style={{ backgroundColor: blueprint.branding.colors.primary }}
                 />
                 <span className="font-medium">{blueprint.branding.colors.primary}</span>
@@ -283,11 +292,21 @@ export function StoreBuildingPreview({ storeData, onBuildComplete, onError }: St
               <p className="font-medium">{blueprint.branding.typography.heading_font}</p>
             </div>
           </div>
-          
-          <p className="text-center text-sm text-green-600 dark:text-green-400 mt-4">
-            Redirecting to your dashboard...
-          </p>
+
+          {!showMigration && (
+            <p className="text-center text-sm text-green-600 dark:text-green-400 mt-4">
+              Redirecting to your dashboard...
+            </p>
+          )}
         </Card>
+      )}
+
+      {/* Migration option after store creation */}
+      {showMigration && storeIdForMigration && (
+        <OnboardingMigrationStep
+          storeId={storeIdForMigration}
+          onSkip={() => onBuildComplete(storeData.slug || '')}
+        />
       )}
     </div>
   )

@@ -79,6 +79,25 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     ]
   },
   {
+    id: 41, // 4.1 - Currency selection (only for international stores)
+    key: 'currency_selection',
+    question: "What currency would you like to display prices in?",
+    type: 'select',
+    required: true,
+    options: [
+      { value: 'USD', label: 'US Dollar ($)' },
+      { value: 'EUR', label: 'Euro (€)' },
+      { value: 'GBP', label: 'British Pound (£)' },
+      { value: 'AED', label: 'UAE Dirham (AED)' },
+      { value: 'SGD', label: 'Singapore Dollar (S$)' },
+      { value: 'AUD', label: 'Australian Dollar (A$)' },
+      { value: 'CAD', label: 'Canadian Dollar (C$)' },
+      { value: 'INR', label: 'Indian Rupee (₹)' }
+    ],
+    // Only show for international stores
+    skipIf: (data: Partial<StoreData>) => data.target_geography !== 'international'
+  },
+  {
     id: 5,
     key: 'logo_url',
     question: "Do you have a logo? Upload one, or let AI generate a professional icon for your brand.",

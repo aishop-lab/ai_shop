@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 
 interface Column<T> {
   key: string
-  header: string
+  header: ReactNode
   render: (item: T) => ReactNode
   className?: string
   hideOnMobile?: boolean

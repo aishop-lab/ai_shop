@@ -108,32 +108,52 @@ export async function POST(request: Request) {
     }
 
     // Extract product data from form
+    const rawTitle = formData.get('title') as string
+    const rawDescription = formData.get('description') as string
+    const rawPrice = formData.get('price') as string
+
+    // Parse price safely (handle NaN)
+    const parsedPrice = rawPrice ? parseFloat(rawPrice) : 0
+    const safePrice = isNaN(parsedPrice) ? 0 : parsedPrice
+
     const productData: Record<string, unknown> = {
       store_id: storeId,
-      title: formData.get('title') as string || undefined,
-      description: formData.get('description') as string || undefined,
-      price: formData.get('price') ? parseFloat(formData.get('price') as string) : undefined,
-      compare_at_price: formData.get('compare_at_price') ? parseFloat(formData.get('compare_at_price') as string) : undefined,
-      cost_per_item: formData.get('cost_per_item') ? parseFloat(formData.get('cost_per_item') as string) : undefined,
+      title: rawTitle && rawTitle.trim() ? rawTitle.trim() : undefined,
+      description: rawDescription && rawDescription.trim() ? rawDescription.trim() : undefined,
+      price: safePrice,
+      compare_at_price: formData.get('compare_at_price') ? parseFloat(formData.get('compare_at_price') as string) || undefined : undefined,
+      cost_per_item: formData.get('cost_per_item') ? parseFloat(formData.get('cost_per_item') as string) || undefined : undefined,
       sku: formData.get('sku') as string || undefined,
       barcode: formData.get('barcode') as string || undefined,
-      quantity: formData.get('quantity') ? parseInt(formData.get('quantity') as string) : 0,
+      quantity: formData.get('quantity') ? parseInt(formData.get('quantity') as string) || 0 : 0,
       track_quantity: formData.get('track_quantity') === 'true',
-      weight: formData.get('weight') ? parseFloat(formData.get('weight') as string) : undefined,
+      weight: formData.get('weight') ? parseFloat(formData.get('weight') as string) || undefined : undefined,
       requires_shipping: formData.get('requires_shipping') !== 'false',
       categories: formData.get('categories') ? JSON.parse(formData.get('categories') as string) : undefined,
       tags: formData.get('tags') ? JSON.parse(formData.get('tags') as string) : undefined,
       status: (formData.get('status') as 'draft' | 'published') || 'draft'
     }
 
+    // Log for debugging
+    console.log('[Upload] Product data received:', {
+      store_id: storeId,
+      title: productData.title,
+      titleLength: rawTitle?.length,
+      description: productData.description ? `${(productData.description as string).substring(0, 50)}...` : undefined,
+      descriptionLength: rawDescription?.length,
+      price: productData.price
+    })
+
     // Validate basic structure
     const validation = productUploadSchema.safeParse(productData)
     if (!validation.success) {
+      const errorDetails = validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
+      console.error('[Upload] Validation failed:', errorDetails)
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Invalid product data', 
-          details: validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`) 
+        {
+          success: false,
+          error: 'Invalid product data',
+          details: errorDetails
         },
         { status: 400 }
       )

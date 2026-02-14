@@ -5,10 +5,11 @@ import Link from 'next/link'
 import { X, ExternalLink, Plus, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-// Get store URL based on environment
+// Get store URL - always use subdomain in production
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+
 function getStoreUrl(slug: string): string {
-  const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
-  if (isProd) {
+  if (IS_PRODUCTION) {
     return `https://${slug}.storeforge.site`
   }
   return `/${slug}`

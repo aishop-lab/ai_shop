@@ -236,10 +236,17 @@ export async function POST(request: Request) {
           updatedData.currency = 'INR'
           updatedData.timezone = 'Asia/Kolkata'
         } else {
+          // International - currency will be set in next step, default to USD
           updatedData.country = 'India'
-          updatedData.currency = 'USD'
+          updatedData.currency = 'USD' // Default, will be overridden in currency_selection
           updatedData.timezone = 'UTC'
         }
+        break
+
+      case 'currency_selection':
+        // User selected currency for international store
+        updatedData.currency = message
+        console.log(`[Onboarding] Currency selected: ${message}`)
         break
 
       case 'logo_url':

@@ -446,7 +446,11 @@ export default function ProductForm({
         const contentType = response.headers.get('content-type')
         if (contentType && contentType.includes('application/json')) {
           const errorData = await response.json()
-          throw new Error(errorData.error || 'Upload failed')
+          // Include validation details in error message
+          const errorMessage = errorData.details
+            ? `${errorData.error}: ${Array.isArray(errorData.details) ? errorData.details.join(', ') : errorData.details}`
+            : errorData.error || 'Upload failed'
+          throw new Error(errorMessage)
         } else {
           // Handle plain text error responses
           if (response.status === 413) {

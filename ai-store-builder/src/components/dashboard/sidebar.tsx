@@ -35,6 +35,7 @@ import {
   FileSpreadsheet,
   PackageX,
   Shield,
+  Import,
 } from 'lucide-react'
 import { UserDropdown } from './user-dropdown'
 import { Button } from '@/components/ui/button'
@@ -147,6 +148,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
             items={[
               { label: 'All Products', href: '/dashboard/products' },
               { label: 'Add Product', href: '/dashboard/products/new', icon: Plus },
+              { label: 'Import Products', href: '/dashboard/migrate', icon: Import },
               { label: 'Collections', href: '/dashboard/collections', icon: Folder },
             ]}
             onNavigate={onClose}

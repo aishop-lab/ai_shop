@@ -9,7 +9,21 @@ export function cn(...inputs: ClassValue[]) {
  * Format currency with locale support
  */
 export function formatCurrency(amount: number, currency: string = 'INR'): string {
-  const formatter = new Intl.NumberFormat('en-IN', {
+  // Determine locale based on currency
+  const localeMap: Record<string, string> = {
+    INR: 'en-IN',
+    USD: 'en-US',
+    EUR: 'de-DE',
+    GBP: 'en-GB',
+    AED: 'ar-AE',
+    SGD: 'en-SG',
+    AUD: 'en-AU',
+    CAD: 'en-CA',
+  }
+
+  const locale = localeMap[currency] || 'en-US'
+
+  const formatter = new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,

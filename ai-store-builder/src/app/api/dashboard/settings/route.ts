@@ -54,10 +54,10 @@ export async function PATCH(request: Request) {
     // Get update data
     const body = await request.json()
 
-    // Get user's store first (include slug for revalidation)
+    // Get user's store first (include slug and blueprint for revalidation and updates)
     const { data: stores, error: fetchError } = await supabase
       .from('stores')
-      .select('id, slug')
+      .select('id, slug, blueprint')
       .eq('owner_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -87,6 +87,18 @@ export async function PATCH(request: Request) {
     if (body.brand_colors !== undefined) updateData.brand_colors = body.brand_colors
     if (body.settings !== undefined) updateData.settings = body.settings
     if (body.logo_url !== undefined) updateData.logo_url = body.logo_url
+
+    // Handle currency update (stored in blueprint.location.currency)
+    if (body.currency !== undefined) {
+      const currentBlueprint = existingStore.blueprint || {}
+      updateData.blueprint = {
+        ...currentBlueprint,
+        location: {
+          ...(currentBlueprint.location || {}),
+          currency: body.currency
+        }
+      }
+    }
 
     // Update store
     const { data: store, error: updateError } = await supabase

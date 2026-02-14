@@ -51,11 +51,52 @@ export const getOrder: ToolDefinition = {
 }
 
 export const getAnalytics: ToolDefinition = {
-  description: 'Get store analytics and statistics',
+  description: 'Get basic store analytics (product count, order count, revenue, low stock). For deeper analysis, use getBusinessIntelligence, getRevenueAnalytics, getCustomerInsights, getInventoryHealth, getMarketingInsights, or getActionableInsights instead.',
   inputSchema: z.object({
     metric: z.enum(['overview', 'revenue', 'orders', 'products', 'customers', 'top_sellers']).optional(),
     period: z.enum(['today', 'yesterday', 'this_week', 'this_month', 'last_30_days', 'this_year']).optional(),
   }),
+}
+
+export const getBusinessIntelligence: ToolDefinition = {
+  description: 'Get a comprehensive business overview: revenue with growth %, order trends, AOV, top products, new vs repeat customers, fulfillment speed, and daily revenue trend. Best for "how is my store doing?" questions.',
+  inputSchema: z.object({
+    period: z.enum(['last_7_days', 'last_30_days', 'last_90_days']).optional().describe('Analysis period (default: last_30_days)'),
+  }),
+}
+
+export const getRevenueAnalytics: ToolDefinition = {
+  description: 'Deep revenue analysis: breakdown by payment method (UPI/COD/cards), by product category, discount impact, shipping revenue, weekly trends, and period-over-period comparison. Best for "revenue breakdown" or "how much am I making?" questions.',
+  inputSchema: z.object({
+    period: z.enum(['last_7_days', 'last_30_days', 'last_90_days']).optional().describe('Analysis period (default: last_30_days)'),
+    compareWithPrevious: z.boolean().optional().describe('Compare with previous period of same length (default: true)'),
+  }),
+}
+
+export const getCustomerInsights: ToolDefinition = {
+  description: 'Customer behavior analysis: acquisition trend, repeat purchase rate, top customers by spend, CLV segments, geographic distribution (top states/cities), cart abandonment rate, and marketing consent stats. Best for "who are my customers?" or "retention" questions.',
+  inputSchema: z.object({
+    period: z.enum(['last_7_days', 'last_30_days', 'last_90_days']).optional().describe('Analysis period (default: last_30_days)'),
+  }),
+}
+
+export const getInventoryHealth: ToolDefinition = {
+  description: 'Stock health analysis: sales velocity per product, days until stockout, suggested reorder quantities, out-of-stock items, dead stock (no sales in 30+ days), inventory value, and best sellers by velocity. Best for "what should I restock?" or "dead stock" questions.',
+  inputSchema: z.object({
+    includeArchived: z.boolean().optional().describe('Include archived products (default: false)'),
+  }),
+}
+
+export const getMarketingInsights: ToolDefinition = {
+  description: 'Marketing performance: per-coupon ROI and redemption rates, expiring coupons, cart recovery rates, unfeatured high-rated products to promote, and review health (pending moderation, rating distribution). Best for "how are coupons performing?" or "cart recovery" questions.',
+  inputSchema: z.object({
+    period: z.enum(['last_7_days', 'last_30_days', 'last_90_days']).optional().describe('Analysis period (default: last_30_days)'),
+  }),
+}
+
+export const getActionableInsights: ToolDefinition = {
+  description: 'AI-curated priority action items: out-of-stock alerts, unshipped orders, revenue trends, low stock warnings, pending reviews, expiring coupons, abandoned carts, and more. Each item has priority (critical/high/medium/low) and a specific suggested action. Best for "what should I focus on?" questions.',
+  inputSchema: z.object({}),
 }
 
 export const getSettings: ToolDefinition = {
@@ -347,6 +388,14 @@ export const botTools = {
   getCoupons,
   getCollections,
   getReviews,
+
+  // Business intelligence tools
+  getBusinessIntelligence,
+  getRevenueAnalytics,
+  getCustomerInsights,
+  getInventoryHealth,
+  getMarketingInsights,
+  getActionableInsights,
 
   // Write tools
   createProduct,

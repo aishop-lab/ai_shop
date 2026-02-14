@@ -113,7 +113,8 @@ export class BlueprintGenerator {
       location: {
         target_geography: geography,
         country: regionDefaults.country,
-        currency: regionDefaults.currency,
+        // Use user-selected currency if provided, otherwise use regional default
+        currency: data.currency || regionDefaults.currency,
         timezone: regionDefaults.timezone
       },
       contact: {

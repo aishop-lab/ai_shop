@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import {
   Store,
@@ -24,11 +25,24 @@ import {
   Shield,
   AlertTriangle,
   Globe,
-  Bell
+  Bell,
+  Import
 } from 'lucide-react'
 import { RebuildStoreDialog } from '@/components/dashboard/rebuild-store-dialog'
 import { ColorAccessibilityChecker } from '@/components/ui/color-accessibility-checker'
 import { LogoEditor } from '@/components/dashboard/logo-editor'
+
+// Supported currencies for international stores
+const CURRENCIES = [
+  { value: 'INR', label: 'Indian Rupee (₹)', symbol: '₹' },
+  { value: 'USD', label: 'US Dollar ($)', symbol: '$' },
+  { value: 'EUR', label: 'Euro (€)', symbol: '€' },
+  { value: 'GBP', label: 'British Pound (£)', symbol: '£' },
+  { value: 'AED', label: 'UAE Dirham (AED)', symbol: 'AED' },
+  { value: 'SGD', label: 'Singapore Dollar (S$)', symbol: 'S$' },
+  { value: 'AUD', label: 'Australian Dollar (A$)', symbol: 'A$' },
+  { value: 'CAD', label: 'Canadian Dollar (C$)', symbol: 'C$' },
+]
 
 interface StoreSettings {
   id: string
@@ -67,6 +81,10 @@ interface StoreSettings {
   blueprint?: {
     business_category?: string[]
     brand_vibe?: string
+    location?: {
+      currency?: string
+      target_geography?: string
+    }
   }
 }
 
@@ -86,6 +104,7 @@ export default function SettingsPage() {
     whatsapp_number: '',
     instagram_handle: '',
     primary_color: '#3B82F6',
+    currency: 'INR',
     free_shipping_threshold: 999,
     flat_rate_national: 49,
     cod_enabled: true,
@@ -111,6 +130,7 @@ export default function SettingsPage() {
               whatsapp_number: data.store.whatsapp_number || '',
               instagram_handle: data.store.instagram_handle || '',
               primary_color: data.store.brand_colors?.primary || '#3B82F6',
+              currency: data.store.blueprint?.location?.currency || 'INR',
               free_shipping_threshold: data.store.settings?.shipping?.free_shipping_threshold || 999,
               flat_rate_national: data.store.settings?.shipping?.flat_rate_national || 49,
               cod_enabled: data.store.settings?.shipping?.cod_enabled ?? true,
@@ -147,6 +167,7 @@ export default function SettingsPage() {
           whatsapp_number: formData.whatsapp_number,
           instagram_handle: formData.instagram_handle,
           logo_url: store.logo_url,
+          currency: formData.currency,
           brand_colors: {
             primary: formData.primary_color,
             secondary: store.brand_colors?.secondary || '#6B7280'
@@ -322,6 +343,28 @@ export default function SettingsPage() {
                   placeholder="@yourstore"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="currency">Display Currency</Label>
+              <Select
+                value={formData.currency}
+                onValueChange={(value) => setFormData({ ...formData, currency: value })}
+              >
+                <SelectTrigger id="currency">
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((currency) => (
+                    <SelectItem key={currency.value} value={currency.value}>
+                      {currency.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Currency displayed for product prices
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -619,6 +662,31 @@ export default function SettingsPage() {
             <Link href="/dashboard/settings/notifications">
               <Button variant="outline">
                 Notification Settings
+                <ExternalLink className="h-3 w-3 ml-2" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Store Migration */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Import className="h-5 w-5" />
+              Import Products
+            </CardTitle>
+            <CardDescription>
+              Migrate from Shopify or Etsy
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Import your entire product catalog from an existing Shopify or Etsy store.
+              Products, images, variants, and collections are all transferred automatically.
+            </p>
+            <Link href="/dashboard/migrate">
+              <Button variant="outline">
+                Import Products
                 <ExternalLink className="h-3 w-3 ml-2" />
               </Button>
             </Link>

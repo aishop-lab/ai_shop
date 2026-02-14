@@ -61,10 +61,23 @@ export function StoreProvider({ children, initialData }: StoreProviderProps) {
   
   const { store, products, featured_products, categories, settings } = initialData
   
-  // Currency formatting
+  // Currency formatting with proper locale
   const currency = store.blueprint?.location?.currency || 'INR'
   const formatPrice = useCallback((price: number) => {
-    return new Intl.NumberFormat('en-IN', {
+    // Determine locale based on currency
+    const localeMap: Record<string, string> = {
+      INR: 'en-IN',
+      USD: 'en-US',
+      EUR: 'de-DE',
+      GBP: 'en-GB',
+      AED: 'ar-AE',
+      SGD: 'en-SG',
+      AUD: 'en-AU',
+      CAD: 'en-CA',
+    }
+    const locale = localeMap[currency] || 'en-US'
+
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: currency,
       minimumFractionDigits: 0,
