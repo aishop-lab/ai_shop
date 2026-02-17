@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, ExternalLink, Check } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Loader2, ExternalLink, Check, Key, AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface PlatformConnectorProps {
   storeId: string
@@ -22,13 +24,45 @@ export function PlatformConnector({
   onConnected,
 }: PlatformConnectorProps) {
   const [shopifyUrl, setShopifyUrl] = useState('')
-  const [connecting, setConnecting] = useState<'shopify' | 'etsy' | null>(null)
+  const [shopifyToken, setShopifyToken] = useState('')
+  const [connecting, setConnecting] = useState<'shopify' | 'shopify-token' | 'etsy' | null>(null)
 
-  const handleShopifyConnect = () => {
+  const handleShopifyOAuth = () => {
     if (!shopifyUrl.trim()) return
     setConnecting('shopify')
-    // Redirect to OAuth flow
     window.location.href = `/api/migration/shopify/auth?store_id=${storeId}&shop=${encodeURIComponent(shopifyUrl.trim())}`
+  }
+
+  const handleShopifyTokenConnect = async () => {
+    if (!shopifyUrl.trim() || !shopifyToken.trim()) return
+    setConnecting('shopify-token')
+
+    try {
+      const response = await fetch('/api/migration/shopify/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          store_id: storeId,
+          shop_url: shopifyUrl.trim(),
+          access_token: shopifyToken.trim(),
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        toast.success(`Connected to ${data.shop_name}`)
+        // Redirect to refresh state
+        window.location.href = '/dashboard/migrate?connected=shopify'
+      } else {
+        toast.error(data.error || 'Failed to connect to Shopify')
+      }
+    } catch (error) {
+      console.error('Shopify token connect error:', error)
+      toast.error('Failed to connect to Shopify store')
+    } finally {
+      setConnecting(null)
+    }
   }
 
   const handleEtsyConnect = () => {
@@ -86,21 +120,73 @@ export function PlatformConnector({
               placeholder="myshop.myshopify.com"
               value={shopifyUrl}
               onChange={(e) => setShopifyUrl(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleShopifyConnect()}
             />
           </div>
-          <Button
-            onClick={handleShopifyConnect}
-            disabled={!shopifyUrl.trim() || connecting !== null}
-            className="w-full"
-          >
-            {connecting === 'shopify' ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <ExternalLink className="h-4 w-4 mr-2" />
-            )}
-            Connect Shopify
-          </Button>
+
+          <Tabs defaultValue="token" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="token">Access Token</TabsTrigger>
+              <TabsTrigger value="oauth">OAuth</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="token" className="space-y-3 mt-3">
+              <div className="space-y-2">
+                <Label htmlFor="shopify-token">Admin API Access Token</Label>
+                <Input
+                  id="shopify-token"
+                  type="password"
+                  placeholder="shpat_..."
+                  value={shopifyToken}
+                  onChange={(e) => setShopifyToken(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleShopifyTokenConnect()}
+                />
+              </div>
+              <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">How to get your access token:</p>
+                    <ol className="list-decimal ml-4 mt-1 space-y-0.5">
+                      <li>Go to your Shopify Admin &rarr; Settings &rarr; Apps and sales channels</li>
+                      <li>Click &quot;Develop apps&quot; &rarr; &quot;Create an app&quot;</li>
+                      <li>Configure API scopes: enable <strong>read_products</strong></li>
+                      <li>Install the app and copy the Admin API access token</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+              <Button
+                onClick={handleShopifyTokenConnect}
+                disabled={!shopifyUrl.trim() || !shopifyToken.trim() || connecting !== null}
+                className="w-full"
+              >
+                {connecting === 'shopify-token' ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Key className="h-4 w-4 mr-2" />
+                )}
+                Connect with Token
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="oauth" className="space-y-3 mt-3">
+              <p className="text-xs text-muted-foreground">
+                Connect via Shopify OAuth to automatically authorize access to your store&apos;s product data.
+              </p>
+              <Button
+                onClick={handleShopifyOAuth}
+                disabled={!shopifyUrl.trim() || connecting !== null}
+                className="w-full"
+              >
+                {connecting === 'shopify' ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                )}
+                Connect via OAuth
+              </Button>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 

@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       await supabase
         .from('store_migrations')
         .update({
-          source_shop_id: shopInfo.id.toString(),
+          source_shop_id: shop,
           source_shop_name: shopInfo.name,
           access_token_encrypted: encryptedToken,
           status: 'connected',
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
         .insert({
           store_id: cookieData.store_id,
           platform: 'shopify',
-          source_shop_id: shopInfo.id.toString(),
+          source_shop_id: shop,
           source_shop_name: shopInfo.name,
           access_token_encrypted: encryptedToken,
           status: 'connected',
