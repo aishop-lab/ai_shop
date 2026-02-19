@@ -101,36 +101,8 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const hostname = request.headers.get('host') || ''
 
-  // Skip for static files only
-  if (pathname.startsWith('/_next') || pathname.includes('.')) {
-    return NextResponse.next()
-  }
-
-  // For API routes, only refresh the session (no redirects/rewrites)
-  if (pathname.startsWith('/api')) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    if (supabaseUrl && supabaseKey) {
-      let apiResponse = NextResponse.next({ request })
-      try {
-        const supabase = createServerClient(supabaseUrl, supabaseKey, {
-          cookies: {
-            getAll: () => request.cookies.getAll(),
-            setAll: (cookies: { name: string; value: string; options: CookieOptions }[]) => {
-              cookies.forEach(({ name, value }) => request.cookies.set(name, value))
-              apiResponse = NextResponse.next({ request })
-              cookies.forEach(({ name, value, options }) =>
-                apiResponse.cookies.set(name, value, options)
-              )
-            }
-          }
-        })
-        await supabase.auth.getUser()
-      } catch {
-        // Continue on error
-      }
-      return apiResponse
-    }
+  // Skip for static files and API routes
+  if (pathname.startsWith('/_next') || pathname.includes('.') || pathname.startsWith('/api')) {
     return NextResponse.next()
   }
 

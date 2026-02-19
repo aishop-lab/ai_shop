@@ -121,6 +121,7 @@ export function AIBotProvider({ children }: AIBotProviderProps) {
     () =>
       new DefaultChatTransport({
         api: '/api/ai/bot',
+        credentials: 'include',
         body: {
           storeId,
           storeName,
