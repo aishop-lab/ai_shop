@@ -125,12 +125,15 @@ export async function POST(req: Request) {
 
     const store = userStores?.find(s => s.id === storeId)
     if (!store) {
-      console.error('[AI Bot] Store mismatch:', {
-        requestedStoreId: storeId,
-        userId: user.id,
-        userStoreIds: userStores?.map(s => s.id) || [],
-      })
-      return new Response(JSON.stringify({ error: 'Store not found or unauthorized' }), {
+      return new Response(JSON.stringify({
+        error: 'Store not found or unauthorized',
+        debug: {
+          requestedStoreId: storeId,
+          userId: user.id,
+          userStoreCount: userStores?.length || 0,
+          userStoreIds: userStores?.map(s => s.id) || [],
+        }
+      }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
       })
