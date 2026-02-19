@@ -11,6 +11,7 @@ import {
 } from 'react'
 import { useChat, type UIMessage } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import { createClient as createBrowserSupabase } from '@/lib/supabase/client'
 
 // Action that requires confirmation
 export interface PendingAction {
@@ -109,6 +110,9 @@ export function AIBotProvider({ children }: AIBotProviderProps) {
   // Local input state (since useChat doesn't provide it in v6)
   const [input, setInput] = useState('')
 
+  // Access token for API auth (bypasses cookie issues on production)
+  const [accessToken, setAccessToken] = useState<string | null>(null)
+
   // Update chatId when storeId changes to force useChat to reinitialize
   useEffect(() => {
     if (storeId) {
@@ -116,19 +120,36 @@ export function AIBotProvider({ children }: AIBotProviderProps) {
     }
   }, [storeId])
 
-  // Create transport with current storeId
+  // Fetch access token from Supabase browser client
+  useEffect(() => {
+    async function getToken() {
+      try {
+        const supabase = createBrowserSupabase()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+          setAccessToken(session.access_token)
+        }
+      } catch (err) {
+        console.error('[AI Bot] Failed to get access token:', err)
+      }
+    }
+    getToken()
+  }, [])
+
+  // Create transport with current storeId and auth token
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/ai/bot',
         credentials: 'include',
+        headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : undefined,
         body: {
           storeId,
           storeName,
           context: pageContext,
         },
       }),
-    [storeId, storeName, pageContext]
+    [storeId, storeName, pageContext, accessToken]
   )
 
   // Use Vercel AI SDK useChat hook

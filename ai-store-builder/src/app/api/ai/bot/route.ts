@@ -9,6 +9,7 @@ import { botTools, requiresConfirmation } from '@/lib/ai/bot/tools'
 import { executeTool } from '@/lib/ai/bot/tool-executor'
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { PageContext } from '@/components/dashboard/ai-bot/ai-bot-provider'
 
 export const runtime = 'nodejs'
@@ -59,19 +60,36 @@ function createExecutableTools(storeId: string, isConfirmedAction: boolean) {
 export async function POST(req: Request) {
   try {
     // --- Authentication ---
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Try cookie-based auth first, fall back to Authorization header
+    let user: { id: string; email?: string } | null = null
 
-    if (authError || !user) {
-      // Log cookie names (not values) to diagnose auth failures
-      const cookieHeader = req.headers.get('cookie') || ''
-      const cookieNames = cookieHeader.split(';').map(c => c.trim().split('=')[0]).filter(Boolean)
-      console.error('[AI Bot] Auth failed:', {
-        error: authError?.message,
-        hasCookies: cookieNames.length > 0,
-        cookieNames,
-        hasAuthHeader: !!req.headers.get('authorization'),
-      })
+    // Method 1: Cookie-based auth (works on localhost)
+    const supabase = await createClient()
+    const { data: cookieAuth } = await supabase.auth.getUser()
+    if (cookieAuth?.user) {
+      user = cookieAuth.user
+    }
+
+    // Method 2: Authorization header (fallback for production)
+    if (!user) {
+      const authHeader = req.headers.get('authorization')
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.slice(7)
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        if (supabaseUrl && supabaseKey) {
+          const tokenClient = createServiceClient(supabaseUrl, supabaseKey, {
+            global: { headers: { Authorization: `Bearer ${token}` } },
+          })
+          const { data: tokenAuth } = await tokenClient.auth.getUser(token)
+          if (tokenAuth?.user) {
+            user = tokenAuth.user
+          }
+        }
+      }
+    }
+
+    if (!user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
