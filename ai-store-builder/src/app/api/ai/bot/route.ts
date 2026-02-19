@@ -79,17 +79,30 @@ export async function POST(req: Request) {
       })
     }
 
-    // --- Authorization: verify user owns the store ---
+    // --- Authorization: verify user owns a store ---
     // Use admin client to bypass RLS (user already verified via auth.getUser above)
-    const { data: store, error: storeError } = await getSupabaseAdmin()
+    // Look up by owner_id first, then verify storeId matches
+    const { data: userStores, error: storeError } = await getSupabaseAdmin()
       .from('stores')
       .select('id')
-      .eq('id', storeId)
       .eq('owner_id', user.id)
-      .single()
+      .limit(5)
 
-    if (storeError || !store) {
-      console.error('[AI Bot] Store lookup failed:', { storeId, userId: user.id, error: storeError?.message })
+    if (storeError) {
+      console.error('[AI Bot] Store lookup error:', storeError.message)
+      return new Response(JSON.stringify({ error: 'Failed to verify store ownership' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    const store = userStores?.find(s => s.id === storeId)
+    if (!store) {
+      console.error('[AI Bot] Store mismatch:', {
+        requestedStoreId: storeId,
+        userId: user.id,
+        userStoreIds: userStores?.map(s => s.id) || [],
+      })
       return new Response(JSON.stringify({ error: 'Store not found or unauthorized' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
