@@ -227,6 +227,7 @@ NEXT_PUBLIC_APP_URL=https://storeforge.site
 
 | Date | Change |
 |------|--------|
+| 2026-02-19 | **AI Bot Production Auth Fix**: Fixed AI Bot failing on production (storeforge.site). Cookie-based auth doesn't work cross-domain on Vercel; added Bearer token auth fallback. Frontend fetches access token from Supabase browser client, sends via Authorization header. Backend tries cookies first, falls back to token. Store ownership check uses admin client to bypass RLS. |
 | 2026-02-19 | **Etsy Migration**: Full Etsy store import via OAuth PKCE. Imports products (with variant support for 1D/2D properties) and collections (from Etsy sections). Offset-based pagination, token refresh, rate limit backoff. |
 | 2026-02-19 | **Stripe Payment Integration**: International payments via Stripe Checkout. Auto-selects Razorpay for INR, Stripe for non-INR currencies. Per-store Stripe credentials with platform fallback. Webhook handler for checkout completed/expired/refunds. Stripe settings page in dashboard. |
 | 2026-02-19 | **Shippo Shipping Provider**: Multi-carrier US shipping via Shippo (USPS, UPS, FedEx, DHL). Full ShippingProvider interface implementation. Per-store credentials with settings UI. |
@@ -297,14 +298,17 @@ Stores are accessible at `{store-slug}.storeforge.site`:
 
 ## Production Deployment
 
-1. Configure Vercel with wildcard domain `*.storeforge.site`
-2. Set DNS: `*.storeforge.site → cname.vercel-dns.com`
-3. Add all environment variables in Vercel dashboard
-4. Enable Razorpay live mode + webhook URL
-5. Enable Stripe live mode + webhook URL (`/api/webhooks/stripe`)
-6. Configure Shiprocket production credentials
-7. Configure Shopify app (client ID + secret) for migration
-8. Configure Etsy app (client ID) for migration
-9. Run database migrations for new features
+**IMPORTANT**: `storeforge.site` is served by the `ai-store-builder` Vercel project (locally linked via `.vercel/project.json`). Deploy via `npx vercel --prod` from the project root — git push does NOT deploy to this project.
+
+1. Deploy: `npx vercel --prod` (NOT git push)
+2. Configure Vercel with wildcard domain `*.storeforge.site`
+3. Set DNS: `*.storeforge.site → cname.vercel-dns.com`
+4. Add all environment variables in Vercel dashboard
+5. Enable Razorpay live mode + webhook URL
+6. Enable Stripe live mode + webhook URL (`/api/webhooks/stripe`)
+7. Configure Shiprocket production credentials
+8. Configure Shopify app (client ID + secret) for migration
+9. Configure Etsy app (client ID) for migration
+10. Run database migrations for new features
 
 *Last Updated: 2026-02-19*
