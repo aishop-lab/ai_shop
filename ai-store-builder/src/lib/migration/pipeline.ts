@@ -162,13 +162,18 @@ async function createMigratedCollection(
 ): Promise<string> {
   const supabase = await createClient()
 
+  const slug = collection.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+
   const { data: created, error } = await supabase
     .from('collections')
     .insert({
       store_id: storeId,
-      name: collection.title,
+      title: collection.title,
+      slug,
       description: collection.description || null,
-      type: 'manual',
     })
     .select('id')
     .single()
