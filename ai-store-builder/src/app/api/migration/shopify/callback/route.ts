@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { validateShopifyHmac, exchangeShopifyCode, fetchShopifyShopInfo } from '@/lib/migration/shopify/oauth'
 import { encrypt } from '@/lib/encryption'
 import { SHOPIFY_STATE_COOKIE } from '@/lib/migration/constants'
@@ -49,22 +50,23 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Authenticate user
+    // Authenticate user via cookies (this is a browser redirect, cookies should be present)
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
+      console.error('[Migration] Shopify callback auth failed:', authError?.message)
       return NextResponse.redirect(`${getAppUrl()}/sign-in`)
     }
 
-    // Verify store ownership
-    const { data: store } = await supabase
+    // Verify store ownership using admin client (bypasses RLS)
+    const { data: userStores } = await getSupabaseAdmin()
       .from('stores')
       .select('id')
       .eq('id', cookieData.store_id)
       .eq('owner_id', user.id)
-      .single()
+      .limit(1)
 
-    if (!store) {
+    if (!userStores || userStores.length === 0) {
       return NextResponse.redirect(`${getAppUrl()}/dashboard/migrate?error=store_not_found`)
     }
 
@@ -77,8 +79,9 @@ export async function GET(request: NextRequest) {
     // Encrypt access token
     const encryptedToken = encrypt(tokenData.access_token)
 
-    // Create or update migration record
-    const { data: existingMigration } = await supabase
+    // Create or update migration record using admin client
+    const admin = getSupabaseAdmin()
+    const { data: existingMigration } = await admin
       .from('store_migrations')
       .select('id')
       .eq('store_id', cookieData.store_id)
@@ -87,7 +90,7 @@ export async function GET(request: NextRequest) {
 
     if (existingMigration) {
       // Update existing
-      await supabase
+      await admin
         .from('store_migrations')
         .update({
           source_shop_id: shop,
@@ -99,7 +102,7 @@ export async function GET(request: NextRequest) {
         .eq('id', existingMigration.id)
     } else {
       // Create new
-      await supabase
+      await admin
         .from('store_migrations')
         .insert({
           store_id: cookieData.store_id,

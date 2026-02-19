@@ -3,15 +3,44 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { encrypt } from '@/lib/encryption'
 import { validateShopDomain, fetchShopifyShopInfo } from '@/lib/migration/shopify/oauth'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    // --- Authentication ---
+    // Try cookie-based auth first, fall back to Authorization header
+    let userId: string | null = null
 
-    if (!user) {
+    // Method 1: Cookie-based auth
+    const supabase = await createClient()
+    const { data: cookieAuth } = await supabase.auth.getUser()
+    if (cookieAuth?.user) {
+      userId = cookieAuth.user.id
+    }
+
+    // Method 2: Authorization header (fallback for production)
+    if (!userId) {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.slice(7)
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        if (supabaseUrl && supabaseKey) {
+          const tokenClient = createServiceClient(supabaseUrl, supabaseKey, {
+            global: { headers: { Authorization: `Bearer ${token}` } },
+          })
+          const { data: tokenAuth } = await tokenClient.auth.getUser(token)
+          if (tokenAuth?.user) {
+            userId = tokenAuth.user.id
+          }
+        }
+      }
+    }
+
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -25,14 +54,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate store ownership
-    const { data: store } = await supabase
+    // Validate store ownership using admin client (bypasses RLS)
+    const { data: userStores } = await getSupabaseAdmin()
       .from('stores')
-      .select('id, owner_id')
+      .select('id')
       .eq('id', store_id)
-      .single()
+      .eq('owner_id', userId)
+      .limit(1)
 
-    if (!store || store.owner_id !== user.id) {
+    if (!userStores || userStores.length === 0) {
       return NextResponse.json({ error: 'Store not found' }, { status: 404 })
     }
 
@@ -51,7 +81,7 @@ export async function POST(request: NextRequest) {
       shopInfo = await fetchShopifyShopInfo(shopDomain, access_token)
     } catch {
       return NextResponse.json(
-        { error: 'Invalid access token. Could not connect to your Shopify store. Please check that the token has read_products scope.' },
+        { error: 'Invalid access token. Could not connect to your Shopify store. Please check that the token has read_products, read_orders, read_customers, and read_discounts scopes.' },
         { status: 400 }
       )
     }
@@ -59,8 +89,9 @@ export async function POST(request: NextRequest) {
     // Encrypt the access token
     const encryptedToken = encrypt(access_token)
 
-    // Check for existing migration for this store
-    const { data: existingMigration } = await supabase
+    // Check for existing migration for this store using admin client
+    const admin = getSupabaseAdmin()
+    const { data: existingMigration } = await admin
       .from('store_migrations')
       .select('id')
       .eq('store_id', store_id)
@@ -73,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     if (existingMigration) {
       // Update existing migration record
-      const { error: updateError } = await supabase
+      const { error: updateError } = await admin
         .from('store_migrations')
         .update({
           source_shop_id: shopDomain,
@@ -92,7 +123,7 @@ export async function POST(request: NextRequest) {
       migrationId = existingMigration.id
     } else {
       // Create new migration record
-      const { data: newMigration, error: insertError } = await supabase
+      const { data: newMigration, error: insertError } = await admin
         .from('store_migrations')
         .insert({
           store_id,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Loader2, ExternalLink, Check, Key, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { createClient as createBrowserSupabase } from '@/lib/supabase/client'
 
 interface PlatformConnectorProps {
   storeId: string
@@ -28,11 +29,57 @@ export function PlatformConnector({
   const [shopifyUrl, setShopifyUrl] = useState('')
   const [shopifyToken, setShopifyToken] = useState('')
   const [connecting, setConnecting] = useState<'shopify' | 'shopify-token' | 'etsy' | null>(null)
+  const [accessToken, setAccessToken] = useState<string | null>(null)
 
-  const handleShopifyOAuth = () => {
+  // Fetch access token for API auth (production cookie workaround)
+  useEffect(() => {
+    async function getToken() {
+      try {
+        const supabase = createBrowserSupabase()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+          setAccessToken(session.access_token)
+        }
+      } catch (err) {
+        console.error('[Migration] Failed to get access token:', err)
+      }
+    }
+    getToken()
+  }, [])
+
+  const handleShopifyOAuth = async () => {
     if (!shopifyUrl.trim()) return
     setConnecting('shopify')
-    window.location.href = `/api/migration/shopify/auth?store_id=${storeId}&shop=${encodeURIComponent(shopifyUrl.trim())}`
+
+    try {
+      // Fetch auth URL via API (with Bearer token for production auth)
+      const response = await fetch(
+        `/api/migration/shopify/auth?store_id=${storeId}&shop=${encodeURIComponent(shopifyUrl.trim())}`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+          },
+          credentials: 'include',
+        }
+      )
+
+      if (!response.ok) {
+        const data = await response.json()
+        toast.error(data.error || 'Failed to start Shopify OAuth')
+        setConnecting(null)
+        return
+      }
+
+      const data = await response.json()
+      if (data.authUrl) {
+        window.location.href = data.authUrl
+      }
+    } catch (error) {
+      console.error('Shopify OAuth error:', error)
+      toast.error('Failed to connect to Shopify')
+      setConnecting(null)
+    }
   }
 
   const handleShopifyTokenConnect = async () => {
@@ -42,7 +89,11 @@ export function PlatformConnector({
     try {
       const response = await fetch('/api/migration/shopify/connect', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({
           store_id: storeId,
           shop_url: shopifyUrl.trim(),
@@ -174,7 +225,7 @@ export function PlatformConnector({
                         <ol className="list-decimal ml-4 mt-1 space-y-0.5">
                           <li>Go to your Shopify Admin &rarr; Settings &rarr; Apps and sales channels</li>
                           <li>Click &quot;Develop apps&quot; &rarr; &quot;Create an app&quot;</li>
-                          <li>Configure API scopes: enable <strong>read_products</strong></li>
+                          <li>Configure API scopes: enable <strong>read_products</strong>, <strong>read_orders</strong>, <strong>read_customers</strong>, <strong>read_discounts</strong></li>
                           <li>Install the app and copy the Admin API access token</li>
                         </ol>
                       </div>
