@@ -17,15 +17,17 @@ import {
   Users,
   Tag,
   RotateCcw,
+  Plus,
 } from 'lucide-react'
 import type { MigrationProgress } from '@/lib/migration/types'
 
 interface MigrationResultsProps {
   progress: MigrationProgress
   onRetry?: () => void
+  onImportAnother?: () => void
 }
 
-export function MigrationResults({ progress, onRetry }: MigrationResultsProps) {
+export function MigrationResults({ progress, onRetry, onImportAnother }: MigrationResultsProps) {
   const [showErrors, setShowErrors] = useState(false)
 
   const totalFailed = progress.failed_products + progress.failed_collections + progress.failed_images +
@@ -193,6 +195,12 @@ export function MigrationResults({ progress, onRetry }: MigrationResultsProps) {
             <Button variant="outline" onClick={onRetry}>
               <RotateCcw className="h-4 w-4 mr-2" />
               Retry Failed
+            </Button>
+          )}
+          {onImportAnother && (
+            <Button variant="outline" onClick={onImportAnother}>
+              <Plus className="h-4 w-4 mr-2" />
+              Import from Another Platform
             </Button>
           )}
         </div>

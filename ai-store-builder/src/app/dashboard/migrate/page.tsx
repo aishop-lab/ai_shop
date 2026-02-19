@@ -22,6 +22,7 @@ export default function MigratePage() {
   const [platform, setPlatform] = useState<string | null>(null)
   const [shopName, setShopName] = useState<string | null>(null)
   const [completedProgress, setCompletedProgress] = useState<MigrationProgressType | null>(null)
+  const [completedPlatforms, setCompletedPlatforms] = useState<string[]>([])
   const [starting, setStarting] = useState(false)
 
   // Fetch current migration state
@@ -45,6 +46,12 @@ export default function MigratePage() {
         }
 
         const migrationData = await migrationResponse.json()
+
+        // Track all completed platforms
+        const completed = (migrationData.completed_migrations || [])
+          .filter((m: { status: string }) => m.status === 'completed')
+          .map((m: { platform: string }) => m.platform)
+        setCompletedPlatforms(completed)
 
         if (!migrationData.migration) {
           setPageState('disconnected')
@@ -198,7 +205,7 @@ export default function MigratePage() {
 
       {/* Disconnected - Show platform cards */}
       {pageState === 'disconnected' && storeId && (
-        <PlatformConnector storeId={storeId} />
+        <PlatformConnector storeId={storeId} completedPlatforms={completedPlatforms} />
       )}
 
       {/* Connected - Show connection status and configure button */}
@@ -249,6 +256,18 @@ export default function MigratePage() {
         <MigrationResults
           progress={completedProgress}
           onRetry={handleRetry}
+          onImportAnother={() => {
+            setCompletedPlatforms(prev =>
+              completedProgress.platform && !prev.includes(completedProgress.platform)
+                ? [...prev, completedProgress.platform]
+                : prev
+            )
+            setMigrationId(null)
+            setPlatform(null)
+            setShopName(null)
+            setCompletedProgress(null)
+            setPageState('disconnected')
+          }}
         />
       )}
     </div>

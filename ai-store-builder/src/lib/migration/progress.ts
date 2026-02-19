@@ -17,16 +17,42 @@ export async function getMigration(migrationId: string): Promise<StoreMigration 
 
 export async function getMigrationForStore(storeId: string): Promise<StoreMigration | null> {
   const supabase = await createClient()
+
+  // Prefer active (non-completed/non-failed) migrations over finished ones
+  const { data: activeMigrations } = await supabase
+    .from('store_migrations')
+    .select('*')
+    .eq('store_id', storeId)
+    .in('status', ['connected', 'running', 'paused', 'cancelled'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  if (activeMigrations && activeMigrations.length > 0) {
+    return activeMigrations[0] as StoreMigration
+  }
+
+  // Fall back to most recent completed/failed migration
   const { data, error } = await supabase
     .from('store_migrations')
     .select('*')
     .eq('store_id', storeId)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
 
-  if (error || !data) return null
-  return data as StoreMigration
+  if (error || !data || data.length === 0) return null
+  return data[0] as StoreMigration
+}
+
+export async function getAllMigrationsForStore(storeId: string): Promise<StoreMigration[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('store_migrations')
+    .select('*')
+    .eq('store_id', storeId)
+    .order('created_at', { ascending: false })
+
+  if (error || !data) return []
+  return data as StoreMigration[]
 }
 
 export async function updateMigrationStatus(

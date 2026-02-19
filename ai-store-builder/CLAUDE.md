@@ -39,7 +39,7 @@
 - Customer accounts with order history, addresses, wishlist, Google OAuth login
 - Abandoned cart recovery with 3-email sequence
 - WhatsApp order notifications (MSG91)
-- Store migration from Shopify (products, collections, orders, customers, coupons)
+- Store migration from Shopify (products, collections, orders, customers, coupons) and Etsy (products, collections)
 - Per-store integrations:
   - Razorpay (INR payment processing)
   - Stripe (international payment processing)
@@ -134,6 +134,9 @@ src/
 | `lib/migration/shopify/order-transformer.ts` | Shopify order → StoreForge order mapping |
 | `lib/migration/shopify/customer-transformer.ts` | Shopify customer → StoreForge customer mapping |
 | `lib/migration/shopify/discount-transformer.ts` | Shopify discount → StoreForge coupon mapping |
+| `lib/migration/etsy/oauth.ts` | Etsy OAuth PKCE flow (auth URL, token exchange, refresh) |
+| `lib/migration/etsy/client.ts` | Etsy REST API (listings, sections, images, rate limiting) |
+| `lib/migration/etsy/transformer.ts` | Etsy listing → StoreForge product mapping (with variant support) |
 
 ---
 
@@ -204,6 +207,9 @@ MSG91_WHATSAPP_INTEGRATED_NUMBER=
 SHOPIFY_CLIENT_ID=
 SHOPIFY_CLIENT_SECRET=
 
+# Etsy Migration (OAuth PKCE app)
+ETSY_CLIENT_ID=
+
 # Cron Jobs
 CRON_SECRET=
 
@@ -221,6 +227,7 @@ NEXT_PUBLIC_APP_URL=https://storeforge.site
 
 | Date | Change |
 |------|--------|
+| 2026-02-19 | **Etsy Migration**: Full Etsy store import via OAuth PKCE. Imports products (with variant support for 1D/2D properties) and collections (from Etsy sections). Offset-based pagination, token refresh, rate limit backoff. |
 | 2026-02-19 | **Stripe Payment Integration**: International payments via Stripe Checkout. Auto-selects Razorpay for INR, Stripe for non-INR currencies. Per-store Stripe credentials with platform fallback. Webhook handler for checkout completed/expired/refunds. Stripe settings page in dashboard. |
 | 2026-02-19 | **Shippo Shipping Provider**: Multi-carrier US shipping via Shippo (USPS, UPS, FedEx, DHL). Full ShippingProvider interface implementation. Per-store credentials with settings UI. |
 | 2026-02-19 | **Expanded Shopify Migration**: Full store migration now imports Orders, Customers, and Coupons in addition to Products and Collections. 5-phase pipeline (Products → Collections → Customers → Coupons → Orders). Orders link to imported customers via email. Code-based discounts imported (automatic discounts skipped). OAuth scopes expanded to `read_products,read_orders,read_customers,read_discounts`. |
@@ -284,7 +291,7 @@ Stores are accessible at `{store-slug}.storeforge.site`:
 - SMS OTP verification
 - PWA support (installable stores)
 - Store UI customization (fonts, layouts, custom CSS)
-- Etsy migration support (OAuth + product import)
+
 
 ---
 
@@ -297,6 +304,7 @@ Stores are accessible at `{store-slug}.storeforge.site`:
 5. Enable Stripe live mode + webhook URL (`/api/webhooks/stripe`)
 6. Configure Shiprocket production credentials
 7. Configure Shopify app (client ID + secret) for migration
-8. Run database migrations for new features
+8. Configure Etsy app (client ID) for migration
+9. Run database migrations for new features
 
 *Last Updated: 2026-02-19*

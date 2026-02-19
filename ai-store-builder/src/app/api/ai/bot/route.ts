@@ -63,6 +63,15 @@ export async function POST(req: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
+      // Log cookie names (not values) to diagnose auth failures
+      const cookieHeader = req.headers.get('cookie') || ''
+      const cookieNames = cookieHeader.split(';').map(c => c.trim().split('=')[0]).filter(Boolean)
+      console.error('[AI Bot] Auth failed:', {
+        error: authError?.message,
+        hasCookies: cookieNames.length > 0,
+        cookieNames,
+        hasAuthHeader: !!req.headers.get('authorization'),
+      })
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },

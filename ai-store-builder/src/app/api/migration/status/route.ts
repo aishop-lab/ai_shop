@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getMigration, getMigrationForStore } from '@/lib/migration/progress'
+import { getMigration, getMigrationForStore, getAllMigrationsForStore } from '@/lib/migration/progress'
 import type { MigrationProgress } from '@/lib/migration/types'
 
 export const dynamic = 'force-dynamic'
@@ -20,10 +20,12 @@ export async function GET(request: NextRequest) {
     const storeId = request.nextUrl.searchParams.get('store_id')
 
     let migration
+    let allMigrations: Awaited<ReturnType<typeof getAllMigrationsForStore>> = []
     if (migrationId) {
       migration = await getMigration(migrationId)
     } else if (storeId) {
       migration = await getMigrationForStore(storeId)
+      allMigrations = await getAllMigrationsForStore(storeId)
     } else {
       return NextResponse.json(
         { error: 'migration_id or store_id is required' },
@@ -32,7 +34,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!migration) {
-      return NextResponse.json({ migration: null })
+      return NextResponse.json({ migration: null, all_migrations: [] })
     }
 
     // Verify ownership via store
@@ -101,7 +103,20 @@ export async function GET(request: NextRequest) {
       current_phase: currentPhase,
     }
 
-    return NextResponse.json({ migration: progress })
+    // Build summaries for all completed migrations
+    const completedMigrations = allMigrations
+      .filter(m => m.status === 'completed' || m.status === 'failed')
+      .map(m => ({
+        id: m.id,
+        platform: m.platform,
+        status: m.status,
+        source_shop_name: m.source_shop_name,
+        migrated_products: m.migrated_products,
+        migrated_collections: m.migrated_collections,
+        completed_at: m.completed_at,
+      }))
+
+    return NextResponse.json({ migration: progress, completed_migrations: completedMigrations })
   } catch (error) {
     console.error('[Migration] Status error:', error)
     return NextResponse.json(
