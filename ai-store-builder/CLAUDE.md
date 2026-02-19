@@ -9,8 +9,8 @@
 - **UI**: Tailwind CSS 4, Radix UI, Shadcn UI
 - **Database**: Supabase (PostgreSQL + Auth + Storage + Realtime)
 - **AI**: Vercel AI SDK (Google Gemini 2.0 Flash + Claude)
-- **Payments**: Razorpay (UPI, cards, COD) with per-store credentials
-- **Shipping**: Multi-provider (Shiprocket, Delhivery, Blue Dart, Self-delivery) with per-store credentials
+- **Payments**: Razorpay (UPI, cards, COD) + Stripe (international cards) with per-store credentials, auto-selection by currency
+- **Shipping**: Multi-provider (Shiprocket, Delhivery, Blue Dart, Shippo, Self-delivery) with per-store credentials
 - **Email**: Resend + React Email templates (per-store credentials supported)
 - **WhatsApp**: MSG91 (per-store credentials supported)
 
@@ -39,9 +39,11 @@
 - Customer accounts with order history, addresses, wishlist, Google OAuth login
 - Abandoned cart recovery with 3-email sequence
 - WhatsApp order notifications (MSG91)
+- Store migration from Shopify (products, collections, orders, customers, coupons)
 - Per-store integrations:
-  - Razorpay (payment processing)
-  - Shiprocket, Delhivery, Blue Dart (shipping)
+  - Razorpay (INR payment processing)
+  - Stripe (international payment processing)
+  - Shiprocket, Delhivery, Blue Dart, Shippo (shipping)
   - Resend (email notifications)
   - MSG91 (WhatsApp notifications)
 
@@ -73,9 +75,10 @@ src/
 │   ├── store/            # queries.ts, dynamic-styles.ts
 │   ├── customer/         # auth.ts (customer authentication)
 │   ├── cart/             # abandoned-cart.ts (recovery system)
-│   ├── payment/          # razorpay.ts (per-store credentials support)
+│   ├── payment/          # razorpay.ts, stripe.ts (per-store credentials, auto-selection by currency)
 │   ├── encryption.ts     # AES-256-GCM for sensitive credentials
-│   ├── shipping/         # provider-manager.ts, shiprocket.ts, delhivery.ts, bluedart.ts
+│   ├── shipping/         # provider-manager.ts, shiprocket.ts, delhivery.ts, bluedart.ts, shippo.ts
+│   ├── migration/        # pipeline.ts, progress.ts, shopify/ (client, transformers)
 │   ├── whatsapp/         # msg91.ts (per-store credentials support)
 │   ├── email/            # index.ts (per-store credentials), order-confirmation.ts, merchant-notifications.ts
 │   ├── contexts/         # auth-context.tsx, customer-context.tsx
@@ -99,10 +102,15 @@ src/
 | `components/dashboard/ai-bot/` | AI Bot UI (panel, messages, input, confirmation) |
 | `lib/store/queries.ts` | Database queries + `getStoreUrl()` helper |
 | `lib/store/dynamic-styles.ts` | Theme CSS variables + contrast colors |
+| `lib/payment/stripe.ts` | Stripe payment processing (checkout sessions, webhooks, refunds) |
+| `lib/payment/stripe-client.ts` | Client-side Stripe checkout redirect |
+| `app/api/webhooks/stripe/route.ts` | Stripe webhook handler (checkout completed/expired, refunds) |
+| `app/api/dashboard/settings/stripe/route.ts` | Per-store Stripe credential management |
 | `lib/shipping/provider-manager.ts` | Multi-provider shipping abstraction |
 | `lib/shipping/shiprocket.ts` | Shiprocket API integration |
 | `lib/shipping/delhivery.ts` | Delhivery API integration |
 | `lib/shipping/bluedart.ts` | Blue Dart API integration |
+| `lib/shipping/shippo.ts` | Shippo multi-carrier US shipping (USPS, UPS, FedEx, DHL) |
 | `lib/email/index.ts` | Email service with per-store Resend credentials |
 | `lib/whatsapp/msg91.ts` | WhatsApp notifications with per-store MSG91 credentials |
 | `lib/rate-limit.ts` | Rate limiting (100/min API, 10/min AI, 5/min auth) |
@@ -132,10 +140,10 @@ src/
 ## Database
 
 ### Main Tables (25+)
-- **stores** - Config, blueprint (JSONB), policies, settings, cart_recovery_settings, razorpay_credentials, shipping_providers, msg91_credentials, resend_credentials, notification_settings
+- **stores** - Config, blueprint (JSONB), policies, settings, cart_recovery_settings, razorpay_credentials, stripe_credentials, shipping_providers, msg91_credentials, resend_credentials, notification_settings
 - **products** - Details, pricing, `is_demo` flag for demo products
 - **product_variants** - SKU combinations with per-variant pricing
-- **orders** / **order_items** - With shipping tracking, customer_id link, courier info
+- **orders** / **order_items** - With shipping tracking, customer_id link, courier info, Stripe/Razorpay payment fields, currency
 - **collections**, **collection_products** - Manual + tag-based product grouping
 - **coupons**, **product_reviews**
 - **notifications** - Merchant alerts (new orders, low stock, etc.)
@@ -175,6 +183,9 @@ GOOGLE_CLOUD_CREDENTIALS=          # Service account JSON key (as string)
 RAZORPAY_KEY_ID=
 RAZORPAY_KEY_SECRET=
 RAZORPAY_WEBHOOK_SECRET=
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
 CREDENTIALS_ENCRYPTION_KEY=  # 32-byte base64 key for encrypting merchant secrets
 
 # Shipping (Platform defaults - merchants can override)
@@ -188,6 +199,10 @@ RESEND_FROM_EMAIL=
 # WhatsApp (Platform defaults - merchants can override)
 MSG91_AUTH_KEY=
 MSG91_WHATSAPP_INTEGRATED_NUMBER=
+
+# Shopify Migration (OAuth app)
+SHOPIFY_CLIENT_ID=
+SHOPIFY_CLIENT_SECRET=
 
 # Cron Jobs
 CRON_SECRET=
@@ -206,7 +221,10 @@ NEXT_PUBLIC_APP_URL=https://storeforge.site
 
 | Date | Change |
 |------|--------|
-| 2026-02-19 | **Expanded Shopify Migration**: Full store migration now imports Orders, Customers, and Coupons in addition to Products and Collections. 5-phase pipeline (Products → Collections → Customers → Coupons → Orders). Orders link to imported customers via email. Code-based discounts imported (automatic discounts skipped). OAuth scopes expanded to `read_products,read_orders,read_customers,read_discounts`. 39 Playwright tests for migration. |
+| 2026-02-19 | **Stripe Payment Integration**: International payments via Stripe Checkout. Auto-selects Razorpay for INR, Stripe for non-INR currencies. Per-store Stripe credentials with platform fallback. Webhook handler for checkout completed/expired/refunds. Stripe settings page in dashboard. |
+| 2026-02-19 | **Shippo Shipping Provider**: Multi-carrier US shipping via Shippo (USPS, UPS, FedEx, DHL). Full ShippingProvider interface implementation. Per-store credentials with settings UI. |
+| 2026-02-19 | **Expanded Shopify Migration**: Full store migration now imports Orders, Customers, and Coupons in addition to Products and Collections. 5-phase pipeline (Products → Collections → Customers → Coupons → Orders). Orders link to imported customers via email. Code-based discounts imported (automatic discounts skipped). OAuth scopes expanded to `read_products,read_orders,read_customers,read_discounts`. |
+| 2026-02-19 | **AI Bot Improvements**: Added authentication, confirmation flow for destructive actions, fixed `category` → `categories` field mapping, rate limiting. |
 | 2026-02-09 | **Platform Admin Dashboard**: Full admin panel at `/admin` for platform owner. Stores, sellers, customers, orders, products management. Revenue and signups charts. Store suspend/unsuspend. Access restricted to hardcoded admin email. |
 | 2026-02-09 | **AI Bot for Sellers**: Natural language store management via sidebar panel (Cmd+K). 25+ tools for products, orders, coupons, collections, analytics, settings, branding. Auto-execute for creates/updates, confirmation dialogs for destructive actions. Context-aware of current page. |
 | 2026-02-04 | **Comprehensive E2E Tests**: 405 Playwright tests covering shipping (56), payment/Razorpay (56), products (75), API routes (97), inventory (18), email (29), cart, auth, storefront |
@@ -240,9 +258,11 @@ Merchants can connect their own accounts for direct control:
 | Service | Settings Page | Credentials Needed |
 |---------|---------------|-------------------|
 | **Razorpay** | `/dashboard/settings/payments` | Key ID, Key Secret, Webhook Secret |
+| **Stripe** | `/dashboard/settings/payments` | Publishable Key, Secret Key, Webhook Secret |
 | **Shiprocket** | `/dashboard/settings/shipping-providers` | Email, Password |
 | **Delhivery** | `/dashboard/settings/shipping-providers` | API Token, Client Name |
 | **Blue Dart** | `/dashboard/settings/shipping-providers` | API Key, Client Code, License Key, Login ID |
+| **Shippo** | `/dashboard/settings/shipping-providers` | API Token |
 | **Resend** | `/dashboard/settings/notifications` | API Key, From Email |
 | **MSG91** | `/dashboard/settings/notifications` | Auth Key, WhatsApp Number |
 
@@ -263,8 +283,8 @@ Stores are accessible at `{store-slug}.storeforge.site`:
 - Multi-language support (Hindi at minimum)
 - SMS OTP verification
 - PWA support (installable stores)
-- Stripe integration for international payments
 - Store UI customization (fonts, layouts, custom CSS)
+- Etsy migration support (OAuth + product import)
 
 ---
 
@@ -274,7 +294,9 @@ Stores are accessible at `{store-slug}.storeforge.site`:
 2. Set DNS: `*.storeforge.site → cname.vercel-dns.com`
 3. Add all environment variables in Vercel dashboard
 4. Enable Razorpay live mode + webhook URL
-5. Configure Shiprocket production credentials
-6. Run database migrations for new features
+5. Enable Stripe live mode + webhook URL (`/api/webhooks/stripe`)
+6. Configure Shiprocket production credentials
+7. Configure Shopify app (client ID + secret) for migration
+8. Run database migrations for new features
 
 *Last Updated: 2026-02-19*

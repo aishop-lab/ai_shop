@@ -34,7 +34,7 @@ import {
   ShieldCheck,
   Info,
 } from 'lucide-react'
-import type { RazorpayCredentialStatus } from '@/lib/types/store'
+import type { RazorpayCredentialStatus, StripeCredentialStatus } from '@/lib/types/store'
 
 export default function PaymentsSettingsPage() {
   const [loading, setLoading] = useState(true)
@@ -42,14 +42,24 @@ export default function PaymentsSettingsPage() {
   const [deleting, setDeleting] = useState(false)
   const [status, setStatus] = useState<RazorpayCredentialStatus | null>(null)
 
-  // Form state
+  // Form state (Razorpay)
   const [keyId, setKeyId] = useState('')
   const [keySecret, setKeySecret] = useState('')
   const [webhookSecret, setWebhookSecret] = useState('')
 
-  // Visibility toggles
+  // Visibility toggles (Razorpay)
   const [showKeySecret, setShowKeySecret] = useState(false)
   const [showWebhookSecret, setShowWebhookSecret] = useState(false)
+
+  // Stripe state
+  const [stripeStatus, setStripeStatus] = useState<StripeCredentialStatus | null>(null)
+  const [stripeSaving, setStripeSaving] = useState(false)
+  const [stripeDeleting, setStripeDeleting] = useState(false)
+  const [stripePublishableKey, setStripePublishableKey] = useState('')
+  const [stripeSecretKey, setStripeSecretKey] = useState('')
+  const [stripeWebhookSecret, setStripeWebhookSecret] = useState('')
+  const [showStripeSecretKey, setShowStripeSecretKey] = useState(false)
+  const [showStripeWebhookSecret, setShowStripeWebhookSecret] = useState(false)
 
   useEffect(() => {
     fetchStatus()
@@ -57,16 +67,28 @@ export default function PaymentsSettingsPage() {
 
   async function fetchStatus() {
     try {
-      const response = await fetch('/api/dashboard/settings/razorpay')
-      if (response.ok) {
-        const data = await response.json()
+      const [razorpayRes, stripeRes] = await Promise.all([
+        fetch('/api/dashboard/settings/razorpay'),
+        fetch('/api/dashboard/settings/stripe'),
+      ])
+
+      if (razorpayRes.ok) {
+        const data = await razorpayRes.json()
         setStatus(data.status)
         if (data.status?.key_id) {
           setKeyId(data.status.key_id)
         }
       }
+
+      if (stripeRes.ok) {
+        const data = await stripeRes.json()
+        setStripeStatus(data.status)
+        if (data.status?.publishable_key) {
+          setStripePublishableKey(data.status.publishable_key)
+        }
+      }
     } catch (error) {
-      console.error('Failed to fetch Razorpay status:', error)
+      console.error('Failed to fetch payment settings:', error)
       toast.error('Failed to load payment settings')
     } finally {
       setLoading(false)
@@ -139,6 +161,78 @@ export default function PaymentsSettingsPage() {
       toast.error('Failed to remove credentials')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  // Stripe handlers
+  async function handleStripeSave() {
+    if (!stripePublishableKey || !stripeSecretKey) {
+      toast.error('Publishable Key and Secret Key are required')
+      return
+    }
+
+    if (!stripePublishableKey.match(/^pk_(test|live)_[a-zA-Z0-9]+$/)) {
+      toast.error('Invalid Publishable Key format. Should start with pk_test_ or pk_live_')
+      return
+    }
+
+    if (!stripeSecretKey.match(/^sk_(test|live)_[a-zA-Z0-9]+$/)) {
+      toast.error('Invalid Secret Key format. Should start with sk_test_ or sk_live_')
+      return
+    }
+
+    setStripeSaving(true)
+    try {
+      const response = await fetch('/api/dashboard/settings/stripe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          publishable_key: stripePublishableKey,
+          secret_key: stripeSecretKey,
+          webhook_secret: stripeWebhookSecret || undefined,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast.success('Stripe credentials saved and verified')
+        setStripeSecretKey('')
+        setStripeWebhookSecret('')
+        await fetchStatus()
+      } else {
+        toast.error(data.error || data.details || 'Failed to save Stripe credentials')
+      }
+    } catch (error) {
+      console.error('Failed to save Stripe credentials:', error)
+      toast.error('Failed to save Stripe credentials')
+    } finally {
+      setStripeSaving(false)
+    }
+  }
+
+  async function handleStripeDelete() {
+    setStripeDeleting(true)
+    try {
+      const response = await fetch('/api/dashboard/settings/stripe', {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        toast.success('Stripe credentials removed. Using platform credentials.')
+        setStripePublishableKey('')
+        setStripeSecretKey('')
+        setStripeWebhookSecret('')
+        await fetchStatus()
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Failed to remove Stripe credentials')
+      }
+    } catch (error) {
+      console.error('Failed to remove Stripe credentials:', error)
+      toast.error('Failed to remove Stripe credentials')
+    } finally {
+      setStripeDeleting(false)
     }
   }
 
@@ -393,11 +487,218 @@ export default function PaymentsSettingsPage() {
         </CardContent>
       </Card>
 
+      {/* ===== Stripe Section ===== */}
+      <div className="pt-6 border-t mt-6">
+        <h2 className="text-2xl font-bold mb-1">Stripe</h2>
+        <p className="text-muted-foreground text-sm mb-6">
+          For international payments (USD, EUR, GBP). Used automatically when your store currency is non-INR.
+        </p>
+      </div>
+
+      {/* Stripe Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5" />
+            Stripe Configuration
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            {stripeStatus?.configured && stripeStatus?.verified ? (
+              <>
+                <Badge variant="default" className="bg-green-600">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Custom Credentials Active
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  Payments are settled directly to your Stripe account
+                </span>
+              </>
+            ) : (
+              <>
+                <Badge variant="secondary">
+                  <Info className="h-3 w-3 mr-1" />
+                  Using Platform Credentials
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  Payments are processed through StoreForge
+                </span>
+              </>
+            )}
+          </div>
+
+          {stripeStatus?.verified && stripeStatus?.verified_at && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Verified on {new Date(stripeStatus.verified_at).toLocaleDateString()}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Stripe Credentials Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Stripe Credentials
+          </CardTitle>
+          <CardDescription>
+            Enter your Stripe API credentials. They will be encrypted before storage.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Publishable Key */}
+          <div className="space-y-2">
+            <Label htmlFor="stripe_pk">Publishable Key *</Label>
+            <Input
+              id="stripe_pk"
+              value={stripePublishableKey}
+              onChange={(e) => setStripePublishableKey(e.target.value)}
+              placeholder="pk_live_xxxxxxxxxxxxxxxx"
+            />
+            <p className="text-xs text-muted-foreground">
+              Found in Stripe Dashboard → Developers → API Keys
+            </p>
+          </div>
+
+          {/* Secret Key */}
+          <div className="space-y-2">
+            <Label htmlFor="stripe_sk">Secret Key *</Label>
+            <div className="relative">
+              <Input
+                id="stripe_sk"
+                type={showStripeSecretKey ? 'text' : 'password'}
+                value={stripeSecretKey}
+                onChange={(e) => setStripeSecretKey(e.target.value)}
+                placeholder={stripeStatus?.configured ? '••••••••••••' : 'sk_live_xxxxxxxxxxxxxxxx'}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-3"
+                onClick={() => setShowStripeSecretKey(!showStripeSecretKey)}
+              >
+                {showStripeSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Webhook Secret */}
+          <div className="space-y-2">
+            <Label htmlFor="stripe_wh">Webhook Secret (Optional)</Label>
+            <div className="relative">
+              <Input
+                id="stripe_wh"
+                type={showStripeWebhookSecret ? 'text' : 'password'}
+                value={stripeWebhookSecret}
+                onChange={(e) => setStripeWebhookSecret(e.target.value)}
+                placeholder={stripeStatus?.webhook_secret_masked || 'whsec_xxxxxxxxxxxxxxxx'}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-3"
+                onClick={() => setShowStripeWebhookSecret(!showStripeWebhookSecret)}
+              >
+                {showStripeWebhookSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Found in Stripe Dashboard → Developers → Webhooks
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4">
+            <Button onClick={handleStripeSave} disabled={stripeSaving || !stripePublishableKey || !stripeSecretKey}>
+              {stripeSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save & Verify
+            </Button>
+
+            {stripeStatus?.configured && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="text-destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Remove Credentials
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remove Stripe Credentials?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Your store will use platform credentials for Stripe payment processing.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleStripeDelete}
+                      disabled={stripeDeleting}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {stripeDeleting ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : null}
+                      Remove
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stripe Help */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Stripe Help</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <a
+            href="https://stripe.com/docs/api"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-primary hover:underline"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Stripe API Documentation
+          </a>
+          <a
+            href="https://dashboard.stripe.com/apikeys"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-primary hover:underline"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Stripe Dashboard - API Keys
+          </a>
+
+          <div className="pt-4 border-t mt-4">
+            <h4 className="font-medium text-sm mb-2">Webhook URL for Stripe:</h4>
+            <code className="text-xs bg-muted px-2 py-1 rounded block overflow-x-auto">
+              https://storeforge.site/api/webhooks/stripe
+            </code>
+            <p className="text-xs text-muted-foreground mt-2">
+              Add this URL in your Stripe webhook settings. Subscribe to: checkout.session.completed, checkout.session.expired, charge.refunded
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Security Notice */}
       <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
         <AlertCircle className="h-4 w-4 text-amber-600" />
         <AlertDescription className="text-amber-800 dark:text-amber-200">
-          <strong>Security Note:</strong> Your Key Secret and Webhook Secret are encrypted
+          <strong>Security Note:</strong> All secrets are encrypted
           with AES-256-GCM before storage. We never store or transmit these values in plaintext.
         </AlertDescription>
       </Alert>

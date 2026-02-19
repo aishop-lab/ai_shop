@@ -208,6 +208,8 @@ export default function ShippingProvidersPage() {
         return '📦'
       case 'bluedart':
         return '✈️'
+      case 'shippo':
+        return '🚢'
       case 'self':
         return '🏠'
       default:
@@ -641,6 +643,70 @@ export default function ShippingProvidersPage() {
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <p className="text-xs">
                   You can also call Blue Dart at <strong>1860-233-1234</strong> for faster onboarding. Mention you need NetConnect API access.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Shippo Guide */}
+          <div className="border rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-2xl">🚢</span>
+              <span className="font-semibold text-lg">Shippo</span>
+              <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">US Shipping</span>
+            </div>
+            <div className="space-y-3 text-sm">
+              <p className="text-gray-600">
+                Shippo connects you to USPS, UPS, FedEx, and DHL with a single API token. Best for US-based stores.
+              </p>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <p className="font-medium text-gray-800">Steps:</p>
+                <ol className="list-decimal list-inside space-y-2 text-gray-700">
+                  <li>
+                    Go to{' '}
+                    <a
+                      href="https://apps.goshippo.com/register"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                    >
+                      apps.goshippo.com/register
+                      <ExternalLink className="w-3 h-3" />
+                    </a>{' '}
+                    and create a free account
+                  </li>
+                  <li>Verify your email address</li>
+                  <li>Add your <strong>warehouse / pickup address</strong> in Shippo under <strong>Settings → Addresses</strong></li>
+                  <li>
+                    Go to{' '}
+                    <a
+                      href="https://apps.goshippo.com/settings/api"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                    >
+                      Settings → API
+                      <ExternalLink className="w-3 h-3" />
+                    </a>{' '}
+                    and copy your <strong>Live API Token</strong> (starts with <code className="bg-gray-200 px-1 rounded">shippo_live_</code>)
+                  </li>
+                  <li>Come back here and paste the API Token</li>
+                  <li>(Optional) Connect your own USPS, UPS, or FedEx carrier accounts in Shippo for negotiated rates</li>
+                </ol>
+              </div>
+              <div className="flex items-start gap-2 text-indigo-700 bg-indigo-50 p-3 rounded-lg">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <p className="text-xs">
+                  Shippo offers free USPS rates out of the box. For UPS/FedEx discounted rates, connect your carrier accounts in the{' '}
+                  <a
+                    href="https://apps.goshippo.com/settings/carriers"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    Shippo Carriers settings
+                  </a>.
+                  For testing, use a token starting with <code className="bg-indigo-100 px-1 rounded">shippo_test_</code>.
                 </p>
               </div>
             </div>

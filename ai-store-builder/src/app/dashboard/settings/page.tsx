@@ -498,7 +498,7 @@ export default function SettingsPage() {
                 </Button>
               </Link>
               <p className="text-xs text-muted-foreground text-center">
-                Connect Shiprocket, Delhivery, Blue Dart, or manage deliveries yourself
+                Connect Shiprocket, Delhivery, Blue Dart, Shippo (US), or manage deliveries yourself
               </p>
               <Link href="/dashboard/settings/shipping">
                 <Button variant="ghost" className="w-full text-sm">
@@ -561,7 +561,7 @@ export default function SettingsPage() {
               </div>
               <Link href="/dashboard/settings/payments">
                 <Button variant="outline" size="sm" className="mt-3">
-                  Configure Razorpay
+                  Configure Payments
                   <ExternalLink className="h-3 w-3 ml-2" />
                 </Button>
               </Link>

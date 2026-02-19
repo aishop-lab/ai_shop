@@ -18,6 +18,7 @@ import {
 } from './types'
 import { DelhiveryProvider } from './delhivery'
 import { BlueDartProvider } from './bluedart'
+import { ShippoProvider } from './shippo'
 
 const SHIPROCKET_API_BASE = 'https://apiv2.shiprocket.in/v1/external'
 
@@ -217,6 +218,13 @@ export async function validateProviderCredentials(
         return await bluedart.validateCredentials()
       }
 
+      case 'shippo': {
+        const shippo = new ShippoProvider({
+          apiToken: credentials.apiToken,
+        })
+        return await shippo.validateCredentials()
+      }
+
       case 'self':
         return { valid: true }
 
@@ -357,6 +365,13 @@ export async function createShipmentForStore(
           loginId: credentials.loginId,
         })
         return await bluedart.createShipment(request)
+      }
+
+      case 'shippo': {
+        const shippo = new ShippoProvider({
+          apiToken: credentials.apiToken,
+        })
+        return await shippo.createShipment(request)
       }
 
       default:
@@ -504,6 +519,14 @@ export async function getShippingRatesForStore(
           break
         }
 
+        case 'shippo': {
+          const shippo = new ShippoProvider({
+            apiToken: credentials.apiToken,
+          })
+          rateResponse = await shippo.getRates(request)
+          break
+        }
+
         default:
           continue
       }
@@ -647,6 +670,13 @@ export async function trackShipmentForStore(
         loginId: credentials.loginId,
       })
       return await bluedart.trackShipment(awbCode)
+    }
+
+    case 'shippo': {
+      const shippo = new ShippoProvider({
+        apiToken: credentials.apiToken,
+      })
+      return await shippo.trackShipment(awbCode)
     }
 
     default:

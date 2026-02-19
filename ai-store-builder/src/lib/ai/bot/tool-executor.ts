@@ -2,6 +2,8 @@
 // Executes tools by calling the appropriate dashboard APIs
 
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { generateText } from 'ai'
+import { getTextModel } from '@/lib/ai/provider'
 
 interface ToolContext {
   storeId: string
@@ -33,7 +35,7 @@ export async function executeGetProducts(
     const supabase = getSupabaseAdmin()
     let query = supabase
       .from('products')
-      .select('id, title, price, status, quantity, track_quantity, category, featured, sku', { count: 'exact' })
+      .select('id, title, price, status, quantity, track_quantity, categories, featured, sku', { count: 'exact' })
       .eq('store_id', ctx.storeId)
 
     if (args.status && args.status !== 'all') {
@@ -43,7 +45,7 @@ export async function executeGetProducts(
     }
 
     if (args.category) {
-      query = query.eq('category', args.category)
+      query = query.contains('categories', [args.category])
     }
 
     if (args.featured !== undefined) {
@@ -452,7 +454,7 @@ export async function executeCreateProduct(
         description: args.description || '',
         price: args.price,
         compare_at_price: args.compareAtPrice,
-        category: args.category || 'General',
+        categories: args.category ? [args.category] : ['General'],
         sku: args.sku,
         quantity: args.quantity || 0,
         track_quantity: args.trackQuantity ?? false,
@@ -502,7 +504,7 @@ export async function executeUpdateProduct(
     if (args.description !== undefined) updates.description = args.description
     if (args.price !== undefined) updates.price = args.price
     if (args.compareAtPrice !== undefined) updates.compare_at_price = args.compareAtPrice
-    if (args.category !== undefined) updates.category = args.category
+    if (args.category !== undefined) updates.categories = [args.category]
     if (args.quantity !== undefined) updates.quantity = args.quantity
     if (args.status !== undefined) updates.status = args.status
     if (args.featured !== undefined) updates.featured = args.featured
@@ -1370,11 +1372,11 @@ export async function executeGetRevenueAnalytics(
         .gte('created_at', start.toISOString()),
       compare
         ? supabase
-            .from('orders')
-            .select('id, total_amount, payment_status')
-            .eq('store_id', ctx.storeId)
-            .gte('created_at', prevStart.toISOString())
-            .lt('created_at', start.toISOString())
+          .from('orders')
+          .select('id, total_amount, payment_status')
+          .eq('store_id', ctx.storeId)
+          .gte('created_at', prevStart.toISOString())
+          .lt('created_at', start.toISOString())
         : Promise.resolve({ data: [] }),
     ])
 
@@ -1468,9 +1470,9 @@ export async function executeGetRevenueAnalytics(
         aov: paidOrders.length > 0 ? Math.round(totalRevenue / paidOrders.length) : 0,
         comparison: compare
           ? {
-              previousRevenue: prevRevenue,
-              growthPercent: prevRevenue > 0 ? Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 1000) / 10 : 0,
-            }
+            previousRevenue: prevRevenue,
+            growthPercent: prevRevenue > 0 ? Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 1000) / 10 : 0,
+          }
           : null,
         byPaymentMethod: byMethod,
         byCategory: sortedCategories,
@@ -1808,9 +1810,9 @@ export async function executeGetMarketingInsights(
       // Reviews
       productIds.length > 0
         ? supabase
-            .from('product_reviews')
-            .select('id, rating, status, created_at')
-            .in('product_id', productIds.slice(0, 500))
+          .from('product_reviews')
+          .select('id, rating, status, created_at')
+          .in('product_id', productIds.slice(0, 500))
         : Promise.resolve({ data: [] }),
     ])
 
@@ -2023,10 +2025,10 @@ export async function executeGetActionableInsights(
       // Pending reviews
       productIds.length > 0
         ? supabase
-            .from('product_reviews')
-            .select('id', { count: 'exact', head: true })
-            .in('product_id', productIds.slice(0, 500))
-            .eq('status', 'pending')
+          .from('product_reviews')
+          .select('id', { count: 'exact', head: true })
+          .in('product_id', productIds.slice(0, 500))
+          .eq('status', 'pending')
         : Promise.resolve({ count: 0 }),
       // Expiring coupons (within 3 days)
       supabase
@@ -2196,6 +2198,246 @@ export async function executeGetActionableInsights(
 }
 
 // =============================================================================
+// UI TOOL EXECUTORS (client-side actions acknowledged by server)
+// =============================================================================
+
+export async function executeNavigateTo(
+  args: { page: string },
+  _ctx: ToolContext
+): Promise<ToolResult> {
+  // Server acknowledges the navigation request; the client-side UI
+  // will pick up the `page` value from the tool result and navigate.
+  const pageLabels: Record<string, string> = {
+    dashboard: 'Dashboard',
+    products: 'Products',
+    'products/new': 'Add New Product',
+    orders: 'Orders',
+    coupons: 'Coupons',
+    collections: 'Collections',
+    reviews: 'Reviews',
+    analytics: 'Analytics',
+    settings: 'Settings',
+    'settings/branding': 'Branding Settings',
+    'settings/shipping': 'Shipping Settings',
+    'settings/payments': 'Payment Settings',
+  }
+
+  const label = pageLabels[args.page] || args.page
+
+  return {
+    success: true,
+    data: { page: args.page },
+    message: `Navigate to ${label}`,
+  }
+}
+
+export async function executeShowNotification(
+  args: { message: string; type?: string },
+  _ctx: ToolContext
+): Promise<ToolResult> {
+  // Server acknowledges; the UI will display the toast notification
+  return {
+    success: true,
+    data: { message: args.message, type: args.type || 'info' },
+    message: args.message,
+  }
+}
+
+// =============================================================================
+// AI GENERATION TOOL EXECUTORS
+// =============================================================================
+
+export async function executeGenerateProductDescription(
+  args: { title: string; category?: string; attributes?: Record<string, string> },
+  _ctx: ToolContext
+): Promise<ToolResult> {
+  try {
+    const attributeText = args.attributes
+      ? Object.entries(args.attributes)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(', ')
+      : ''
+
+    const prompt = `Write a compelling, SEO-friendly product description for an Indian e-commerce store.
+
+Product: ${args.title}
+${args.category ? `Category: ${args.category}` : ''}
+${attributeText ? `Attributes: ${attributeText}` : ''}
+
+Requirements:
+- 2-3 short paragraphs
+- Highlight key benefits and features
+- Use persuasive, professional tone
+- Include relevant keywords naturally
+- Suitable for Indian market (mention INR if referencing value)
+- Do NOT include any pricing or made-up specifications
+- End with a subtle call-to-action
+
+Return ONLY the product description text, no headings or labels.`
+
+    const result = await generateText({
+      model: getTextModel(),
+      prompt,
+    })
+
+    return {
+      success: true,
+      data: { description: result.text },
+      message: `Generated description for "${args.title}"`,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to generate product description',
+    }
+  }
+}
+
+export async function executeGenerateLogo(
+  args: { style?: string; feedback?: string },
+  _ctx: ToolContext
+): Promise<ToolResult> {
+  // Logo generation requires image generation capabilities (Vertex AI Imagen)
+  // which may not be configured. Return helpful guidance instead.
+  const style = args.style || 'modern'
+
+  return {
+    success: true,
+    data: {
+      style,
+      suggestion: `To generate a logo, go to Settings → Branding. The logo generator there supports ${style} style logos.`,
+    },
+    message: `For logo generation, please use the Branding settings page which has the full logo generator with preview. I can help you navigate there — just say "go to branding settings".`,
+  }
+}
+
+export async function executeSuggestPricing(
+  args: { productId?: string; title?: string; category?: string; cost?: number },
+  ctx: ToolContext
+): Promise<ToolResult> {
+  try {
+    const supabase = getSupabaseAdmin()
+
+    // If productId is given, fetch the product details
+    let productTitle = args.title || 'Unknown Product'
+    let productCategory = args.category || 'General'
+    let productCost = args.cost
+
+    if (args.productId) {
+      const { data: product } = await supabase
+        .from('products')
+        .select('title, category, price, cost_price')
+        .eq('id', args.productId)
+        .eq('store_id', ctx.storeId)
+        .single()
+
+      if (product) {
+        productTitle = product.title
+        productCategory = product.category || 'General'
+        productCost = product.cost_price || args.cost
+      }
+    }
+
+    // Get comparable products in the same category for this store
+    const { data: categoryProducts } = await supabase
+      .from('products')
+      .select('title, price, compare_at_price')
+      .eq('store_id', ctx.storeId)
+      .eq('category', productCategory)
+      .neq('status', 'archived')
+      .order('price', { ascending: true })
+      .limit(20)
+
+    const prices = (categoryProducts || []).map((p) => p.price).filter((p) => p > 0)
+    const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0
+    const minPrice = prices.length > 0 ? Math.min(...prices) : 0
+    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0
+
+    // Build pricing suggestions
+    const suggestions: {
+      strategy: string
+      price: number
+      compareAtPrice?: number
+      margin?: number
+      reasoning: string
+    }[] = []
+
+    if (productCost && productCost > 0) {
+      // Cost-based pricing
+      const margins = [
+        { name: 'Competitive', margin: 0.30, desc: '30% margin — aggressive, volume-focused' },
+        { name: 'Balanced', margin: 0.50, desc: '50% margin — healthy for most D2C brands' },
+        { name: 'Premium', margin: 0.70, desc: '70% margin — premium positioning' },
+      ]
+
+      for (const m of margins) {
+        const suggestedPrice = Math.ceil(productCost / (1 - m.margin) / 10) * 10 - 1 // Round to X99
+        suggestions.push({
+          strategy: m.name,
+          price: suggestedPrice,
+          compareAtPrice: Math.ceil(suggestedPrice * 1.25 / 10) * 10 - 1,
+          margin: Math.round(m.margin * 100),
+          reasoning: m.desc,
+        })
+      }
+    } else if (avgPrice > 0) {
+      // Market-based pricing (no cost data)
+      suggestions.push(
+        {
+          strategy: 'Below Market',
+          price: Math.ceil((avgPrice * 0.85) / 10) * 10 - 1,
+          reasoning: `15% below category average (₹${Math.round(avgPrice)}) — good for new entries`,
+        },
+        {
+          strategy: 'Market Rate',
+          price: Math.ceil(avgPrice / 10) * 10 - 1,
+          reasoning: `At category average — safe, competitive positioning`,
+        },
+        {
+          strategy: 'Above Market',
+          price: Math.ceil((avgPrice * 1.20) / 10) * 10 - 1,
+          compareAtPrice: Math.ceil((avgPrice * 1.50) / 10) * 10 - 1,
+          reasoning: `20% above average — premium positioning with MRP discount shown`,
+        }
+      )
+    } else {
+      // No data at all — give general advice
+      return {
+        success: true,
+        data: {
+          product: productTitle,
+          category: productCategory,
+          note: 'No comparable products found in this category. Add your cost price for margin-based suggestions.',
+        },
+        message: `I don't have enough data to suggest specific prices for "${productTitle}". If you tell me your cost price, I can calculate optimal pricing with healthy margins.`,
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        product: productTitle,
+        category: productCategory,
+        costPrice: productCost || null,
+        categoryPriceRange: prices.length > 0 ? { min: minPrice, avg: Math.round(avgPrice), max: maxPrice, sampleSize: prices.length } : null,
+        suggestions,
+        tips: [
+          'Use ₹X99 pricing (e.g., ₹999, ₹1,499) — Indian shoppers respond well to it',
+          'Always show compare_at_price to display a "X% off" badge',
+          'Set free shipping threshold at 1.3× your AOV to boost basket size',
+        ],
+      },
+      message: `Pricing suggestions for "${productTitle}" in ${productCategory}`,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to suggest pricing',
+    }
+  }
+}
+
+// =============================================================================
 // MAIN EXECUTOR
 // =============================================================================
 
@@ -2243,6 +2485,15 @@ export async function executeTool(
     deleteReview: executeDeleteReview as (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult>,
     processRefund: executeProcessRefund as (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult>,
     bulkDeleteProducts: executeBulkDeleteProducts as (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult>,
+
+    // UI tools
+    navigateTo: executeNavigateTo as (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult>,
+    showNotification: executeShowNotification as (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult>,
+
+    // AI generation tools
+    generateProductDescription: executeGenerateProductDescription as (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult>,
+    generateLogo: executeGenerateLogo as (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult>,
+    suggestPricing: executeSuggestPricing as (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult>,
   }
 
   const executor = executors[toolName]

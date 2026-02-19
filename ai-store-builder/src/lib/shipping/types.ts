@@ -3,7 +3,7 @@
  * Supports Shiprocket, Delhivery, Blue Dart, and Self-Delivery
  */
 
-export type ShippingProviderType = 'shiprocket' | 'delhivery' | 'bluedart' | 'self'
+export type ShippingProviderType = 'shiprocket' | 'delhivery' | 'bluedart' | 'shippo' | 'self'
 
 export interface ShippingProviderCredentials {
   shiprocket?: {
@@ -19,6 +19,9 @@ export interface ShippingProviderCredentials {
     clientCode: string
     licenseKey: string
     loginId: string
+  }
+  shippo?: {
+    apiToken: string
   }
 }
 
@@ -219,6 +222,13 @@ export const SHIPPING_PROVIDERS: Record<ShippingProviderType, {
       { key: 'clientCode', label: 'Client Code', type: 'text' },
       { key: 'licenseKey', label: 'License Key', type: 'password' },
       { key: 'loginId', label: 'Login ID', type: 'text' },
+    ],
+  },
+  shippo: {
+    name: 'Shippo',
+    description: 'Multi-carrier US shipping (USPS, UPS, FedEx). Best for US-based stores.',
+    requiredFields: [
+      { key: 'apiToken', label: 'API Token', type: 'password' },
     ],
   },
   self: {

@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { validateCartItems } from '@/lib/cart/validation'
 import { calculateCartTotal } from '@/lib/cart/calculations'
 import { createRazorpayOrder, getStoreRazorpayCredentials, getStoreRazorpayKeyId } from '@/lib/payment/razorpay'
+import { createStripeCheckoutSession, getStoreStripeCredentials, getStoreStripePublishableKey } from '@/lib/payment/stripe'
 import { reserveInventory } from '@/lib/orders/inventory'
 import { sendOrderConfirmationEmail } from '@/lib/email/order-confirmation'
 import { sendShipmentFailedEmail } from '@/lib/email/merchant-notifications'
@@ -41,7 +42,7 @@ const createOrderSchema = z.object({
     email: z.string().email('Valid email required'),
     phone: z.string().min(10, 'Valid phone number required'),
   }),
-  payment_method: z.enum(['razorpay', 'cod']),
+  payment_method: z.enum(['razorpay', 'stripe', 'cod']),
 })
 
 export async function POST(
@@ -110,7 +111,7 @@ export async function POST(
     // 2. Get store settings
     const { data: store, error: storeError } = await getSupabaseAdmin()
       .from('stores')
-      .select('settings, owner_id, name')
+      .select('settings, owner_id, name, slug, blueprint')
       .eq('id', store_id)
       .single()
 
@@ -122,6 +123,10 @@ export async function POST(
     }
 
     const settings = (store.settings || {}) as StoreSettings
+
+    // Determine store currency from blueprint
+    const blueprint = store.blueprint as Record<string, any> | null
+    const currency = blueprint?.location?.currency || 'INR'
 
     // 3. Check if COD is allowed
     if (payment_method === 'cod' && !settings.shipping?.cod_enabled) {
@@ -179,6 +184,7 @@ export async function POST(
       tax_amount: totals.tax,
       discount_amount: totals.discount,
       total: totals.total,
+      currency,
       payment_method,
       payment_status: 'pending',
       fulfillment_status: 'unfulfilled',
@@ -229,9 +235,12 @@ export async function POST(
       )
     }
 
-    // 9. Create Razorpay order (for online payment only)
+    // 9. Create payment order (Razorpay or Stripe)
     let razorpayOrder = null
     let razorpayKeyId = process.env.RAZORPAY_KEY_ID
+    let stripeSessionUrl: string | undefined
+    let stripePublishableKey: string | undefined
+
     if (payment_method === 'razorpay') {
       try {
         // Fetch store-specific Razorpay credentials (if configured)
@@ -239,7 +248,7 @@ export async function POST(
 
         razorpayOrder = await createRazorpayOrder(
           totals.total,
-          'INR',
+          currency,
           orderNumber,
           {
             order_id: orderId,
@@ -259,6 +268,51 @@ export async function POST(
           .eq('id', orderId)
       } catch (razorpayError) {
         console.error('Razorpay order creation failed:', razorpayError)
+        // Clean up order and items
+        await getSupabaseAdmin().from('order_items').delete().eq('order_id', orderId)
+        await getSupabaseAdmin().from('orders').delete().eq('id', orderId)
+        return NextResponse.json(
+          { success: false, error: 'Failed to initialize payment' },
+          { status: 500 }
+        )
+      }
+    } else if (payment_method === 'stripe') {
+      try {
+        // Fetch store-specific Stripe credentials (if configured)
+        const storeStripeCredentials = await getStoreStripeCredentials(store_id, getSupabaseAdmin())
+
+        // Build success/cancel URLs
+        const storeSlug = store.slug || ''
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://storeforge.site'
+        const storeBaseUrl = process.env.NODE_ENV === 'production'
+          ? `https://${storeSlug}.${appUrl.replace('https://', '')}`
+          : `${appUrl}/${storeSlug}`
+        const successUrl = `${storeBaseUrl}/thank-you?order=${orderNumber}`
+        const cancelUrl = `${storeBaseUrl}/checkout`
+
+        const session = await createStripeCheckoutSession(
+          totals.total,
+          currency,
+          orderNumber,
+          orderId,
+          store_id,
+          store.name,
+          customer_details.email,
+          successUrl,
+          cancelUrl,
+          storeStripeCredentials || undefined
+        )
+
+        stripeSessionUrl = session.url
+        stripePublishableKey = storeStripeCredentials?.publishable_key || process.env.STRIPE_PUBLISHABLE_KEY
+
+        // Update order with Stripe session ID
+        await getSupabaseAdmin()
+          .from('orders')
+          .update({ stripe_session_id: session.sessionId })
+          .eq('id', orderId)
+      } catch (stripeError) {
+        console.error('Stripe session creation failed:', stripeError)
         // Clean up order and items
         await getSupabaseAdmin().from('order_items').delete().eq('order_id', orderId)
         await getSupabaseAdmin().from('orders').delete().eq('id', orderId)
@@ -416,8 +470,11 @@ export async function POST(
         id: orderId,
         order_number: orderNumber,
         total_amount: totals.total,
+        currency,
         razorpay_order_id: razorpayOrder?.id,
         razorpay_key_id: razorpayKeyId,
+        stripe_session_url: stripeSessionUrl,
+        stripe_publishable_key: stripePublishableKey,
       },
     })
   } catch (error) {

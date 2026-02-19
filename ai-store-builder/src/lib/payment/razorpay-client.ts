@@ -94,12 +94,13 @@ export function createRazorpayOptions(
   },
   brandColor: string,
   onSuccess: (response: RazorpayResponse) => void,
-  onDismiss: () => void
+  onDismiss: () => void,
+  currency: string = 'INR'
 ): RazorpayOptions {
   return {
     key: razorpayKeyId,
-    amount: Math.round(amount * 100), // Convert to paise
-    currency: 'INR',
+    amount: Math.round(amount * 100), // Convert to smallest unit
+    currency,
     name: storeName,
     description: `Order #${orderNumber}`,
     order_id: razorpayOrderId,

@@ -25,6 +25,23 @@ export interface RazorpayCredentialStatus {
   using_platform_credentials: boolean
 }
 
+// Stripe Credentials Types
+export interface StripeCredentials {
+  publishable_key: string
+  secret_key: string
+  webhook_secret?: string
+}
+
+export interface StripeCredentialStatus {
+  configured: boolean
+  verified: boolean
+  verified_at: string | null
+  publishable_key: string | null
+  secret_key_masked: string | null
+  webhook_secret_masked: string | null
+  using_platform_credentials: boolean
+}
+
 export interface StorePageData {
   store: Store
   products: Product[]

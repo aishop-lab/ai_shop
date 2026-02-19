@@ -29,6 +29,7 @@ import {
   createRazorpayOptions,
   type RazorpayResponse,
 } from '@/lib/payment/razorpay-client'
+import { redirectToStripeCheckout } from '@/lib/payment/stripe-client'
 import AddressAutocomplete from './address-autocomplete'
 import SavedAddressSelector, { type SavedAddress } from './saved-address-selector'
 import DeliveryEstimate, { DeliveryEstimateInline } from './delivery-estimate'
@@ -52,8 +53,11 @@ interface OrderResponse {
     id: string
     order_number: string
     total_amount: number
+    currency?: string
     razorpay_order_id?: string
     razorpay_key_id?: string
+    stripe_session_url?: string
+    stripe_publishable_key?: string
   }
   error?: string
   details?: string[]
@@ -74,6 +78,10 @@ export default function StoreCheckoutPage() {
   const analytics = useAnalytics()
   const isHydrated = useIsHydrated()
   const baseUrl = `/${store.slug}`
+
+  // Determine store currency and payment provider
+  const storeCurrency = (store.blueprint as any)?.location?.currency || 'INR'
+  const useStripe = storeCurrency !== 'INR' // INR → Razorpay, everything else → Stripe
 
   // Form state
   const [formData, setFormData] = useState({
@@ -358,7 +366,7 @@ export default function StoreCheckoutPage() {
             email: formData.email,
             phone: cleanPhone,
           },
-          payment_method: formData.paymentMethod === 'cod' ? 'cod' : 'razorpay',
+          payment_method: formData.paymentMethod === 'cod' ? 'cod' : (useStripe ? 'stripe' : 'razorpay'),
         }),
       })
 
@@ -375,6 +383,10 @@ export default function StoreCheckoutPage() {
         // COD - redirect to thank you page immediately
         clearCart()
         router.push(`${baseUrl}/thank-you?order=${data.order.order_number}`)
+      } else if (data.order.stripe_session_url) {
+        // Stripe - redirect to Stripe Checkout
+        clearCart()
+        redirectToStripeCheckout(data.order.stripe_session_url)
       } else {
         // Razorpay - open payment modal
         openRazorpayModal(data.order)
@@ -509,12 +521,14 @@ export default function StoreCheckoutPage() {
 
   return (
     <>
-      {/* Load Razorpay script */}
-      <Script
-        src="https://checkout.razorpay.com/v1/checkout.js"
-        onLoad={() => setRazorpayLoaded(true)}
-        strategy="lazyOnload"
-      />
+      {/* Load Razorpay script (only for INR stores) */}
+      {!useStripe && (
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          onLoad={() => setRazorpayLoaded(true)}
+          strategy="lazyOnload"
+        />
+      )}
 
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Link */}
@@ -868,20 +882,24 @@ export default function StoreCheckoutPage() {
                     </div>
                     <CreditCard className="w-5 h-5 text-gray-400" />
                     <div className="flex-1">
-                      <p className="font-medium">Pay Online</p>
+                      <p className="font-medium">{useStripe ? 'Pay with Card' : 'Pay Online'}</p>
                       <p className="text-sm text-gray-500">
-                        Credit/Debit Card, UPI, Net Banking, Wallets
+                        {useStripe
+                          ? 'Credit/Debit Card, Apple Pay, Google Pay'
+                          : 'Credit/Debit Card, UPI, Net Banking, Wallets'}
                       </p>
                     </div>
-                    <div className="hidden sm:flex items-center gap-1">
-                      <Image
-                        src="/razorpay-logo.svg"
-                        alt="Razorpay"
-                        width={80}
-                        height={20}
-                        className="opacity-60"
-                      />
-                    </div>
+                    {!useStripe && (
+                      <div className="hidden sm:flex items-center gap-1">
+                        <Image
+                          src="/razorpay-logo.svg"
+                          alt="Razorpay"
+                          width={80}
+                          height={20}
+                          className="opacity-60"
+                        />
+                      </div>
+                    )}
                   </label>
 
                   {settings.shipping?.cod_enabled && (

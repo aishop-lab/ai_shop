@@ -25,6 +25,9 @@ export interface Order {
   payment_status: PaymentStatus
   razorpay_order_id?: string
   razorpay_payment_id?: string
+  stripe_session_id?: string
+  stripe_payment_intent_id?: string
+  currency?: string
   payment_error?: string
 
   // Status
@@ -83,7 +86,7 @@ export interface ShippingAddress {
   country: string
 }
 
-export type PaymentMethod = 'razorpay' | 'cod'
+export type PaymentMethod = 'razorpay' | 'stripe' | 'cod'
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded'
 export type OrderStatus =
   | 'pending'
@@ -116,8 +119,11 @@ export interface CreateOrderResponse {
     id: string
     order_number: string
     total_amount: number
+    currency?: string
     razorpay_order_id?: string
     razorpay_key_id?: string
+    stripe_session_url?: string
+    stripe_publishable_key?: string
   }
   error?: string
   details?: string[]
