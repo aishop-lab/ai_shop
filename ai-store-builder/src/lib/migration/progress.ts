@@ -59,6 +59,15 @@ export async function updateMigrationCounts(
     total_images?: number
     migrated_images?: number
     failed_images?: number
+    total_orders?: number
+    migrated_orders?: number
+    failed_orders?: number
+    total_customers?: number
+    migrated_customers?: number
+    failed_customers?: number
+    total_coupons?: number
+    migrated_coupons?: number
+    failed_coupons?: number
   }
 ): Promise<void> {
   const supabase = await createClient()
@@ -73,14 +82,20 @@ export async function updateMigrationCounts(
 
 export async function incrementMigrationCount(
   migrationId: string,
-  field: 'migrated_products' | 'failed_products' | 'migrated_collections' | 'failed_collections' | 'migrated_images' | 'failed_images',
+  field:
+    | 'migrated_products' | 'failed_products'
+    | 'migrated_collections' | 'failed_collections'
+    | 'migrated_images' | 'failed_images'
+    | 'migrated_orders' | 'failed_orders'
+    | 'migrated_customers' | 'failed_customers'
+    | 'migrated_coupons' | 'failed_coupons',
   amount: number = 1
 ): Promise<void> {
   const supabase = await createClient()
   // Fetch current value then update since Supabase doesn't support atomic increment
   const { data } = await supabase
     .from('store_migrations')
-    .select('migrated_products, failed_products, migrated_collections, failed_collections, migrated_images, failed_images')
+    .select('migrated_products, failed_products, migrated_collections, failed_collections, migrated_images, failed_images, migrated_orders, failed_orders, migrated_customers, failed_customers, migrated_coupons, failed_coupons')
     .eq('id', migrationId)
     .single()
 
@@ -163,6 +178,78 @@ export async function updateCollectionIdMap(
     .from('store_migrations')
     .update({
       collection_id_map: currentMap,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', migrationId)
+}
+
+export async function updateCustomerIdMap(
+  migrationId: string,
+  sourceId: string,
+  storeforgeId: string
+): Promise<void> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('store_migrations')
+    .select('customer_id_map')
+    .eq('id', migrationId)
+    .single()
+
+  const currentMap = (data?.customer_id_map as Record<string, string>) || {}
+  currentMap[sourceId] = storeforgeId
+
+  await supabase
+    .from('store_migrations')
+    .update({
+      customer_id_map: currentMap,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', migrationId)
+}
+
+export async function updateOrderIdMap(
+  migrationId: string,
+  sourceId: string,
+  storeforgeId: string
+): Promise<void> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('store_migrations')
+    .select('order_id_map')
+    .eq('id', migrationId)
+    .single()
+
+  const currentMap = (data?.order_id_map as Record<string, string>) || {}
+  currentMap[sourceId] = storeforgeId
+
+  await supabase
+    .from('store_migrations')
+    .update({
+      order_id_map: currentMap,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', migrationId)
+}
+
+export async function updateCouponIdMap(
+  migrationId: string,
+  sourceId: string,
+  storeforgeId: string
+): Promise<void> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('store_migrations')
+    .select('coupon_id_map')
+    .eq('id', migrationId)
+    .single()
+
+  const currentMap = (data?.coupon_id_map as Record<string, string>) || {}
+  currentMap[sourceId] = storeforgeId
+
+  await supabase
+    .from('store_migrations')
+    .update({
+      coupon_id_map: currentMap,
       updated_at: new Date().toISOString(),
     })
     .eq('id', migrationId)

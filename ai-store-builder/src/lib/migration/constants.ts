@@ -23,7 +23,7 @@ export function getAppUrl(): string {
 }
 
 // OAuth scopes
-export const SHOPIFY_SCOPES = 'read_products'
+export const SHOPIFY_SCOPES = 'read_products,read_orders,read_customers,read_discounts'
 export const ETSY_SCOPES = 'listings_r shops_r'
 
 // API URLs

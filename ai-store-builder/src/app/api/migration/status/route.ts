@@ -48,14 +48,28 @@ export async function GET(request: NextRequest) {
     }
 
     // Determine current phase
-    let currentPhase: 'products' | 'collections' | 'done' = 'products'
+    let currentPhase: MigrationProgress['current_phase'] = 'products'
     if (migration.status === 'completed') {
       currentPhase = 'done'
-    } else if (
-      migration.migrated_products + migration.failed_products >= migration.total_products &&
-      migration.total_products > 0
-    ) {
-      currentPhase = 'collections'
+    } else {
+      const productsDone = migration.total_products > 0 &&
+        migration.migrated_products + migration.failed_products >= migration.total_products
+      const collectionsDone = migration.total_collections > 0 &&
+        migration.migrated_collections + migration.failed_collections >= migration.total_collections
+      const customersDone = migration.total_customers > 0 &&
+        migration.migrated_customers + migration.failed_customers >= migration.total_customers
+      const couponsDone = migration.total_coupons > 0 &&
+        migration.migrated_coupons + migration.failed_coupons >= migration.total_coupons
+
+      if (productsDone && collectionsDone && customersDone && couponsDone) {
+        currentPhase = 'orders'
+      } else if (productsDone && collectionsDone && customersDone) {
+        currentPhase = 'coupons'
+      } else if (productsDone && collectionsDone) {
+        currentPhase = 'customers'
+      } else if (productsDone) {
+        currentPhase = 'collections'
+      }
     }
 
     const progress: MigrationProgress = {
@@ -72,6 +86,15 @@ export async function GET(request: NextRequest) {
       total_images: migration.total_images,
       migrated_images: migration.migrated_images,
       failed_images: migration.failed_images,
+      total_orders: migration.total_orders ?? 0,
+      migrated_orders: migration.migrated_orders ?? 0,
+      failed_orders: migration.failed_orders ?? 0,
+      total_customers: migration.total_customers ?? 0,
+      migrated_customers: migration.migrated_customers ?? 0,
+      failed_customers: migration.failed_customers ?? 0,
+      total_coupons: migration.total_coupons ?? 0,
+      migrated_coupons: migration.migrated_coupons ?? 0,
+      failed_coupons: migration.failed_coupons ?? 0,
       errors: migration.errors,
       started_at: migration.started_at,
       completed_at: migration.completed_at,

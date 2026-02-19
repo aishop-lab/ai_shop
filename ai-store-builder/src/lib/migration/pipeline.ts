@@ -12,6 +12,9 @@ import {
   addMigrationError,
   updateProductIdMap,
   updateCollectionIdMap,
+  updateCustomerIdMap,
+  updateOrderIdMap,
+  updateCouponIdMap,
   saveMigrationCursor,
 } from './progress'
 import {
@@ -23,12 +26,25 @@ import type {
   MigrationConfig,
   MigrationProduct,
   MigrationCollection,
+  MigrationCustomer,
+  MigrationCoupon,
+  MigrationOrder,
   StoreMigration,
 } from './types'
 
 // Shopify imports
-import { fetchShopifyProducts, fetchShopifyCollections, getShopifyProductCount, getShopifyCollectionCount, ShopifyRateLimitError } from './shopify/client'
+import {
+  fetchShopifyProducts, fetchShopifyCollections,
+  getShopifyProductCount, getShopifyCollectionCount,
+  fetchShopifyOrders, getShopifyOrderCount,
+  fetchShopifyCustomers, getShopifyCustomerCount,
+  fetchShopifyDiscounts,
+  ShopifyRateLimitError,
+} from './shopify/client'
 import { transformShopifyProduct, transformShopifyCollection } from './shopify/transformer'
+import { transformShopifyOrder } from './shopify/order-transformer'
+import { transformShopifyCustomer } from './shopify/customer-transformer'
+import { transformShopifyDiscount } from './shopify/discount-transformer'
 
 // Etsy imports
 import { fetchEtsyListings, fetchEtsySections, fetchEtsySectionListings, getEtsyListingCount, EtsyRateLimitError } from './etsy/client'
@@ -199,6 +215,147 @@ async function createMigratedCollection(
 }
 
 /**
+ * Create a StoreForge customer from normalized migration data
+ */
+async function createMigratedCustomer(
+  storeId: string,
+  customer: MigrationCustomer
+): Promise<string> {
+  const supabase = await createClient()
+
+  const { data: created, error } = await supabase
+    .from('customers')
+    .insert({
+      store_id: storeId,
+      email: customer.email,
+      full_name: customer.full_name,
+      phone: customer.phone || null,
+      total_orders: customer.total_orders,
+      total_spent: customer.total_spent,
+    })
+    .select('id')
+    .single()
+
+  if (error || !created) {
+    throw new Error(`Failed to create customer: ${error?.message}`)
+  }
+
+  // Create addresses
+  if (customer.addresses.length > 0) {
+    const addressRows = customer.addresses.map(addr => ({
+      customer_id: created.id,
+      full_name: addr.full_name,
+      phone: addr.phone || '',
+      address_line1: addr.address_line1,
+      address_line2: addr.address_line2 || null,
+      city: addr.city,
+      state: addr.state,
+      pincode: addr.pincode,
+      country: addr.country,
+      is_default: addr.is_default,
+    }))
+
+    await supabase.from('customer_addresses').insert(addressRows)
+  }
+
+  return created.id
+}
+
+/**
+ * Create a StoreForge coupon from normalized migration data
+ */
+async function createMigratedCoupon(
+  storeId: string,
+  coupon: MigrationCoupon
+): Promise<string> {
+  const supabase = await createClient()
+
+  const { data: created, error } = await supabase
+    .from('coupons')
+    .insert({
+      store_id: storeId,
+      code: coupon.code,
+      description: coupon.description || null,
+      discount_type: coupon.discount_type,
+      discount_value: coupon.discount_type === 'free_shipping' ? 1 : coupon.discount_value,
+      minimum_order_value: coupon.minimum_order_value || null,
+      usage_limit: coupon.usage_limit || null,
+      usage_count: coupon.usage_count,
+      starts_at: coupon.starts_at || null,
+      expires_at: coupon.expires_at || null,
+      active: coupon.active,
+    })
+    .select('id')
+    .single()
+
+  if (error || !created) {
+    throw new Error(`Failed to create coupon: ${error?.message}`)
+  }
+
+  return created.id
+}
+
+/**
+ * Create a StoreForge order from normalized migration data
+ */
+async function createMigratedOrder(
+  storeId: string,
+  order: MigrationOrder,
+  customerEmailMap: Record<string, string>,
+  productIdMap: Record<string, string>
+): Promise<string> {
+  const supabase = await createClient()
+
+  // Resolve customer_id from email
+  const customerId = order.customer_email ? customerEmailMap[order.customer_email] : undefined
+
+  const { data: created, error } = await supabase
+    .from('orders')
+    .insert({
+      store_id: storeId,
+      order_number: order.order_number,
+      customer_name: order.customer_name,
+      customer_email: order.customer_email || 'unknown@import.storeforge',
+      customer_phone: order.customer_phone || null,
+      shipping_address: order.shipping_address,
+      subtotal: order.subtotal,
+      shipping_cost: order.shipping_cost,
+      tax_amount: order.tax_amount,
+      discount_amount: order.discount_amount,
+      total_amount: order.total_amount,
+      payment_method: order.payment_method,
+      payment_status: order.payment_status,
+      order_status: order.order_status,
+      coupon_code: order.coupon_code || null,
+      customer_id: customerId || null,
+      created_at: order.created_at,
+      ...(order.payment_status === 'paid' ? { paid_at: order.created_at } : {}),
+    })
+    .select('id')
+    .single()
+
+  if (error || !created) {
+    throw new Error(`Failed to create order: ${error?.message}`)
+  }
+
+  // Create order items
+  if (order.line_items.length > 0) {
+    const itemRows = order.line_items.map(item => ({
+      order_id: created.id,
+      product_id: item.source_product_id ? (productIdMap[item.source_product_id] || null) : null,
+      product_title: item.title,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_price: item.total_price,
+    }))
+
+    await supabase.from('order_items').insert(itemRows)
+  }
+
+  return created.id
+}
+
+/**
  * Main migration pipeline - orchestrates the entire process
  */
 export async function runMigrationPipeline(config: MigrationConfig): Promise<void> {
@@ -246,6 +403,42 @@ export async function runMigrationPipeline(config: MigrationConfig): Promise<voi
     // =====================
     if (config.import_collections) {
       await migrateCollections(migration, accessToken, startTime)
+
+      const updatedMigration = await getMigration(migration.id)
+      if (updatedMigration?.status === 'paused' || updatedMigration?.status === 'cancelled') {
+        return
+      }
+    }
+
+    // =====================
+    // Phase 3: Customers (Shopify only)
+    // =====================
+    if (config.import_customers && migration.platform === 'shopify') {
+      await migrateCustomers(migration, accessToken, startTime)
+
+      const updatedMigration = await getMigration(migration.id)
+      if (updatedMigration?.status === 'paused' || updatedMigration?.status === 'cancelled') {
+        return
+      }
+    }
+
+    // =====================
+    // Phase 4: Coupons (Shopify only)
+    // =====================
+    if (config.import_coupons && migration.platform === 'shopify') {
+      await migrateCoupons(migration, accessToken, startTime)
+
+      const updatedMigration = await getMigration(migration.id)
+      if (updatedMigration?.status === 'paused' || updatedMigration?.status === 'cancelled') {
+        return
+      }
+    }
+
+    // =====================
+    // Phase 5: Orders (Shopify only, runs last to link customers)
+    // =====================
+    if (config.import_orders && migration.platform === 'shopify') {
+      await migrateOrders(migration, accessToken, startTime)
 
       const updatedMigration = await getMigration(migration.id)
       if (updatedMigration?.status === 'paused' || updatedMigration?.status === 'cancelled') {
@@ -542,6 +735,328 @@ async function migrateCollections(
     console.error('[Migration] Collection migration error:', error)
     await addMigrationError(migration.id, {
       type: 'collection',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    })
+  }
+}
+
+/**
+ * Migrate customers from Shopify
+ */
+async function migrateCustomers(
+  migration: StoreMigration,
+  accessToken: string,
+  startTime: number
+): Promise<void> {
+  try {
+    const totalCustomers = await getShopifyCustomerCount(
+      migration.source_shop_id!,
+      accessToken
+    )
+    await updateMigrationCounts(migration.id, { total_customers: totalCustomers })
+
+    let cursor: string | null = null
+    let hasMore = true
+    let rateLimitAttempts = 0
+
+    while (hasMore) {
+      if (Date.now() - startTime > MAX_MIGRATION_DURATION_MS) {
+        await updateMigrationStatus(migration.id, 'paused')
+        return
+      }
+
+      const current = await getMigration(migration.id)
+      if (current?.status === 'cancelled') return
+
+      try {
+        const page = await fetchShopifyCustomers(
+          migration.source_shop_id!,
+          accessToken,
+          cursor
+        )
+
+        rateLimitAttempts = 0
+
+        const customers = page.customers
+          .map(transformShopifyCustomer)
+          .filter((c): c is MigrationCustomer => c !== null)
+
+        for (const customer of customers) {
+          // Idempotency check
+          if (migration.customer_id_map[customer.source_id]) continue
+
+          try {
+            const newCustomerId = await createMigratedCustomer(
+              migration.store_id,
+              customer
+            )
+            await updateCustomerIdMap(migration.id, customer.source_id, newCustomerId)
+            await incrementMigrationCount(migration.id, 'migrated_customers')
+
+            // Store email->id mapping in memory for order linking
+            migration.customer_id_map[customer.source_id] = newCustomerId
+          } catch (error) {
+            console.error(`[Migration] Failed to migrate customer ${customer.source_id}:`, error)
+            await addMigrationError(migration.id, {
+              type: 'customer',
+              source_id: customer.source_id,
+              source_title: customer.full_name,
+              message: error instanceof Error ? error.message : 'Unknown error',
+              timestamp: new Date().toISOString(),
+            })
+            await incrementMigrationCount(migration.id, 'failed_customers')
+          }
+        }
+
+        hasMore = page.hasNextPage
+        cursor = page.endCursor
+      } catch (error) {
+        if (error instanceof ShopifyRateLimitError) {
+          rateLimitAttempts++
+          await backoff(rateLimitAttempts)
+          if (rateLimitAttempts > 10) {
+            await addMigrationError(migration.id, {
+              type: 'rate_limit',
+              message: 'Too many rate limit retries during customer import, pausing',
+              timestamp: new Date().toISOString(),
+            })
+            await updateMigrationStatus(migration.id, 'paused')
+            return
+          }
+          continue
+        }
+        throw error
+      }
+    }
+  } catch (error) {
+    console.error('[Migration] Customer migration error:', error)
+    await addMigrationError(migration.id, {
+      type: 'customer',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    })
+  }
+}
+
+/**
+ * Migrate discount codes / coupons from Shopify
+ */
+async function migrateCoupons(
+  migration: StoreMigration,
+  accessToken: string,
+  startTime: number
+): Promise<void> {
+  try {
+    let cursor: string | null = null
+    let hasMore = true
+    let rateLimitAttempts = 0
+    let totalCounted = false
+
+    while (hasMore) {
+      if (Date.now() - startTime > MAX_MIGRATION_DURATION_MS) {
+        await updateMigrationStatus(migration.id, 'paused')
+        return
+      }
+
+      const current = await getMigration(migration.id)
+      if (current?.status === 'cancelled') return
+
+      try {
+        const page = await fetchShopifyDiscounts(
+          migration.source_shop_id!,
+          accessToken,
+          cursor
+        )
+
+        rateLimitAttempts = 0
+
+        // We count as we go since discountNodes doesn't have a count query
+        if (!totalCounted && !page.hasNextPage) {
+          // Last page — set total from what we've seen
+          totalCounted = true
+        }
+
+        const coupons = page.discounts
+          .map(transformShopifyDiscount)
+          .filter((c): c is MigrationCoupon => c !== null)
+
+        // Update total on first page (approximate from page size)
+        if (migration.total_coupons === 0) {
+          await updateMigrationCounts(migration.id, {
+            total_coupons: coupons.length + (page.hasNextPage ? coupons.length : 0),
+          })
+        }
+
+        for (const coupon of coupons) {
+          if (migration.coupon_id_map[coupon.source_id]) continue
+
+          try {
+            const newCouponId = await createMigratedCoupon(
+              migration.store_id,
+              coupon
+            )
+            await updateCouponIdMap(migration.id, coupon.source_id, newCouponId)
+            await incrementMigrationCount(migration.id, 'migrated_coupons')
+            migration.coupon_id_map[coupon.source_id] = newCouponId
+          } catch (error) {
+            console.error(`[Migration] Failed to migrate coupon ${coupon.source_id}:`, error)
+            await addMigrationError(migration.id, {
+              type: 'coupon',
+              source_id: coupon.source_id,
+              source_title: coupon.code,
+              message: error instanceof Error ? error.message : 'Unknown error',
+              timestamp: new Date().toISOString(),
+            })
+            await incrementMigrationCount(migration.id, 'failed_coupons')
+          }
+        }
+
+        hasMore = page.hasNextPage
+        cursor = page.endCursor
+      } catch (error) {
+        if (error instanceof ShopifyRateLimitError) {
+          rateLimitAttempts++
+          await backoff(rateLimitAttempts)
+          if (rateLimitAttempts > 10) {
+            await addMigrationError(migration.id, {
+              type: 'rate_limit',
+              message: 'Too many rate limit retries during coupon import, pausing',
+              timestamp: new Date().toISOString(),
+            })
+            await updateMigrationStatus(migration.id, 'paused')
+            return
+          }
+          continue
+        }
+        throw error
+      }
+    }
+
+    // Update final total count
+    const refreshed = await getMigration(migration.id)
+    if (refreshed) {
+      await updateMigrationCounts(migration.id, {
+        total_coupons: refreshed.migrated_coupons + refreshed.failed_coupons,
+      })
+    }
+  } catch (error) {
+    console.error('[Migration] Coupon migration error:', error)
+    await addMigrationError(migration.id, {
+      type: 'coupon',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    })
+  }
+}
+
+/**
+ * Migrate orders from Shopify (runs last to link customers and coupons)
+ */
+async function migrateOrders(
+  migration: StoreMigration,
+  accessToken: string,
+  startTime: number
+): Promise<void> {
+  try {
+    const totalOrders = await getShopifyOrderCount(
+      migration.source_shop_id!,
+      accessToken
+    )
+    await updateMigrationCounts(migration.id, { total_orders: totalOrders })
+
+    // Build email -> customer_id map for linking orders to customers
+    const supabase = await createClient()
+    const { data: customers } = await supabase
+      .from('customers')
+      .select('id, email')
+      .eq('store_id', migration.store_id)
+
+    const customerEmailMap: Record<string, string> = {}
+    if (customers) {
+      for (const c of customers) {
+        customerEmailMap[c.email] = c.id
+      }
+    }
+
+    // Refresh product_id_map from DB for order item linking
+    const refreshed = await getMigration(migration.id)
+    const productIdMap = refreshed?.product_id_map || migration.product_id_map
+
+    let cursor: string | null = null
+    let hasMore = true
+    let rateLimitAttempts = 0
+
+    while (hasMore) {
+      if (Date.now() - startTime > MAX_MIGRATION_DURATION_MS) {
+        await updateMigrationStatus(migration.id, 'paused')
+        return
+      }
+
+      const current = await getMigration(migration.id)
+      if (current?.status === 'cancelled') return
+
+      try {
+        const page = await fetchShopifyOrders(
+          migration.source_shop_id!,
+          accessToken,
+          cursor
+        )
+
+        rateLimitAttempts = 0
+
+        const orders = page.orders.map(transformShopifyOrder)
+
+        for (const order of orders) {
+          if (migration.order_id_map[order.source_id]) continue
+
+          try {
+            const newOrderId = await createMigratedOrder(
+              migration.store_id,
+              order,
+              customerEmailMap,
+              productIdMap
+            )
+            await updateOrderIdMap(migration.id, order.source_id, newOrderId)
+            await incrementMigrationCount(migration.id, 'migrated_orders')
+            migration.order_id_map[order.source_id] = newOrderId
+          } catch (error) {
+            console.error(`[Migration] Failed to migrate order ${order.source_id}:`, error)
+            await addMigrationError(migration.id, {
+              type: 'order',
+              source_id: order.source_id,
+              source_title: order.order_number,
+              message: error instanceof Error ? error.message : 'Unknown error',
+              timestamp: new Date().toISOString(),
+            })
+            await incrementMigrationCount(migration.id, 'failed_orders')
+          }
+        }
+
+        hasMore = page.hasNextPage
+        cursor = page.endCursor
+      } catch (error) {
+        if (error instanceof ShopifyRateLimitError) {
+          rateLimitAttempts++
+          await backoff(rateLimitAttempts)
+          if (rateLimitAttempts > 10) {
+            await addMigrationError(migration.id, {
+              type: 'rate_limit',
+              message: 'Too many rate limit retries during order import, pausing',
+              timestamp: new Date().toISOString(),
+            })
+            await updateMigrationStatus(migration.id, 'paused')
+            return
+          }
+          continue
+        }
+        throw error
+      }
+    }
+  } catch (error) {
+    console.error('[Migration] Order migration error:', error)
+    await addMigrationError(migration.id, {
+      type: 'order',
       message: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
     })

@@ -23,7 +23,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { migration_id, import_products = true, import_collections = true, product_status = 'draft' } = body
+    const {
+      migration_id,
+      import_products = true,
+      import_collections = true,
+      import_orders = false,
+      import_customers = false,
+      import_coupons = false,
+      product_status = 'draft',
+    } = body
 
     if (!migration_id) {
       return NextResponse.json({ error: 'migration_id is required' }, { status: 400 })
@@ -58,6 +66,9 @@ export async function POST(request: NextRequest) {
       migration_id,
       import_products,
       import_collections,
+      import_orders,
+      import_customers,
+      import_coupons,
       product_status: product_status === 'active' ? 'active' : 'draft',
     }
 

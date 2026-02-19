@@ -121,6 +121,11 @@ src/
 | `app/admin/layout.tsx` | Admin dashboard layout with sidebar |
 | `app/api/admin/stats/route.ts` | Platform stats API endpoint |
 | `app/api/admin/stores/route.ts` | Stores list + detail + status update |
+| `lib/migration/pipeline.ts` | 5-phase migration orchestration (products, collections, customers, coupons, orders) |
+| `lib/migration/shopify/client.ts` | Shopify GraphQL API (products, collections, orders, customers, discounts) |
+| `lib/migration/shopify/order-transformer.ts` | Shopify order → StoreForge order mapping |
+| `lib/migration/shopify/customer-transformer.ts` | Shopify customer → StoreForge customer mapping |
+| `lib/migration/shopify/discount-transformer.ts` | Shopify discount → StoreForge coupon mapping |
 
 ---
 
@@ -141,6 +146,7 @@ src/
 - **wishlists** - Customer product favorites
 - **abandoned_carts** - Cart recovery with email sequence tracking
 - **cart_recovery_emails** - Recovery email analytics
+- **store_migrations** - Shopify/Etsy import tracking with per-entity progress, ID maps, and error logs
 
 ### Storage Buckets
 - `logos` - Store logos (AI-generated supported)
@@ -200,6 +206,7 @@ NEXT_PUBLIC_APP_URL=https://storeforge.site
 
 | Date | Change |
 |------|--------|
+| 2026-02-19 | **Expanded Shopify Migration**: Full store migration now imports Orders, Customers, and Coupons in addition to Products and Collections. 5-phase pipeline (Products → Collections → Customers → Coupons → Orders). Orders link to imported customers via email. Code-based discounts imported (automatic discounts skipped). OAuth scopes expanded to `read_products,read_orders,read_customers,read_discounts`. 39 Playwright tests for migration. |
 | 2026-02-09 | **Platform Admin Dashboard**: Full admin panel at `/admin` for platform owner. Stores, sellers, customers, orders, products management. Revenue and signups charts. Store suspend/unsuspend. Access restricted to hardcoded admin email. |
 | 2026-02-09 | **AI Bot for Sellers**: Natural language store management via sidebar panel (Cmd+K). 25+ tools for products, orders, coupons, collections, analytics, settings, branding. Auto-execute for creates/updates, confirmation dialogs for destructive actions. Context-aware of current page. |
 | 2026-02-04 | **Comprehensive E2E Tests**: 405 Playwright tests covering shipping (56), payment/Razorpay (56), products (75), API routes (97), inventory (18), email (29), cart, auth, storefront |
@@ -270,4 +277,4 @@ Stores are accessible at `{store-slug}.storeforge.site`:
 5. Configure Shiprocket production credentials
 6. Run database migrations for new features
 
-*Last Updated: 2026-02-09*
+*Last Updated: 2026-02-19*

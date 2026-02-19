@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Pause, X, Package, Folder, Image as ImageIcon } from 'lucide-react'
+import { Loader2, Pause, X, Package, Folder, Image as ImageIcon, ShoppingCart, Users, Tag } from 'lucide-react'
 import type { MigrationProgress as MigrationProgressType } from '@/lib/migration/types'
 
 interface MigrationProgressProps {
@@ -79,14 +79,25 @@ export function MigrationProgress({
     )
   }
 
-  const totalItems = progress.total_products + progress.total_collections
-  const migratedItems = progress.migrated_products + progress.migrated_collections
-  const failedItems = progress.failed_products + progress.failed_collections
+  const totalItems = progress.total_products + progress.total_collections +
+    progress.total_customers + progress.total_coupons + progress.total_orders
+  const migratedItems = progress.migrated_products + progress.migrated_collections +
+    progress.migrated_customers + progress.migrated_coupons + progress.migrated_orders
+  const failedItems = progress.failed_products + progress.failed_collections +
+    progress.failed_customers + progress.failed_coupons + progress.failed_orders
   const processedItems = migratedItems + failedItems
   const overallPercent = totalItems > 0 ? Math.round((processedItems / totalItems) * 100) : 0
 
   const isPaused = progress.status === 'paused'
   const isRunning = progress.status === 'running'
+
+  const phaseLabels: Record<string, string> = {
+    products: `Importing Products ${progress.migrated_products + progress.failed_products}/${progress.total_products}`,
+    collections: `Importing Collections ${progress.migrated_collections + progress.failed_collections}/${progress.total_collections}`,
+    customers: `Importing Customers ${progress.migrated_customers + progress.failed_customers}/${progress.total_customers}`,
+    coupons: `Importing Coupons ${progress.migrated_coupons + progress.failed_coupons}/${progress.total_coupons}`,
+    orders: `Importing Orders ${progress.migrated_orders + progress.failed_orders}/${progress.total_orders}`,
+  }
 
   return (
     <Card>
@@ -192,17 +203,75 @@ export function MigrationProgress({
               </p>
             )}
           </div>
+
+          {/* Customers */}
+          {(progress.total_customers > 0 || progress.current_phase === 'customers') && (
+            <div className="space-y-2 p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Users className="h-4 w-4" />
+                Customers
+              </div>
+              <div className="text-2xl font-bold">
+                {progress.migrated_customers}
+                <span className="text-sm font-normal text-muted-foreground">
+                  /{progress.total_customers}
+                </span>
+              </div>
+              {progress.failed_customers > 0 && (
+                <p className="text-xs text-destructive">
+                  {progress.failed_customers} failed
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Coupons */}
+          {(progress.total_coupons > 0 || progress.current_phase === 'coupons') && (
+            <div className="space-y-2 p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Tag className="h-4 w-4" />
+                Coupons
+              </div>
+              <div className="text-2xl font-bold">
+                {progress.migrated_coupons}
+                <span className="text-sm font-normal text-muted-foreground">
+                  /{progress.total_coupons}
+                </span>
+              </div>
+              {progress.failed_coupons > 0 && (
+                <p className="text-xs text-destructive">
+                  {progress.failed_coupons} failed
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Orders */}
+          {(progress.total_orders > 0 || progress.current_phase === 'orders') && (
+            <div className="space-y-2 p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <ShoppingCart className="h-4 w-4" />
+                Orders
+              </div>
+              <div className="text-2xl font-bold">
+                {progress.migrated_orders}
+                <span className="text-sm font-normal text-muted-foreground">
+                  /{progress.total_orders}
+                </span>
+              </div>
+              {progress.failed_orders > 0 && (
+                <p className="text-xs text-destructive">
+                  {progress.failed_orders} failed
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Current phase */}
-        {isRunning && (
+        {isRunning && progress.current_phase !== 'done' && (
           <p className="text-sm text-muted-foreground text-center">
-            {progress.current_phase === 'products' && (
-              <>Importing Products {progress.migrated_products + progress.failed_products}/{progress.total_products}</>
-            )}
-            {progress.current_phase === 'collections' && (
-              <>Importing Collections {progress.migrated_collections + progress.failed_collections}/{progress.total_collections}</>
-            )}
+            {phaseLabels[progress.current_phase] || 'Processing...'}
           </p>
         )}
 

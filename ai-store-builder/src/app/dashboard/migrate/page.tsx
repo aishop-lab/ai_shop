@@ -118,6 +118,9 @@ export default function MigratePage() {
   const handleStartMigration = async (config: {
     import_products: boolean
     import_collections: boolean
+    import_orders: boolean
+    import_customers: boolean
+    import_coupons: boolean
     product_status: 'draft' | 'active'
   }) => {
     if (!migrationId) return
@@ -186,9 +189,9 @@ export default function MigratePage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Import Products</h1>
+          <h1 className="text-3xl font-bold">Store Migration</h1>
           <p className="text-muted-foreground mt-1">
-            Import your product catalog from Shopify or Etsy
+            Import your store data from Shopify or Etsy
           </p>
         </div>
       </div>

@@ -13,7 +13,9 @@ import {
   Package,
   Folder,
   Image as ImageIcon,
-  ExternalLink,
+  ShoppingCart,
+  Users,
+  Tag,
   RotateCcw,
 } from 'lucide-react'
 import type { MigrationProgress } from '@/lib/migration/types'
@@ -26,7 +28,8 @@ interface MigrationResultsProps {
 export function MigrationResults({ progress, onRetry }: MigrationResultsProps) {
   const [showErrors, setShowErrors] = useState(false)
 
-  const totalFailed = progress.failed_products + progress.failed_collections + progress.failed_images
+  const totalFailed = progress.failed_products + progress.failed_collections + progress.failed_images +
+    progress.failed_orders + progress.failed_customers + progress.failed_coupons
   const isSuccess = totalFailed === 0 && progress.status === 'completed'
 
   return (
@@ -98,6 +101,51 @@ export function MigrationResults({ progress, onRetry }: MigrationResultsProps) {
               )}
             </div>
           </div>
+
+          {(progress.migrated_customers > 0 || progress.failed_customers > 0) && (
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <Users className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Customers</p>
+                <p className="text-lg font-bold text-green-600">
+                  {progress.migrated_customers} imported
+                </p>
+                {progress.failed_customers > 0 && (
+                  <p className="text-xs text-destructive">{progress.failed_customers} failed</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {(progress.migrated_coupons > 0 || progress.failed_coupons > 0) && (
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <Tag className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Coupons</p>
+                <p className="text-lg font-bold text-green-600">
+                  {progress.migrated_coupons} imported
+                </p>
+                {progress.failed_coupons > 0 && (
+                  <p className="text-xs text-destructive">{progress.failed_coupons} failed</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {(progress.migrated_orders > 0 || progress.failed_orders > 0) && (
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <ShoppingCart className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Orders</p>
+                <p className="text-lg font-bold text-green-600">
+                  {progress.migrated_orders} imported
+                </p>
+                {progress.failed_orders > 0 && (
+                  <p className="text-xs text-destructive">{progress.failed_orders} failed</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Error details */}

@@ -29,9 +29,21 @@ export interface StoreMigration {
   total_images: number
   migrated_images: number
   failed_images: number
+  total_orders: number
+  migrated_orders: number
+  failed_orders: number
+  total_customers: number
+  migrated_customers: number
+  failed_customers: number
+  total_coupons: number
+  migrated_coupons: number
+  failed_coupons: number
   errors: MigrationError[]
   product_id_map: Record<string, string>
   collection_id_map: Record<string, string>
+  customer_id_map: Record<string, string>
+  order_id_map: Record<string, string>
+  coupon_id_map: Record<string, string>
   last_cursor: string | null
   started_at: string | null
   completed_at: string | null
@@ -40,7 +52,7 @@ export interface StoreMigration {
 }
 
 export interface MigrationError {
-  type: 'product' | 'collection' | 'image' | 'auth' | 'rate_limit'
+  type: 'product' | 'collection' | 'image' | 'auth' | 'rate_limit' | 'order' | 'customer' | 'coupon'
   source_id?: string
   source_title?: string
   message: string
@@ -90,11 +102,90 @@ export interface MigrationCollection {
   product_source_ids: string[]
 }
 
+// Normalized order format
+export interface MigrationOrder {
+  source_id: string
+  order_number: string
+  customer_email: string
+  customer_name: string
+  customer_phone?: string
+  shipping_address: {
+    name: string
+    phone: string
+    address_line1: string
+    address_line2?: string
+    city: string
+    state: string
+    pincode: string
+    country: string
+  }
+  subtotal: number
+  shipping_cost: number
+  tax_amount: number
+  discount_amount: number
+  total_amount: number
+  payment_method: string
+  payment_status: 'pending' | 'paid' | 'failed' | 'refunded'
+  order_status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded'
+  coupon_code?: string
+  line_items: MigrationOrderItem[]
+  created_at: string
+}
+
+export interface MigrationOrderItem {
+  source_product_id: string
+  title: string
+  quantity: number
+  unit_price: number
+  total_price: number
+}
+
+// Normalized customer format
+export interface MigrationCustomer {
+  source_id: string
+  email: string
+  full_name: string
+  phone?: string
+  total_orders: number
+  total_spent: number
+  addresses: MigrationCustomerAddress[]
+}
+
+export interface MigrationCustomerAddress {
+  full_name: string
+  phone: string
+  address_line1: string
+  address_line2?: string
+  city: string
+  state: string
+  pincode: string
+  country: string
+  is_default: boolean
+}
+
+// Normalized coupon format
+export interface MigrationCoupon {
+  source_id: string
+  code: string
+  description?: string
+  discount_type: 'percentage' | 'fixed_amount' | 'free_shipping'
+  discount_value: number
+  minimum_order_value?: number
+  usage_limit?: number
+  usage_count: number
+  starts_at?: string
+  expires_at?: string
+  active: boolean
+}
+
 // Migration configuration chosen by user before starting
 export interface MigrationConfig {
   migration_id: string
   import_products: boolean
   import_collections: boolean
+  import_orders: boolean
+  import_customers: boolean
+  import_coupons: boolean
   product_status: 'draft' | 'active' // What status to assign imported products
 }
 
@@ -113,10 +204,19 @@ export interface MigrationProgress {
   total_images: number
   migrated_images: number
   failed_images: number
+  total_orders: number
+  migrated_orders: number
+  failed_orders: number
+  total_customers: number
+  migrated_customers: number
+  failed_customers: number
+  total_coupons: number
+  migrated_coupons: number
+  failed_coupons: number
   errors: MigrationError[]
   started_at: string | null
   completed_at: string | null
-  current_phase: 'products' | 'collections' | 'done'
+  current_phase: 'products' | 'collections' | 'customers' | 'coupons' | 'orders' | 'done'
 }
 
 // Shopify-specific types
@@ -158,6 +258,99 @@ export interface ShopifyCollection {
     edges: Array<{
       node: { id: string }
     }>
+  }
+}
+
+export interface ShopifyOrder {
+  id: string
+  name: string
+  createdAt: string
+  displayFinancialStatus: 'PENDING' | 'AUTHORIZED' | 'PARTIALLY_PAID' | 'PAID' | 'PARTIALLY_REFUNDED' | 'REFUNDED' | 'VOIDED' | null
+  displayFulfillmentStatus: 'UNFULFILLED' | 'PARTIALLY_FULFILLED' | 'FULFILLED' | 'RESTOCKED' | 'PENDING_FULFILLMENT' | 'OPEN' | 'IN_PROGRESS' | 'ON_HOLD' | null
+  customer: {
+    id: string
+    email: string | null
+    firstName: string | null
+    lastName: string | null
+    phone: string | null
+  } | null
+  shippingAddress: {
+    name: string | null
+    phone: string | null
+    address1: string | null
+    address2: string | null
+    city: string | null
+    province: string | null
+    zip: string | null
+    country: string | null
+  } | null
+  currentTotalPriceSet: { shopMoney: { amount: string } }
+  currentSubtotalPriceSet: { shopMoney: { amount: string } }
+  totalShippingPriceSet: { shopMoney: { amount: string } }
+  currentTotalTaxSet: { shopMoney: { amount: string } }
+  currentTotalDiscountsSet: { shopMoney: { amount: string } }
+  lineItems: {
+    edges: Array<{
+      node: {
+        title: string
+        quantity: number
+        product: { id: string } | null
+        discountedUnitPriceSet: { shopMoney: { amount: string } }
+      }
+    }>
+  }
+  paymentGatewayNames: string[]
+}
+
+export interface ShopifyCustomer {
+  id: string
+  firstName: string | null
+  lastName: string | null
+  email: string | null
+  phone: string | null
+  numberOfOrders: string
+  amountSpent: { amount: string }
+  tags: string[]
+  addressesV2: {
+    edges: Array<{
+      node: {
+        name: string | null
+        phone: string | null
+        address1: string | null
+        address2: string | null
+        city: string | null
+        province: string | null
+        zip: string | null
+        country: string | null
+      }
+    }>
+  }
+}
+
+export interface ShopifyDiscount {
+  id: string
+  __typename: string
+  title: string
+  status: 'ACTIVE' | 'EXPIRED' | 'SCHEDULED'
+  startsAt: string | null
+  endsAt: string | null
+  usageLimit: number | null
+  asyncUsageCount: number
+  codes: {
+    edges: Array<{
+      node: { code: string }
+    }>
+  }
+  customerGets?: {
+    value: {
+      __typename: string
+      percentage?: number
+      amount?: { amount: string }
+    }
+  }
+  minimumRequirement?: {
+    __typename: string
+    greaterThanOrEqualToSubtotal?: { amount: string }
   }
 }
 
