@@ -8,6 +8,7 @@ import { buildSystemPrompt } from '@/lib/ai/bot/system-prompt'
 import { botTools, requiresConfirmation } from '@/lib/ai/bot/tools'
 import { executeTool } from '@/lib/ai/bot/tool-executor'
 import { createClient } from '@/lib/supabase/server'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import type { PageContext } from '@/components/dashboard/ai-bot/ai-bot-provider'
 
 export const runtime = 'nodejs'
@@ -79,7 +80,8 @@ export async function POST(req: Request) {
     }
 
     // --- Authorization: verify user owns the store ---
-    const { data: store, error: storeError } = await supabase
+    // Use admin client to bypass RLS (user already verified via auth.getUser above)
+    const { data: store, error: storeError } = await getSupabaseAdmin()
       .from('stores')
       .select('id')
       .eq('id', storeId)
