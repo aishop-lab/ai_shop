@@ -89,6 +89,7 @@ export async function POST(req: Request) {
       .single()
 
     if (storeError || !store) {
+      console.error('[AI Bot] Store lookup failed:', { storeId, userId: user.id, error: storeError?.message })
       return new Response(JSON.stringify({ error: 'Store not found or unauthorized' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
