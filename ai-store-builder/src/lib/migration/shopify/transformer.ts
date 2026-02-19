@@ -34,20 +34,6 @@ function extractGid(gid: string): string {
 }
 
 /**
- * Convert Shopify weight to grams
- */
-function normalizeWeight(weight: number | null, unit: string): number | undefined {
-  if (weight === null || weight === 0) return undefined
-  switch (unit) {
-    case 'KILOGRAMS': return weight * 1000
-    case 'GRAMS': return weight
-    case 'POUNDS': return weight * 453.592
-    case 'OUNCES': return weight * 28.3495
-    default: return weight
-  }
-}
-
-/**
  * Transform a Shopify product to StoreForge format
  */
 export function transformShopifyProduct(product: ShopifyProduct): MigrationProduct | null {
@@ -81,7 +67,6 @@ export function transformShopifyProduct(product: ShopifyProduct): MigrationProdu
         compare_at_price: v.compareAtPrice ? parseFloat(v.compareAtPrice) : undefined,
         quantity: Math.max(0, v.inventoryQuantity),
         options,
-        weight: normalizeWeight(v.weight, v.weightUnit),
       })
     }
   }
@@ -103,9 +88,7 @@ export function transformShopifyProduct(product: ShopifyProduct): MigrationProdu
     sku: firstVariant?.sku || undefined,
     quantity: firstVariant ? Math.max(0, firstVariant.inventoryQuantity) : 0,
     track_quantity: true,
-    weight: firstVariant
-      ? normalizeWeight(firstVariant.weight, firstVariant.weightUnit)
-      : undefined,
+    weight: undefined,
     categories,
     tags: product.tags,
     images,

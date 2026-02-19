@@ -74,8 +74,6 @@ const PRODUCTS_QUERY = `
                 price
                 compareAtPrice
                 inventoryQuantity
-                weight
-                weightUnit
                 selectedOptions {
                   name
                   value

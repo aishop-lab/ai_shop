@@ -136,8 +136,6 @@ export interface ShopifyProduct {
         price: string
         compareAtPrice: string | null
         inventoryQuantity: number
-        weight: number | null
-        weightUnit: string
         selectedOptions: Array<{ name: string; value: string }>
       }
     }>
