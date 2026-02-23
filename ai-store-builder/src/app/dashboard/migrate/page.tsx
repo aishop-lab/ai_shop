@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -10,9 +10,24 @@ import { PlatformConnector } from '@/components/migration/platform-connector'
 import { MigrationConfig } from '@/components/migration/migration-config'
 import { MigrationProgress } from '@/components/migration/migration-progress'
 import { MigrationResults } from '@/components/migration/migration-results'
+import { createClient as createBrowserSupabase } from '@/lib/supabase/client'
 import type { MigrationProgress as MigrationProgressType } from '@/lib/migration/types'
 
 type PageState = 'loading' | 'disconnected' | 'connected' | 'configuring' | 'migrating' | 'completed'
+
+// Helper to get auth headers for API calls
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    const supabase = createBrowserSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) {
+      return { 'Authorization': `Bearer ${session.access_token}` }
+    }
+  } catch {
+    // Continue without token
+  }
+  return {}
+}
 
 export default function MigratePage() {
   const searchParams = useSearchParams()
@@ -24,21 +39,52 @@ export default function MigratePage() {
   const [completedProgress, setCompletedProgress] = useState<MigrationProgressType | null>(null)
   const [completedPlatforms, setCompletedPlatforms] = useState<string[]>([])
   const [starting, setStarting] = useState(false)
+  const authHeadersRef = useRef<Record<string, string>>({})
 
   // Fetch current migration state
   useEffect(() => {
     async function fetchState() {
       try {
+        // Get auth headers once for all API calls
+        const authHeaders = await getAuthHeaders()
+        authHeadersRef.current = authHeaders
+
         // First get the store
-        const storeResponse = await fetch('/api/dashboard/settings')
-        if (!storeResponse.ok) return
+        const storeResponse = await fetch('/api/dashboard/settings', {
+          headers: authHeaders,
+          credentials: 'include',
+        })
+        if (!storeResponse.ok) {
+          // Try fallback: /api/dashboard/stats
+          const statsResponse = await fetch('/api/dashboard/stats', {
+            headers: authHeaders,
+            credentials: 'include',
+          })
+          if (statsResponse.ok) {
+            const statsData = await statsResponse.json()
+            if (statsData.store?.id) {
+              setStoreId(statsData.store.id)
+              setPageState('disconnected')
+              return
+            }
+          }
+          setPageState('disconnected')
+          return
+        }
         const storeData = await storeResponse.json()
-        if (!storeData.store) return
+        if (!storeData.store) {
+          setPageState('disconnected')
+          return
+        }
         setStoreId(storeData.store.id)
 
         // Check for existing migration
         const migrationResponse = await fetch(
-          `/api/migration/status?store_id=${storeData.store.id}`
+          `/api/migration/status?store_id=${storeData.store.id}`,
+          {
+            headers: authHeaders,
+            credentials: 'include',
+          }
         )
         if (!migrationResponse.ok) {
           setPageState('disconnected')
@@ -134,9 +180,11 @@ export default function MigratePage() {
     setStarting(true)
 
     try {
+      const authHeaders = await getAuthHeaders()
       const response = await fetch('/api/migration/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        credentials: 'include',
         body: JSON.stringify({
           migration_id: migrationId,
           ...config,
@@ -161,7 +209,11 @@ export default function MigratePage() {
     // Fetch final progress
     if (!migrationId) return
     try {
-      const response = await fetch(`/api/migration/status?migration_id=${migrationId}`)
+      const authHeaders = await getAuthHeaders()
+      const response = await fetch(`/api/migration/status?migration_id=${migrationId}`, {
+        headers: authHeaders,
+        credentials: 'include',
+      })
       if (response.ok) {
         const data = await response.json()
         if (data.migration) {

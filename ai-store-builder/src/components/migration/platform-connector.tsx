@@ -74,6 +74,9 @@ export function PlatformConnector({
       const data = await response.json()
       if (data.authUrl) {
         window.location.href = data.authUrl
+      } else {
+        toast.error('Failed to get Shopify authorization URL')
+        setConnecting(null)
       }
     } catch (error) {
       console.error('Shopify OAuth error:', error)
