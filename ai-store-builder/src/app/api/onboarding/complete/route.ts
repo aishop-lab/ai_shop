@@ -193,7 +193,7 @@ export async function POST(request: Request) {
             is_demo: true,
             quantity: 100,
             track_quantity: false,
-            featured: i === 0 // Make first demo product featured
+            featured: true // Make all demo products featured
           })
           .select('id')
           .single()

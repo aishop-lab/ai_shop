@@ -1,37 +1,15 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 
-// Google Identity Services types
-interface GoogleIdentityServices {
-  accounts: {
-    id: {
-      initialize: (config: {
-        client_id: string
-        callback: (response: { credential: string }) => void
-        auto_select?: boolean
-        cancel_on_tap_outside?: boolean
-      }) => void
-      renderButton: (
-        element: HTMLElement,
-        options: {
-          theme?: 'outline' | 'filled_blue' | 'filled_black'
-          size?: 'large' | 'medium' | 'small'
-          type?: 'standard' | 'icon'
-          shape?: 'rectangular' | 'pill' | 'circle' | 'square'
-          text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin'
-          width?: number
-          logo_alignment?: 'left' | 'center'
-        }
-      ) => void
-      prompt: () => void
-    }
-  }
-}
-
-// Extend window to include Google Identity Services
-declare const gisGoogle: GoogleIdentityServices | undefined
+/**
+ * Google Sign-In Button for Customer Auth
+ *
+ * Opens a popup on the main domain (storeforge.site/google-auth) where Google OAuth
+ * is authorized, then receives the ID token via postMessage. This avoids needing to
+ * register every store subdomain as an authorized JavaScript origin in Google Cloud Console.
+ */
 
 interface GoogleSignInButtonProps {
   onSuccess: (idToken: string) => void
@@ -40,124 +18,122 @@ interface GoogleSignInButtonProps {
   text?: 'signin_with' | 'signup_with' | 'continue_with'
 }
 
+function getMainDomainUrl(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  return appUrl
+}
+
 export function GoogleSignInButton({
   onSuccess,
   onError,
   disabled = false,
   text = 'continue_with'
 }: GoogleSignInButtonProps) {
-  const buttonRef = useRef<HTMLDivElement>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [scriptError, setScriptError] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
 
-  // Helper to get Google Identity Services from window
-  const getGoogleIdentityServices = (): GoogleIdentityServices | undefined => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (window as any).google as GoogleIdentityServices | undefined
-  }
+  const handleMessage = useCallback(
+    (event: MessageEvent) => {
+      const mainDomain = getMainDomainUrl()
+      // In dev, origin check is relaxed since everything is on localhost
+      const expectedOrigin = new URL(mainDomain).origin
+
+      if (event.origin !== expectedOrigin) return
+      if (event.data?.type !== 'google-auth-success') return
+
+      const credential = event.data.credential
+      if (credential) {
+        onSuccess(credential)
+      } else {
+        onError?.('No credential received from Google')
+      }
+    },
+    [onSuccess, onError]
+  )
 
   useEffect(() => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [handleMessage])
 
-    if (!clientId) {
-      console.error('Google Client ID not configured')
-      setScriptError(true)
-      setIsLoading(false)
-      return
-    }
-
-    // Check if script is already loaded
-    const gis = getGoogleIdentityServices()
-    if (gis?.accounts?.id) {
-      initializeGoogle(clientId)
-      return
-    }
-
-    // Load Google Identity Services script
-    const script = document.createElement('script')
-    script.src = 'https://accounts.google.com/gsi/client'
-    script.async = true
-    script.defer = true
-
-    script.onload = () => {
-      initializeGoogle(clientId)
-    }
-
-    script.onerror = () => {
-      console.error('Failed to load Google Sign-In script')
-      setScriptError(true)
-      setIsLoading(false)
-      onError?.('Failed to load Google Sign-In')
-    }
-
-    document.body.appendChild(script)
-
-    return () => {
-      // Cleanup if needed
-    }
-  }, [onError])
-
-  const initializeGoogle = (clientId: string) => {
-    const gis = getGoogleIdentityServices()
-    if (!gis?.accounts?.id) {
-      setScriptError(true)
-      setIsLoading(false)
-      return
-    }
-
-    try {
-      gis.accounts.id.initialize({
-        client_id: clientId,
-        callback: handleCredentialResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true
-      })
-
-      if (buttonRef.current) {
-        gis.accounts.id.renderButton(buttonRef.current, {
-          theme: 'outline',
-          size: 'large',
-          type: 'standard',
-          shape: 'rectangular',
-          text: text,
-          width: 320,
-          logo_alignment: 'left'
-        })
-      }
-
-      setIsLoading(false)
-    } catch (error) {
-      console.error('Failed to initialize Google Sign-In:', error)
-      setScriptError(true)
-      setIsLoading(false)
-    }
-  }
-
-  const handleCredentialResponse = (response: { credential: string }) => {
-    if (response.credential) {
-      onSuccess(response.credential)
-    } else {
-      onError?.('No credential received from Google')
-    }
-  }
-
-  if (scriptError) {
-    // Fallback: Don't show anything if Google Sign-In fails to load
+  if (!clientId) {
     return null
   }
 
+  const openPopup = () => {
+    if (disabled || isLoading) return
+
+    setIsLoading(true)
+
+    const mainDomain = getMainDomainUrl()
+    const currentOrigin = window.location.origin
+    const popupUrl = `${mainDomain}/google-auth?origin=${encodeURIComponent(currentOrigin)}`
+
+    const width = 500
+    const height = 600
+    const left = window.screenX + (window.outerWidth - width) / 2
+    const top = window.screenY + (window.outerHeight - height) / 2
+
+    const popup = window.open(
+      popupUrl,
+      'google-auth-popup',
+      `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
+    )
+
+    if (!popup) {
+      setIsLoading(false)
+      onError?.('Popup was blocked. Please allow popups for this site.')
+      return
+    }
+
+    // Poll to detect if popup was closed without completing auth
+    const timer = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(timer)
+        setIsLoading(false)
+      }
+    }, 500)
+  }
+
+  const label =
+    text === 'signin_with'
+      ? 'Sign in with Google'
+      : text === 'signup_with'
+        ? 'Sign up with Google'
+        : 'Continue with Google'
+
   return (
     <div className="w-full">
-      {isLoading ? (
-        <div className="flex items-center justify-center h-10 border rounded-md bg-gray-50">
-          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-        </div>
-      ) : (
-        <div
-          ref={buttonRef}
-          className={`flex justify-center ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
-        />
-      )}
+      <button
+        type="button"
+        onClick={openPopup}
+        disabled={disabled || isLoading}
+        className="w-full flex items-center justify-center gap-3 h-10 px-4 border border-gray-300 rounded-md bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <svg className="h-4 w-4" viewBox="0 0 24 24">
+            <path
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+              fill="#4285F4"
+            />
+            <path
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              fill="#34A853"
+            />
+            <path
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              fill="#FBBC05"
+            />
+            <path
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              fill="#EA4335"
+            />
+          </svg>
+        )}
+        {label}
+      </button>
     </div>
   )
 }
