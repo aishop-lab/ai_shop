@@ -19,8 +19,7 @@ interface GoogleSignInButtonProps {
 }
 
 function getMainDomainUrl(): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  return appUrl
+  return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 }
 
 export function GoogleSignInButton({
@@ -34,10 +33,7 @@ export function GoogleSignInButton({
 
   const handleMessage = useCallback(
     (event: MessageEvent) => {
-      const mainDomain = getMainDomainUrl()
-      // In dev, origin check is relaxed since everything is on localhost
-      const expectedOrigin = new URL(mainDomain).origin
-
+      const expectedOrigin = new URL(getMainDomainUrl()).origin
       if (event.origin !== expectedOrigin) return
       if (event.data?.type !== 'google-auth-success') return
 
@@ -69,15 +65,15 @@ export function GoogleSignInButton({
     const currentOrigin = window.location.origin
     const popupUrl = `${mainDomain}/google-auth?origin=${encodeURIComponent(currentOrigin)}`
 
-    const width = 500
-    const height = 600
+    const width = 420
+    const height = 520
     const left = window.screenX + (window.outerWidth - width) / 2
     const top = window.screenY + (window.outerHeight - height) / 2
 
     const popup = window.open(
       popupUrl,
       'google-auth-popup',
-      `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
+      `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=no,resizable=no`
     )
 
     if (!popup) {
@@ -86,7 +82,6 @@ export function GoogleSignInButton({
       return
     }
 
-    // Poll to detect if popup was closed without completing auth
     const timer = setInterval(() => {
       if (popup.closed) {
         clearInterval(timer)
@@ -108,12 +103,12 @@ export function GoogleSignInButton({
         type="button"
         onClick={openPopup}
         disabled={disabled || isLoading}
-        className="w-full flex items-center justify-center gap-3 h-10 px-4 border border-gray-300 rounded-md bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex items-center justify-center gap-3 h-[42px] px-4 border border-[#dadce0] rounded-md bg-white text-[#3c4043] text-[14px] font-medium shadow-sm hover:shadow-md hover:border-[#d2d2d2] hover:bg-[#f8f9fa] active:bg-[#f1f3f4] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
       >
         {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Loader2 className="h-[18px] w-[18px] animate-spin text-[#3c4043]" />
         ) : (
-          <svg className="h-4 w-4" viewBox="0 0 24 24">
+          <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24">
             <path
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
               fill="#4285F4"
