@@ -36,16 +36,18 @@ interface GoogleIdentityServices {
   }
 }
 
+function getGIS(): GoogleIdentityServices | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (window as any).google as GoogleIdentityServices | undefined
+}
+
 export default function GoogleAuthPopup() {
   const buttonRef = useRef<HTMLDivElement>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'success' | 'error'>('loading')
   const [errorMessage, setErrorMessage] = useState('')
+  const [gisReady, setGisReady] = useState(false)
 
-  const getGIS = (): GoogleIdentityServices | undefined => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (window as any).google as GoogleIdentityServices | undefined
-  }
-
+  // Step 1: Load the GIS script and initialize
   useEffect(() => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
     if (!clientId) {
@@ -54,7 +56,6 @@ export default function GoogleAuthPopup() {
       return
     }
 
-    // Get the allowed origin from the opener
     const params = new URLSearchParams(window.location.search)
     const origin = params.get('origin') || ''
 
@@ -87,22 +88,9 @@ export default function GoogleAuthPopup() {
         cancel_on_tap_outside: false,
       })
 
-      if (buttonRef.current) {
-        gis.accounts.id.renderButton(buttonRef.current, {
-          theme: 'outline',
-          size: 'large',
-          type: 'standard',
-          shape: 'rectangular',
-          text: 'continue_with',
-          width: 320,
-          logo_alignment: 'left',
-        })
-      }
-
-      setStatus('ready')
+      setGisReady(true)
     }
 
-    // Check if already loaded
     const gis = getGIS()
     if (gis?.accounts?.id) {
       initGoogle()
@@ -121,6 +109,26 @@ export default function GoogleAuthPopup() {
     document.body.appendChild(script)
   }, [])
 
+  // Step 2: Render the Google button once GIS is initialized AND the ref is mounted
+  useEffect(() => {
+    if (!gisReady || !buttonRef.current) return
+
+    const gis = getGIS()
+    if (!gis?.accounts?.id) return
+
+    gis.accounts.id.renderButton(buttonRef.current, {
+      theme: 'outline',
+      size: 'large',
+      type: 'standard',
+      shape: 'rectangular',
+      text: 'continue_with',
+      width: 320,
+      logo_alignment: 'left',
+    })
+
+    setStatus('ready')
+  }, [gisReady])
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-white p-6">
       <div className="text-center space-y-4 max-w-sm w-full">
@@ -128,14 +136,6 @@ export default function GoogleAuthPopup() {
           <>
             <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto" />
             <p className="text-gray-600 text-sm">Loading Google Sign-In...</p>
-          </>
-        )}
-
-        {status === 'ready' && (
-          <>
-            <p className="text-gray-800 font-medium">Sign in with Google</p>
-            <p className="text-gray-500 text-sm">Click the button below to continue</p>
-            <div ref={buttonRef} className="flex justify-center mt-4" />
           </>
         )}
 
@@ -155,6 +155,12 @@ export default function GoogleAuthPopup() {
             </button>
           </>
         )}
+
+        {/* Always in DOM so ref is available when GIS loads */}
+        <div
+          ref={buttonRef}
+          className={`flex justify-center mt-4 ${status !== 'ready' ? 'hidden' : ''}`}
+        />
       </div>
     </div>
   )
