@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import type { DashboardAnalytics, AnalyticsPeriod, RevenueTrendItem } from '@/lib/types/dashboard'
 
 interface OrderRow {
@@ -20,6 +21,14 @@ interface OrderItemRow {
 
 export async function GET(request: NextRequest) {
   try {
+    // Authenticate user
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const searchParams = request.nextUrl.searchParams
     const storeId = searchParams.get('store_id')
     const period = (searchParams.get('period') || '7d') as AnalyticsPeriod
@@ -29,6 +38,18 @@ export async function GET(request: NextRequest) {
         { error: 'Store ID required' },
         { status: 400 }
       )
+    }
+
+    // Verify the authenticated user owns this store
+    const { data: store, error: storeError } = await supabase
+      .from('stores')
+      .select('id')
+      .eq('id', storeId)
+      .eq('owner_id', user.id)
+      .single()
+
+    if (storeError || !store) {
+      return NextResponse.json({ error: 'Store not found or access denied' }, { status: 403 })
     }
 
     // Calculate date range

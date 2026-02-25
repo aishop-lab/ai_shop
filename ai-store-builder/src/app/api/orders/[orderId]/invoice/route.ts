@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import PDFDocument from 'pdfkit'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
+import { validateSession } from '@/lib/customer/auth'
 
 interface RouteParams {
     params: Promise<{ orderId: string }>
@@ -25,6 +27,42 @@ export async function GET(
 
         if (orderError || !order) {
             return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+        }
+
+        // Verify caller is either the store owner or the customer who placed the order
+        let authorized = false
+
+        // Check merchant auth (store owner)
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+            const { data: store } = await supabase
+                .from('stores')
+                .select('id')
+                .eq('id', order.store_id)
+                .eq('owner_id', user.id)
+                .single()
+            if (store) authorized = true
+        }
+
+        // Check customer auth (customer who placed the order)
+        if (!authorized) {
+            const customerToken = request.cookies.get('customer_session')?.value
+            if (customerToken) {
+                const sessionResult = await validateSession(customerToken)
+                if (sessionResult.success && sessionResult.customer) {
+                    if (
+                        order.customer_id === sessionResult.customer.id ||
+                        order.email === sessionResult.customer.email
+                    ) {
+                        authorized = true
+                    }
+                }
+            }
+        }
+
+        if (!authorized) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
         // Fetch store details

@@ -103,14 +103,16 @@ async function uploadToStorage(
 export async function uploadProductImages(
   storeId: string,
   productId: string,
-  files: File[]
+  files: File[],
+  startPosition: number = 0
 ): Promise<ProductImage[]> {
   const supabase = await createClient()
   const images: ProductImage[] = []
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i]
-    const filename = generateFilename(productId, i)
+    const position = startPosition + i
+    const filename = generateFilename(productId, position)
     const arrayBuffer = await file.arrayBuffer()
 
     try {
@@ -131,9 +133,9 @@ export async function uploadProductImages(
           product_id: productId,
           original_url: originalUrl,
           thumbnail_url: thumbnailUrl,
-          position: i,
-          alt_text: `${file.name.split('.')[0] || 'Product image'} ${i + 1}`,
-          is_primary: i === 0
+          position: position,
+          alt_text: `${file.name.split('.')[0] || 'Product image'} ${position + 1}`,
+          is_primary: position === 0
         })
         .select()
         .single()

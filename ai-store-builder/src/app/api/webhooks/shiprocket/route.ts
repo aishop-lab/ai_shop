@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { mapShiprocketStatus } from '@/lib/shipping/shiprocket'
+import { validateShiprocketWebhook } from '@/lib/webhook-security'
 import {
   sendOrderShippedEmail,
   sendOrderDeliveredEmail,
@@ -32,8 +33,15 @@ interface ShiprocketWebhookPayload {
   }>
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Verify the webhook is from Shiprocket (IP allowlist check)
+    const validation = validateShiprocketWebhook(request)
+    if (!validation.valid) {
+      console.warn('[Shiprocket Webhook] Rejected:', validation.error)
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     const payload: ShiprocketWebhookPayload = await request.json()
 
     console.log('[Shiprocket Webhook] Received:', {

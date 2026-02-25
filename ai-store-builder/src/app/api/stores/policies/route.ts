@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import DOMPurify from 'isomorphic-dompurify'
 
 // GET - Fetch store policies
 export async function GET() {
@@ -59,11 +60,26 @@ export async function PATCH(request: Request) {
             return NextResponse.json({ error: 'Store not found' }, { status: 404 })
         }
 
+        // Sanitize HTML content to prevent XSS
+        const sanitizedContent = DOMPurify.sanitize(content, {
+            ALLOWED_TAGS: [
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                'p', 'br', 'hr',
+                'ul', 'ol', 'li',
+                'strong', 'em', 'b', 'i', 'u', 's',
+                'a', 'blockquote', 'pre', 'code',
+                'table', 'thead', 'tbody', 'tr', 'th', 'td',
+                'div', 'span',
+            ],
+            ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+            ALLOW_DATA_ATTR: false,
+        })
+
         // Update the specific policy
         const updatedPolicies = {
             ...store.policies,
             [type]: {
-                content,
+                content: sanitizedContent,
                 updated_at: new Date().toISOString()
             }
         }

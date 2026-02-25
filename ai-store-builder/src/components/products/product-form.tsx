@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter } from 'next/navigation'
-import { Loader2, Save, Send, Sparkles, Wand2, Image as ImageIcon, CheckCircle } from 'lucide-react'
+import Link from 'next/link'
+import { Loader2, Save, Send, Sparkles, Wand2, Image as ImageIcon, CheckCircle, ExternalLink, Eye, EyeOff, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,7 +14,8 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import ImageUploader from './image-uploader'
+import { Badge } from '@/components/ui/badge'
+import ImageUploader, { type ExistingImage } from './image-uploader'
 import AISuggestions, { type AISuggestionsData } from './ai-suggestions'
 import { ProcessingStatus, ProcessingStatusInline } from './processing-status'
 import DescriptionGenerator from './description-generator'
@@ -49,13 +51,23 @@ interface ProductFormProps {
   initialData?: Partial<ProductFormData>
   productId?: string
   mode?: 'create' | 'edit'
+  initialImages?: ProductImage[]
+  initialVariants?: VariantInput[]
+  initialVariantOptions?: VariantOptionInput[]
+  storeSlug?: string
+  productStatus?: string
 }
 
 export default function ProductForm({
   storeId,
   initialData,
   productId,
-  mode = 'create'
+  mode = 'create',
+  initialImages,
+  initialVariants,
+  initialVariantOptions,
+  storeSlug,
+  productStatus: initialProductStatus
 }: ProductFormProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -65,8 +77,8 @@ export default function ProductForm({
   const [isExtracting, setIsExtracting] = useState(false)
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestionsData | null>(null)
   const [aiApplied, setAiApplied] = useState(false)
-  const [tagsInput, setTagsInput] = useState('')
-  const [categoriesInput, setCategoriesInput] = useState('')
+  const [tagsInput, setTagsInput] = useState(initialData?.tags?.join(', ') || '')
+  const [categoriesInput, setCategoriesInput] = useState(initialData?.categories?.join(', ') || '')
 
   // Enhanced AI processing state
   const [processingStages, setProcessingStages] = useState<Array<{
@@ -82,12 +94,25 @@ export default function ProductForm({
   const [aiSuggestedPrice, setAiSuggestedPrice] = useState<{ price: number; compare_at?: number; reasoning?: string } | null>(null)
 
   // Variant state
-  const [hasVariants, setHasVariants] = useState(false)
-  const [variantOptions, setVariantOptions] = useState<VariantOptionInput[]>([])
-  const [variants, setVariants] = useState<VariantInput[]>([])
+  const [hasVariants, setHasVariants] = useState(
+    (initialVariants && initialVariants.length > 0) || (initialVariantOptions && initialVariantOptions.length > 0) || false
+  )
+  const [variantOptions, setVariantOptions] = useState<VariantOptionInput[]>(initialVariantOptions || [])
+  const [variants, setVariants] = useState<VariantInput[]>(initialVariants || [])
   const [isGeneratingVariants, setIsGeneratingVariants] = useState(false)
-  const [existingImages, setExistingImages] = useState<ProductImage[]>([])
+  const [existingImages, setExistingImages] = useState<ExistingImage[]>(
+    initialImages?.map(img => ({
+      id: img.id,
+      url: img.url,
+      thumbnail_url: img.thumbnail_url,
+      alt_text: img.alt_text,
+      position: img.position
+    })) || []
+  )
   const [lastAnalyzedCount, setLastAnalyzedCount] = useState(0) // Track when we last analyzed
+  const [productStatus, setProductStatus] = useState(initialProductStatus || 'draft')
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false)
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema) as never,
@@ -108,14 +133,14 @@ export default function ProductForm({
     }
   })
 
-  // Auto-extract when images are added (re-analyze ALL images together)
+  // Auto-extract when new images are added (re-analyze ALL new images together)
   useEffect(() => {
-    // Only trigger in create mode and when new images are added
-    if (mode === 'create' && images.length > 0 && images.length > lastAnalyzedCount && images.length <= 10) {
+    // Trigger when new File images are added (works in both create and edit mode)
+    if (images.length > 0 && images.length > lastAnalyzedCount && images.length <= 10) {
       extractProductInfo()
       setLastAnalyzedCount(images.length)
     }
-  }, [images.length, mode]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [images.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const extractProductInfo = async () => {
     if (images.length === 0) return
@@ -304,6 +329,77 @@ export default function ProductForm({
     })
   }
 
+  // Handle deleting an existing image
+  const handleDeleteExistingImage = async (imageId: string) => {
+    if (!productId) return
+    try {
+      const res = await fetch(`/api/products/${productId}/images`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageId })
+      })
+      if (res.ok) {
+        setExistingImages(prev => prev.filter(img => img.id !== imageId))
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to delete image',
+          variant: 'destructive'
+        })
+      }
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete image',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  // Handle status toggle (edit mode)
+  const handleToggleStatus = async () => {
+    if (!productId) return
+    setIsTogglingStatus(true)
+    try {
+      const newStatus = productStatus === 'active' ? 'draft' : 'active'
+      const res = await fetch(`/api/products/${productId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      })
+      if (res.ok) {
+        setProductStatus(newStatus)
+        toast({
+          title: newStatus === 'active' ? 'Published' : 'Unpublished',
+          description: `Product is now ${newStatus === 'active' ? 'visible' : 'hidden'} in your store`
+        })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' })
+    } finally {
+      setIsTogglingStatus(false)
+    }
+  }
+
+  // Handle delete (edit mode)
+  const handleDeleteProduct = async () => {
+    if (!productId || !confirm('Are you sure you want to delete this product? This action cannot be undone.')) return
+    setIsDeleting(true)
+    try {
+      const res = await fetch(`/api/products/${productId}`, { method: 'DELETE' })
+      if (res.ok) {
+        toast({ title: 'Deleted', description: 'Product has been deleted' })
+        router.push('/dashboard/products')
+      } else {
+        throw new Error('Failed to delete')
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to delete product', variant: 'destructive' })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   // Generate variant combinations from options
   const generateVariants = async () => {
     if (variantOptions.length === 0 || variantOptions.some(o => o.values.length === 0)) {
@@ -374,7 +470,7 @@ export default function ProductForm({
   }
 
   const onSubmit = async (data: ProductFormData, status: 'draft' | 'published') => {
-    if (images.length === 0 && mode === 'create') {
+    if (images.length === 0 && existingImages.length === 0 && mode === 'create') {
       toast({
         title: 'No Images',
         description: 'Please upload at least one product image',
@@ -383,85 +479,150 @@ export default function ProductForm({
       return
     }
 
+    if (images.length === 0 && existingImages.length === 0 && mode === 'edit') {
+      toast({
+        title: 'No Images',
+        description: 'Product must have at least one image',
+        variant: 'destructive'
+      })
+      return
+    }
+
     setIsLoading(true)
     try {
-      const formData = new FormData()
-      formData.append('store_id', storeId)
-      formData.append('title', data.title)
-      formData.append('description', data.description)
-      formData.append('price', data.price.toString())
-      formData.append('quantity', (data.quantity ?? 0).toString())
-      formData.append('status', status)
-      formData.append('track_quantity', data.track_quantity.toString())
-      formData.append('requires_shipping', data.requires_shipping.toString())
+      if (mode === 'edit' && productId) {
+        // --- Edit mode: separate API calls ---
 
-      if (data.compare_at_price) {
-        formData.append('compare_at_price', data.compare_at_price.toString())
-      }
-      if (data.cost_per_item) {
-        formData.append('cost_per_item', data.cost_per_item.toString())
-      }
-      if (data.sku) {
-        formData.append('sku', data.sku)
-      }
-      if (data.barcode) {
-        formData.append('barcode', data.barcode)
-      }
-      if (data.weight) {
-        formData.append('weight', data.weight.toString())
-      }
-      if (data.categories && data.categories.length > 0) {
-        formData.append('categories', JSON.stringify(data.categories))
-      }
-      if (data.tags && data.tags.length > 0) {
-        formData.append('tags', JSON.stringify(data.tags))
-      }
+        // 1. Upload new images if any
+        if (images.length > 0) {
+          const imageFormData = new FormData()
+          images.forEach(image => {
+            imageFormData.append('images', image)
+          })
 
-      // Add variant data
-      if (hasVariants && variantOptions.length > 0 && variants.length > 0) {
-        formData.append('has_variants', 'true')
-        formData.append('variant_options', JSON.stringify(variantOptions))
-        formData.append('variants', JSON.stringify(variants))
-      }
-
-      // Add images
-      images.forEach(image => {
-        formData.append('images', image)
-      })
-
-      const url = mode === 'edit' && productId
-        ? `/api/products/${productId}`
-        : '/api/products/upload'
-
-      const response = await fetch(url, {
-        method: mode === 'edit' ? 'PATCH' : 'POST',
-        body: mode === 'edit' ? JSON.stringify(data) : formData,
-        ...(mode === 'edit' && {
-          headers: { 'Content-Type': 'application/json' }
-        })
-      })
-
-      if (!response.ok) {
-        // Handle non-JSON responses (like 413 Request Entity Too Large)
-        const contentType = response.headers.get('content-type')
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json()
-          // Include validation details in error message
-          const errorMessage = errorData.details
-            ? `${errorData.error}: ${Array.isArray(errorData.details) ? errorData.details.join(', ') : errorData.details}`
-            : errorData.error || 'Upload failed'
-          throw new Error(errorMessage)
-        } else {
-          // Handle plain text error responses
-          if (response.status === 413) {
-            throw new Error('Images are too large. Please use smaller images (max 5MB each).')
+          const imgRes = await fetch(`/api/products/${productId}/images`, {
+            method: 'POST',
+            body: imageFormData
+          })
+          if (!imgRes.ok) {
+            const imgErr = await imgRes.json().catch(() => ({ error: 'Image upload failed' }))
+            throw new Error(imgErr.error || 'Failed to upload new images')
           }
-          throw new Error(`Upload failed: ${response.statusText || 'Unknown error'}`)
+        }
+
+        // 2. Update product fields
+        const updateRes = await fetch(`/api/products/${productId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: data.title,
+            description: data.description,
+            price: data.price,
+            compare_at_price: data.compare_at_price || null,
+            cost_per_item: data.cost_per_item || null,
+            sku: data.sku || null,
+            barcode: data.barcode || null,
+            quantity: data.quantity ?? 0,
+            track_quantity: data.track_quantity,
+            weight: data.weight || null,
+            requires_shipping: data.requires_shipping,
+            categories: data.categories,
+            tags: data.tags,
+            status
+          })
+        })
+
+        if (!updateRes.ok) {
+          const errData = await updateRes.json().catch(() => ({ error: 'Update failed' }))
+          throw new Error(errData.error || 'Failed to update product')
+        }
+
+        // 3. Save variants if applicable
+        if (hasVariants && variantOptions.length > 0 && variants.length > 0) {
+          const varRes = await fetch(`/api/products/${productId}/variants`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              options: variantOptions,
+              variants: variants
+            })
+          })
+          if (!varRes.ok) {
+            console.error('Variant save failed:', await varRes.text())
+          }
+        }
+
+        setProductStatus(status)
+      } else {
+        // --- Create mode: single multipart upload ---
+        const formData = new FormData()
+        formData.append('store_id', storeId)
+        formData.append('title', data.title)
+        formData.append('description', data.description)
+        formData.append('price', data.price.toString())
+        formData.append('quantity', (data.quantity ?? 0).toString())
+        formData.append('status', status)
+        formData.append('track_quantity', data.track_quantity.toString())
+        formData.append('requires_shipping', data.requires_shipping.toString())
+
+        if (data.compare_at_price) {
+          formData.append('compare_at_price', data.compare_at_price.toString())
+        }
+        if (data.cost_per_item) {
+          formData.append('cost_per_item', data.cost_per_item.toString())
+        }
+        if (data.sku) {
+          formData.append('sku', data.sku)
+        }
+        if (data.barcode) {
+          formData.append('barcode', data.barcode)
+        }
+        if (data.weight) {
+          formData.append('weight', data.weight.toString())
+        }
+        if (data.categories && data.categories.length > 0) {
+          formData.append('categories', JSON.stringify(data.categories))
+        }
+        if (data.tags && data.tags.length > 0) {
+          formData.append('tags', JSON.stringify(data.tags))
+        }
+
+        if (hasVariants && variantOptions.length > 0 && variants.length > 0) {
+          formData.append('has_variants', 'true')
+          formData.append('variant_options', JSON.stringify(variantOptions))
+          formData.append('variants', JSON.stringify(variants))
+        }
+
+        images.forEach(image => {
+          formData.append('images', image)
+        })
+
+        const response = await fetch('/api/products/upload', {
+          method: 'POST',
+          body: formData
+        })
+
+        if (!response.ok) {
+          const contentType = response.headers.get('content-type')
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json()
+            const errorMessage = errorData.details
+              ? `${errorData.error}: ${Array.isArray(errorData.details) ? errorData.details.join(', ') : errorData.details}`
+              : errorData.error || 'Upload failed'
+            throw new Error(errorMessage)
+          } else {
+            if (response.status === 413) {
+              throw new Error('Images are too large. Please use smaller images (max 5MB each).')
+            }
+            throw new Error(`Upload failed: ${response.statusText || 'Unknown error'}`)
+          }
         }
       }
 
       toast({
-        title: status === 'published' ? 'Product Published!' : 'Draft Saved!',
+        title: status === 'published'
+          ? (mode === 'edit' ? 'Product Saved & Published!' : 'Product Published!')
+          : 'Draft Saved!',
         description: mode === 'edit' ? 'Product updated successfully' : 'Product created successfully'
       })
 
@@ -495,6 +656,55 @@ export default function ProductForm({
 
   return (
     <div className="max-w-6xl mx-auto">
+      {/* Edit mode header with actions */}
+      {mode === 'edit' && productId && (
+        <div className="flex items-center justify-between mb-6 pb-4 border-b">
+          <div className="flex items-center gap-3">
+            <Badge variant={productStatus === 'active' ? 'default' : 'secondary'}>
+              {productStatus === 'active' ? 'Published' : 'Draft'}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            {storeSlug && (
+              <Link href={`/${storeSlug}/products/${productId}`} target="_blank">
+                <Button variant="outline" size="sm">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View in Store
+                </Button>
+              </Link>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleStatus}
+              disabled={isTogglingStatus}
+            >
+              {isTogglingStatus ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : productStatus === 'active' ? (
+                <EyeOff className="w-4 h-4 mr-2" />
+              ) : (
+                <Eye className="w-4 h-4 mr-2" />
+              )}
+              {productStatus === 'active' ? 'Unpublish' : 'Publish'}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteProduct}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Delete
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Column - Images */}
         <div className="space-y-6">
@@ -511,10 +721,13 @@ export default function ProductForm({
                 onImagesChange={setImages}
                 maxImages={10}
                 disabled={isLoading || isExtracting}
+                existingImages={existingImages}
+                onDeleteExistingImage={handleDeleteExistingImage}
               />
-              {images.length > 0 && !isExtracting && (
+              {(images.length > 0 || existingImages.length > 0) && !isExtracting && (
                 <p className="text-xs text-muted-foreground mt-2">
-                  {images.length} image{images.length > 1 ? 's' : ''} uploaded. Add more images to improve AI analysis.
+                  {existingImages.length + images.length} image{(existingImages.length + images.length) > 1 ? 's' : ''} total.
+                  {images.length > 0 && ' Add more images to improve AI analysis.'}
                 </p>
               )}
             </CardContent>
@@ -955,20 +1168,27 @@ export default function ProductForm({
                         <VariantsTable
                           variants={variants}
                           options={variantOptions.map((o, i) => ({
-                            id: `opt-${i}`,
-                            product_id: '',
+                            id: o.id || `opt-${i}`,
+                            product_id: productId || '',
                             name: o.name,
-                            position: i,
+                            position: o.position ?? i,
                             values: o.values.map((v, j) => ({
-                              id: `val-${i}-${j}`,
-                              option_id: `opt-${i}`,
+                              id: v.id || `val-${i}-${j}`,
+                              option_id: o.id || `opt-${i}`,
                               value: v.value,
                               color_code: v.color_code,
-                              position: j,
+                              position: v.position ?? j,
                             })),
                           }))}
                           basePrice={form.watch('price') || 0}
-                          images={existingImages}
+                          images={existingImages.map(img => ({
+                            id: img.id,
+                            product_id: productId || '',
+                            url: img.url,
+                            thumbnail_url: img.thumbnail_url,
+                            position: img.position,
+                            alt_text: img.alt_text
+                          }))}
                           onChange={setVariants}
                           disabled={isLoading}
                         />
@@ -1019,7 +1239,7 @@ export default function ProductForm({
               ) : (
                 <Send className="w-4 h-4 mr-2" />
               )}
-              Publish Product
+              {mode === 'edit' ? 'Save & Publish' : 'Publish Product'}
             </Button>
           </div>
         </div>

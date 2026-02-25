@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import type { OrderUpdateRequest } from '@/lib/types/dashboard'
 import {
@@ -12,6 +13,45 @@ import { refundPayment } from '@/lib/payment/razorpay'
 
 interface RouteParams {
   params: Promise<{ orderId: string }>
+}
+
+/**
+ * Verify the authenticated user owns the store that the order belongs to.
+ * Returns the user on success, or a NextResponse error on failure.
+ */
+async function verifyOrderOwnership(orderId: string): Promise<
+  { user: { id: string }; error?: never } | { error: NextResponse; user?: never }
+> {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  }
+
+  // Fetch the order's store_id and verify ownership
+  const { data: order } = await getSupabaseAdmin()
+    .from('orders')
+    .select('store_id')
+    .eq('id', orderId)
+    .single()
+
+  if (!order) {
+    return { error: NextResponse.json({ error: 'Order not found' }, { status: 404 }) }
+  }
+
+  const { data: store } = await supabase
+    .from('stores')
+    .select('id')
+    .eq('id', order.store_id)
+    .eq('owner_id', user.id)
+    .single()
+
+  if (!store) {
+    return { error: NextResponse.json({ error: 'Access denied' }, { status: 403 }) }
+  }
+
+  return { user }
 }
 
 // Validation schema for order updates - uses database fulfillment_status values
@@ -37,6 +77,10 @@ export async function GET(
 ) {
   try {
     const { orderId } = await params
+
+    // Verify authentication and store ownership
+    const auth = await verifyOrderOwnership(orderId)
+    if (auth.error) return auth.error
 
     const { data: order, error } = await getSupabaseAdmin()
       .from('orders')
@@ -89,6 +133,11 @@ export async function PATCH(
 ) {
   try {
     const { orderId } = await params
+
+    // Verify authentication and store ownership
+    const auth = await verifyOrderOwnership(orderId)
+    if (auth.error) return auth.error
+
     const body = await request.json()
 
     // Validate request body
@@ -268,6 +317,10 @@ export async function DELETE(
 ) {
   try {
     const { orderId } = await params
+
+    // Verify authentication and store ownership
+    const auth = await verifyOrderOwnership(orderId)
+    if (auth.error) return auth.error
 
     // Fetch full order with items for inventory restoration
     const { data: order, error: fetchError } = await getSupabaseAdmin()

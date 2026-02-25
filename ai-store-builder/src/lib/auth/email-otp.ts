@@ -1,4 +1,4 @@
-import { createHash, randomInt } from 'crypto'
+import { createHash, randomInt, timingSafeEqual } from 'crypto'
 
 const OTP_LENGTH = 6
 const OTP_EXPIRY_MINUTES = 10
@@ -86,10 +86,24 @@ export function hasExceededAttempts(attempts: number): boolean {
 }
 
 /**
+ * Get the signing secret for 2FA pending tokens.
+ * Throws if not configured — fail secure, never fall back to a weak default.
+ */
+function getPendingTokenSecret(): string {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!secret) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for 2FA token signing')
+  }
+  return secret
+}
+
+/**
  * Create a pending session token for 2FA verification
  * This is a simple signed token containing the user ID and expiry
  */
 export function createPendingToken(userId: string): string {
+  const secret = getPendingTokenSecret()
+
   const expiry = new Date()
   expiry.setMinutes(expiry.getMinutes() + PENDING_TOKEN_EXPIRY_MINUTES)
 
@@ -101,7 +115,7 @@ export function createPendingToken(userId: string): string {
 
   const payloadStr = JSON.stringify(payload)
   const signature = createHash('sha256')
-    .update(payloadStr + (process.env.SUPABASE_SERVICE_ROLE_KEY || 'secret'))
+    .update(payloadStr + secret)
     .digest('hex')
 
   const token = Buffer.from(JSON.stringify({ payload: payloadStr, signature })).toString('base64')
@@ -113,15 +127,20 @@ export function createPendingToken(userId: string): string {
  */
 export function verifyPendingToken(token: string): { valid: boolean; userId?: string; error?: string } {
   try {
+    const secret = getPendingTokenSecret()
+
     const decoded = JSON.parse(Buffer.from(token, 'base64').toString('utf8'))
     const { payload: payloadStr, signature } = decoded
 
-    // Verify signature
+    // Verify signature using timing-safe comparison
     const expectedSignature = createHash('sha256')
-      .update(payloadStr + (process.env.SUPABASE_SERVICE_ROLE_KEY || 'secret'))
+      .update(payloadStr + secret)
       .digest('hex')
 
-    if (signature !== expectedSignature) {
+    const sigBuffer = Buffer.from(signature, 'hex')
+    const expectedBuffer = Buffer.from(expectedSignature, 'hex')
+
+    if (sigBuffer.length !== expectedBuffer.length || !timingSafeEqual(sigBuffer, expectedBuffer)) {
       return { valid: false, error: 'Invalid token signature' }
     }
 
@@ -138,7 +157,10 @@ export function verifyPendingToken(token: string): { valid: boolean; userId?: st
     }
 
     return { valid: true, userId: payload.userId }
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('SUPABASE_SERVICE_ROLE_KEY')) {
+      console.error('[2FA] Token verification failed: signing secret not configured')
+    }
     return { valid: false, error: 'Invalid token format' }
   }
 }

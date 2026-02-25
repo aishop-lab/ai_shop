@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { validateSession } from '@/lib/customer/auth'
 
 interface RouteParams {
   params: Promise<{ orderNumber: string }>
@@ -14,6 +15,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         { error: 'Order number is required' },
         { status: 400 }
       )
+    }
+
+    // Require customer session authentication
+    const customerToken = request.cookies.get('customer_session')?.value
+    if (!customerToken) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const sessionResult = await validateSession(customerToken)
+    if (!sessionResult.success || !sessionResult.customer) {
+      return NextResponse.json({ error: 'Session expired' }, { status: 401 })
     }
 
     // Fetch order with items
@@ -31,6 +43,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         { error: 'Order not found' },
         { status: 404 }
       )
+    }
+
+    // Verify the order belongs to the authenticated customer
+    if (
+      order.customer_id !== sessionResult.customer.id &&
+      order.email !== sessionResult.customer.email
+    ) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
     // Return order details (excluding sensitive payment info)

@@ -107,12 +107,22 @@ async function compressImage(file: File, maxSizeMB: number = 4.8): Promise<File>
   })
 }
 
+export interface ExistingImage {
+  id: string
+  url: string
+  thumbnail_url?: string
+  alt_text?: string
+  position: number
+}
+
 interface ImageUploaderProps {
   images: File[]
   onImagesChange: (files: File[]) => void
   maxImages?: number
   disabled?: boolean
   enableEnhancement?: boolean
+  existingImages?: ExistingImage[]
+  onDeleteExistingImage?: (imageId: string) => void
 }
 
 interface PreviewImage {
@@ -148,8 +158,12 @@ export default function ImageUploader({
   onImagesChange,
   maxImages = 10,
   disabled = false,
-  enableEnhancement = true
+  enableEnhancement = true,
+  existingImages = [],
+  onDeleteExistingImage
 }: ImageUploaderProps) {
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null)
+  const totalImageCount = existingImages.length + images.length
   const [previews, setPreviews] = useState<PreviewImage[]>([])
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [analysisMap, setAnalysisMap] = useState<Map<string, ImageAnalysis>>(new Map())
@@ -338,10 +352,18 @@ export default function ImageUploader({
     }
   }
 
+  const handleDeleteExisting = async (imageId: string) => {
+    if (!onDeleteExistingImage) return
+    setDeletingImageId(imageId)
+    await onDeleteExistingImage(imageId)
+    setDeletingImageId(null)
+  }
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (images.length + acceptedFiles.length > maxImages) {
+    const totalWithNew = totalImageCount + acceptedFiles.length
+    if (totalWithNew > maxImages) {
       alert(`Maximum ${maxImages} images allowed`)
-      const allowedCount = maxImages - images.length
+      const allowedCount = maxImages - totalImageCount
       acceptedFiles = acceptedFiles.slice(0, allowedCount)
     }
 
@@ -423,8 +445,8 @@ export default function ImageUploader({
       'image/png': ['.png'],
       'image/webp': ['.webp']
     },
-    maxFiles: maxImages - images.length,
-    disabled: disabled || images.length >= maxImages,
+    maxFiles: maxImages - totalImageCount,
+    disabled: disabled || totalImageCount >= maxImages,
     onDrop
   })
 
@@ -528,9 +550,63 @@ export default function ImageUploader({
       </Dialog>
 
       <div className="space-y-4">
-        {/* Image Preview Grid */}
-        {previews.length > 0 && (
+        {/* Existing + New Images Grid */}
+        {(existingImages.length > 0 || previews.length > 0) && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {/* Existing images (already uploaded) */}
+            {existingImages.map((img, index) => {
+              const isDeleting = deletingImageId === img.id
+              const globalIndex = index // existing images come first
+
+              return (
+                <div
+                  key={img.id}
+                  className={cn(
+                    "relative aspect-square rounded-lg overflow-hidden border-2 group",
+                    isDeleting ? "opacity-50 border-red-300" : "border-transparent",
+                    "hover:border-primary/50 transition-all"
+                  )}
+                >
+                  <Image
+                    src={img.thumbnail_url || img.url}
+                    alt={img.alt_text || `Product image ${index + 1}`}
+                    fill
+                    className="object-cover"
+                  />
+
+                  {/* Delete button */}
+                  {onDeleteExistingImage && !isDeleting && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteExisting(img.id)}
+                      className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {isDeleting && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 text-white animate-spin" />
+                    </div>
+                  )}
+
+                  {/* Primary badge */}
+                  {globalIndex === 0 && previews.length === 0 && (
+                    <div className="absolute bottom-2 left-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded">
+                      Primary
+                    </div>
+                  )}
+
+                  {/* Image number */}
+                  <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                    {globalIndex + 1}/{totalImageCount}
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* New file previews */}
             {previews.map((preview, index) => {
               const analysis = getAnalysisForImage(preview)
               const isEnhancing = enhancingIndex === index
@@ -655,7 +731,7 @@ export default function ImageUploader({
                   )}
 
                   {/* Primary badge */}
-                  {index === 0 && (
+                  {index === 0 && existingImages.length === 0 && (
                     <div className="absolute bottom-2 left-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded">
                       Primary
                     </div>
@@ -663,7 +739,7 @@ export default function ImageUploader({
 
                   {/* Image number */}
                   <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                    {index + 1}/{previews.length}
+                    {existingImages.length + index + 1}/{totalImageCount}
                   </div>
                 </div>
               )
@@ -672,7 +748,7 @@ export default function ImageUploader({
         )}
 
         {/* Dropzone */}
-        {images.length < maxImages && (
+        {totalImageCount < maxImages && (
           <div
             {...getRootProps()}
             className={cn(
@@ -707,7 +783,7 @@ export default function ImageUploader({
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    JPG, PNG or WebP (max 5MB each) • {images.length}/{maxImages} uploaded
+                    JPG, PNG or WebP (max 5MB each) • {totalImageCount}/{maxImages} uploaded
                   </p>
                 </>
               )}
@@ -716,7 +792,7 @@ export default function ImageUploader({
         )}
 
         {/* Tips */}
-        {images.length === 0 && (
+        {totalImageCount === 0 && (
           <div className="bg-muted/50 rounded-lg p-4">
             <h4 className="font-medium text-sm mb-2">Tips for great product photos:</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
