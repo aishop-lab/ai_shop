@@ -28,6 +28,32 @@ export async function POST(request: Request) {
       const arrayBuffer = await imageFile.arrayBuffer()
       imageBuffer = Buffer.from(arrayBuffer)
     } else if (imageUrl) {
+      // Validate URL to prevent SSRF attacks
+      try {
+        const parsedUrl = new URL(imageUrl)
+        if (!['https:', 'http:'].includes(parsedUrl.protocol)) {
+          return NextResponse.json({ error: 'Only HTTP(S) URLs are allowed' }, { status: 400 })
+        }
+        // Block private/internal IPs
+        const hostname = parsedUrl.hostname
+        if (
+          hostname === 'localhost' ||
+          hostname === '127.0.0.1' ||
+          hostname === '0.0.0.0' ||
+          hostname.startsWith('10.') ||
+          hostname.startsWith('172.') ||
+          hostname.startsWith('192.168.') ||
+          hostname === '169.254.169.254' ||
+          hostname.startsWith('169.254.') ||
+          hostname.endsWith('.internal') ||
+          hostname === '[::1]'
+        ) {
+          return NextResponse.json({ error: 'URL points to a private/internal address' }, { status: 400 })
+        }
+      } catch {
+        return NextResponse.json({ error: 'Invalid URL' }, { status: 400 })
+      }
+
       // Fetch image from URL
       const response = await fetch(imageUrl)
       if (!response.ok) {

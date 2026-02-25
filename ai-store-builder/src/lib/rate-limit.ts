@@ -83,12 +83,12 @@ export const RATE_LIMITS = {
  * Uses IP address as primary identifier, falls back to user ID if available
  */
 export function getClientIdentifier(request: NextRequest, userId?: string): string {
-  // Try to get real IP from various headers (for proxied requests)
-  const forwarded = request.headers.get('x-forwarded-for')
-  const realIp = request.headers.get('x-real-ip')
-  const cfIp = request.headers.get('cf-connecting-ip') // Cloudflare
-
-  const ip = cfIp || realIp || forwarded?.split(',')[0]?.trim() || 'unknown'
+  // Use Vercel's edge-injected x-real-ip header (not spoofable by clients on Vercel).
+  // Falls back to x-forwarded-for for local dev. Removed cf-connecting-ip to avoid
+  // trusting client-spoofable headers when not behind Cloudflare.
+  const ip = request.headers.get('x-real-ip')
+    || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || 'unknown'
 
   // If user ID is provided, combine with IP for more precise limiting
   return userId ? `${ip}:user:${userId}` : `${ip}`

@@ -45,7 +45,13 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
     const [salt, key] = hash.split(':')
     crypto.scrypt(password, salt, 64, (err, derivedKey) => {
       if (err) reject(err)
-      resolve(key === derivedKey.toString('hex'))
+      // Timing-safe comparison to prevent timing attacks
+      const keyBuffer = Buffer.from(key, 'hex')
+      if (keyBuffer.length !== derivedKey.length) {
+        resolve(false)
+        return
+      }
+      resolve(crypto.timingSafeEqual(keyBuffer, derivedKey))
     })
   })
 }

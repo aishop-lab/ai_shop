@@ -41,6 +41,12 @@ async function verifyGoogleToken(idToken: string): Promise<GoogleTokenPayload | 
 
     const payload = await response.json() as GoogleTokenPayload
 
+    // Verify the issuer is Google
+    if (!['accounts.google.com', 'https://accounts.google.com'].includes(payload.iss)) {
+      console.error('Google token issuer mismatch:', payload.iss)
+      return null
+    }
+
     // Verify the token is for our app
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
     if (payload.aud !== clientId) {

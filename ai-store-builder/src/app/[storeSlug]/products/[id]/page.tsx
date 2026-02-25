@@ -45,7 +45,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/<\//g, '<\\/') }}
       />
       <StoreProductDetail product={product} relatedProducts={relatedProducts} />
     </>

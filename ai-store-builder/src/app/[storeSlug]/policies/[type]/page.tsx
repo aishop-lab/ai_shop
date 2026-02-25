@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import { getStoreBySlug } from '@/lib/store/get-store-data'
 import { format } from 'date-fns'
+import DOMPurify from 'isomorphic-dompurify'
 
 interface PolicyPageProps {
     params: Promise<{ storeSlug: string; type: string }>
@@ -70,7 +71,19 @@ export default async function PolicyPage({ params }: PolicyPageProps) {
                 style={{ fontFamily: 'var(--font-body)' }}
             >
                 <div
-                    dangerouslySetInnerHTML={{ __html: policy.content }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(policy.content, {
+                        ALLOWED_TAGS: [
+                            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                            'p', 'br', 'hr',
+                            'ul', 'ol', 'li',
+                            'strong', 'em', 'b', 'i', 'u', 's',
+                            'a', 'blockquote', 'pre', 'code',
+                            'table', 'thead', 'tbody', 'tr', 'th', 'td',
+                            'div', 'span',
+                        ],
+                        ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+                        ALLOW_DATA_ATTR: false,
+                    }) }}
                 />
             </article>
 

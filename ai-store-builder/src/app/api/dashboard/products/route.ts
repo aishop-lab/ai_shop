@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { sanitizeSearchQuery } from '@/lib/utils/sanitize'
 import type { ProductsListResponse } from '@/lib/types/dashboard'
 
 export async function GET(request: NextRequest): Promise<NextResponse<ProductsListResponse | { error: string }>> {
@@ -55,7 +56,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ProductsLi
 
     // Search by title or SKU
     if (search) {
-      query = query.or(`title.ilike.%${search}%,sku.ilike.%${search}%`)
+      const s = sanitizeSearchQuery(search)
+      query = query.or(`title.ilike.%${s}%,sku.ilike.%${s}%`)
     }
 
     // Pagination

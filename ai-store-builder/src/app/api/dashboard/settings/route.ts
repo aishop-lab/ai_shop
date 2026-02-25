@@ -15,10 +15,22 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user's store with all settings (use limit instead of single for robustness)
+    // Get user's store with all settings, excluding encrypted secret columns
     const { data: stores, error: storeError } = await supabase
       .from('stores')
-      .select('*')
+      .select(`
+        id, name, slug, tagline, description, logo_url, theme, status,
+        contact_email, contact_phone, whatsapp_number, instagram_handle,
+        brand_colors, settings, blueprint, policies, categories,
+        business_address, gstin, pan, notification_settings,
+        cart_recovery_settings, custom_domain, custom_domain_verified,
+        razorpay_key_id, razorpay_credentials_verified, razorpay_credentials_verified_at,
+        stripe_publishable_key, stripe_credentials_verified, stripe_credentials_verified_at,
+        msg91_whatsapp_number, msg91_credentials_verified,
+        resend_from_email, resend_credentials_verified,
+        shipping_providers,
+        owner_id, created_at, updated_at, activated_at
+      `)
       .eq('owner_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -105,7 +117,19 @@ export async function PATCH(request: Request) {
       .from('stores')
       .update(updateData)
       .eq('id', existingStore.id)
-      .select()
+      .select(`
+        id, name, slug, tagline, description, logo_url, theme, status,
+        contact_email, contact_phone, whatsapp_number, instagram_handle,
+        brand_colors, settings, blueprint, policies, categories,
+        business_address, gstin, pan, notification_settings,
+        cart_recovery_settings, custom_domain, custom_domain_verified,
+        razorpay_key_id, razorpay_credentials_verified, razorpay_credentials_verified_at,
+        stripe_publishable_key, stripe_credentials_verified, stripe_credentials_verified_at,
+        msg91_whatsapp_number, msg91_credentials_verified,
+        resend_from_email, resend_credentials_verified,
+        shipping_providers,
+        owner_id, created_at, updated_at, activated_at
+      `)
       .single()
 
     if (updateError) {

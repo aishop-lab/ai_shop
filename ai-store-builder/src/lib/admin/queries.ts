@@ -3,6 +3,7 @@
  */
 
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { sanitizeSearchQuery } from '@/lib/utils/sanitize'
 
 export interface PlatformStats {
   totalStores: number
@@ -189,7 +190,8 @@ export async function getStoresWithDetails(options: {
   }
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%,slug.ilike.%${search}%`)
+    const s = sanitizeSearchQuery(search)
+    query = query.or(`name.ilike.%${s}%,slug.ilike.%${s}%`)
   }
 
   query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1)
@@ -341,7 +343,8 @@ export async function getSellers(options: {
     .eq('role', 'seller')
 
   if (search) {
-    query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`)
+    const s = sanitizeSearchQuery(search)
+    query = query.or(`full_name.ilike.%${s}%,email.ilike.%${s}%`)
   }
 
   query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1)
@@ -416,7 +419,8 @@ export async function getCustomers(options: {
   }
 
   if (search) {
-    query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`)
+    const s = sanitizeSearchQuery(search)
+    query = query.or(`full_name.ilike.%${s}%,email.ilike.%${s}%`)
   }
 
   query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1)
@@ -512,7 +516,8 @@ export async function getAdminOrders(options: {
   }
 
   if (search) {
-    query = query.or(`order_number.ilike.%${search}%,customer_name.ilike.%${search}%,customer_email.ilike.%${search}%`)
+    const s = sanitizeSearchQuery(search)
+    query = query.or(`order_number.ilike.%${s}%,customer_name.ilike.%${s}%,customer_email.ilike.%${s}%`)
   }
 
   query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1)

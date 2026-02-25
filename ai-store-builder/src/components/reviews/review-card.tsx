@@ -38,7 +38,7 @@ export function ReviewCard({ review, customerEmail }: ReviewCardProps) {
         }
 
         if (!customerEmail) {
-            toast.error('Please provide your email to vote')
+            toast.error('Please log in to vote on reviews')
             return
         }
 
@@ -47,12 +47,16 @@ export function ReviewCard({ review, customerEmail }: ReviewCardProps) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    customer_email: customerEmail,
                     vote_type: voteType,
                 }),
             })
 
             const data = await response.json()
+
+            if (response.status === 401) {
+                toast.error('Please log in to vote on reviews')
+                return
+            }
 
             if (!response.ok) {
                 toast.error(data.error || 'Failed to record vote')

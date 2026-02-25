@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeSearchQuery } from '@/lib/utils/sanitize'
 
 /**
  * GET /api/dashboard/returns
@@ -63,7 +64,8 @@ export async function GET(request: NextRequest) {
 
     // Add search filter
     if (search) {
-      query = query.or(`order_number.ilike.%${search}%,customer_name.ilike.%${search}%,email.ilike.%${search}%`)
+      const s = sanitizeSearchQuery(search)
+      query = query.or(`order_number.ilike.%${s}%,customer_name.ilike.%${s}%,email.ilike.%${s}%`)
     }
 
     const { data: orders, error: ordersError } = await query.limit(100)

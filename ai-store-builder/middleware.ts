@@ -177,6 +177,14 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/sign-in', request.url))
     }
 
+    // Block non-admin users from accessing /admin routes
+    if (user && pathname.startsWith('/admin')) {
+      const adminEmail = process.env.ADMIN_EMAIL || 'aishop@middlefieldbrands.com'
+      if (user.email !== adminEmail) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+    }
+
     // Redirect to dashboard if accessing auth routes while logged in
     if (user && authRoutes.some(r => pathname.startsWith(r))) {
       return NextResponse.redirect(new URL('/dashboard', request.url))

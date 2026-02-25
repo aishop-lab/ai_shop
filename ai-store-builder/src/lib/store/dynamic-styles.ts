@@ -140,9 +140,13 @@ export function getGoogleFontsUrl(fonts: string[]): string {
     return ''
   }
   
+  // Sanitize font names: only allow letters, spaces, digits, and hyphens
+  const sanitizedFonts = googleFonts.map(f => f.replace(/[^a-zA-Z0-9 -]/g, ''))
+
   // Format font names for URL
-  const fontsQuery = googleFonts
-    .map(f => f.replace(/ /g, '+'))
+  const fontsQuery = sanitizedFonts
+    .filter(f => f.length > 0)
+    .map(f => encodeURIComponent(f).replace(/%20/g, '+'))
     .map(f => `${f}:wght@400;500;600;700`)
     .join('&family=')
   

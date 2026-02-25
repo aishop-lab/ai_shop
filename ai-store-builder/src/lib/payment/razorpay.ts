@@ -213,7 +213,11 @@ export function verifyRazorpaySignature(
     .update(body)
     .digest('hex')
 
-  return expectedSignature === signature
+  // Timing-safe comparison to prevent timing attacks
+  const sigBuffer = Buffer.from(signature, 'hex')
+  const expectedBuffer = Buffer.from(expectedSignature, 'hex')
+  if (sigBuffer.length !== expectedBuffer.length) return false
+  return crypto.timingSafeEqual(sigBuffer, expectedBuffer)
 }
 
 /**
@@ -230,7 +234,11 @@ export function verifyWebhookSignature(
     .update(body)
     .digest('hex')
 
-  return expectedSignature === signature
+  // Timing-safe comparison to prevent timing attacks
+  const sigBuffer = Buffer.from(signature, 'hex')
+  const expectedBuffer = Buffer.from(expectedSignature, 'hex')
+  if (sigBuffer.length !== expectedBuffer.length) return false
+  return crypto.timingSafeEqual(sigBuffer, expectedBuffer)
 }
 
 /**

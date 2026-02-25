@@ -2,6 +2,7 @@
 // Executes tools by calling the appropriate dashboard APIs
 
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { sanitizeSearchQuery } from '@/lib/utils/sanitize'
 import { generateText } from 'ai'
 import { getTextModel } from '@/lib/ai/provider'
 
@@ -57,7 +58,8 @@ export async function executeGetProducts(
     }
 
     if (args.search) {
-      query = query.or(`title.ilike.%${args.search}%,sku.ilike.%${args.search}%`)
+      const s = sanitizeSearchQuery(args.search)
+      query = query.or(`title.ilike.%${s}%,sku.ilike.%${s}%`)
     }
 
     const limit = args.limit || 20

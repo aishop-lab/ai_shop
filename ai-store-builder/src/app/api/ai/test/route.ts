@@ -13,6 +13,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 import { AI_PROVIDER, CONFIDENCE_THRESHOLDS, getTextModel, getVisionModel, getFastModel } from '@/lib/ai/provider'
 import { vercelAI } from '@/lib/ai/vercel-ai-service'
 
@@ -30,6 +31,17 @@ interface TestSection {
 }
 
 export async function GET() {
+  // Require authentication - admin only
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const adminEmail = process.env.ADMIN_EMAIL || 'aishop@middlefieldbrands.com'
+  if (user.email !== adminEmail) {
+    return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+  }
+
   const sections: TestSection[] = []
   let totalApiCalls = 0
 

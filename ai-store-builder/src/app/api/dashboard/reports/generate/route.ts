@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+
+const reportSchema = z.object({
+    type: z.enum(['gst', 'sales', 'products']),
+    start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
+    end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
+})
 
 export async function POST(request: NextRequest) {
     try {
@@ -11,7 +18,14 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { type, start_date, end_date } = body
+        const validation = reportSchema.safeParse(body)
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Invalid request', details: validation.error.errors },
+                { status: 400 }
+            )
+        }
+        const { type, start_date, end_date } = validation.data
 
         // Get user's store
         const { data: store, error: storeError } = await supabase

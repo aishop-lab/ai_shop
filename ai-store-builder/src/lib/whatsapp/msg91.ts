@@ -314,9 +314,7 @@ async function sendWhatsAppMessage(params: {
       messageId: 'dev-mode',
     })
     console.log('=== WHATSAPP MESSAGE (MSG91 not configured) ===')
-    console.log('To:', params.to)
     console.log('Template:', params.templateName)
-    console.log('Params:', params.templateParams)
     console.log('Store ID:', params.storeId || 'N/A')
     console.log('==============================================')
     return { success: true, messageId: 'dev-mode', attempts: 1 }

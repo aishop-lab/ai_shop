@@ -80,6 +80,17 @@ export function parseCSVContent(content: string): CSVParseResult {
     })
   }
 
+  // Enforce row count limit to prevent excessive AI API usage and memory consumption
+  const MAX_ROWS = 500
+  if (parsed.data.length > MAX_ROWS) {
+    result.errors.push({
+      row: 0,
+      error: `Too many rows (${parsed.data.length}). Maximum allowed: ${MAX_ROWS}`
+    })
+    result.success = false
+    return result
+  }
+
   // Validate headers
   const headers = parsed.meta.fields || []
   const missingRequired = REQUIRED_HEADERS.filter(h => !headers.includes(h))

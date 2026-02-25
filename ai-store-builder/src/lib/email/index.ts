@@ -156,7 +156,6 @@ export async function sendEmail(
   if (!credentials) {
     console.warn('Email service not configured (missing credentials)')
     console.log('=== EMAIL (Not configured) ===')
-    console.log('To:', options.to)
     console.log('Subject:', options.subject)
     console.log('Store ID:', options.storeId || 'N/A')
     console.log('==============================')
@@ -211,7 +210,6 @@ export async function sendEmailWithReact(options: {
   if (!credentials) {
     console.warn('Email service not configured (missing credentials)')
     console.log('=== EMAIL (Not configured) ===')
-    console.log('To:', options.to)
     console.log('Subject:', options.subject)
     console.log('Store ID:', options.storeId || 'N/A')
     console.log('==============================')

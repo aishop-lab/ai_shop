@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeSearchQuery } from '@/lib/utils/sanitize'
 
 export async function GET(request: NextRequest) {
   try {
@@ -57,7 +58,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      query = query.or(`orders.order_number.ilike.%${search}%,orders.customer_name.ilike.%${search}%`)
+      const s = sanitizeSearchQuery(search)
+      query = query.or(`orders.order_number.ilike.%${s}%,orders.customer_name.ilike.%${s}%`)
     }
 
     // Apply pagination

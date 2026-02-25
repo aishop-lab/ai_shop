@@ -1,6 +1,7 @@
 // Product Database Operations
 
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeSearchQuery } from '@/lib/utils/sanitize'
 import type { Product, ProductImage } from '@/lib/types/store'
 import type { ProductInput, ProductUpdate } from './validation'
 
@@ -305,7 +306,8 @@ export async function getStoreProducts(
 
   // Apply search filter
   if (search) {
-    query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,sku.ilike.%${search}%`)
+    const s = sanitizeSearchQuery(search)
+    query = query.or(`title.ilike.%${s}%,description.ilike.%${s}%,sku.ilike.%${s}%`)
   }
 
   // Apply sorting

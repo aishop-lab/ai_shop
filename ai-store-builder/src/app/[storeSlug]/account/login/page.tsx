@@ -38,7 +38,10 @@ export default function CustomerLoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const storeSlug = params.storeSlug as string
-  const redirectTo = searchParams.get('redirect') || `/${storeSlug}/account`
+  const rawRedirect = searchParams.get('redirect') || `/${storeSlug}/account`
+  // Validate redirect to prevent open redirect attacks
+  const redirectTo = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') && !rawRedirect.includes('://')
+    ? rawRedirect : `/${storeSlug}/account`
 
   const { login, loginWithGoogle, register, isAuthenticated, isLoading: customerLoading } = useCustomer()
   const { toast } = useToast()

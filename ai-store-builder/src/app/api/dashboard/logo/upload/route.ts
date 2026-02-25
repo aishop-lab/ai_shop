@@ -72,8 +72,12 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Generate filename
-    const fileExt = file.name.split('.').pop() || 'png'
+    // Derive extension from MIME type instead of trusting client filename
+    const MIME_TO_EXT: Record<string, string> = {
+      'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+      'image/gif': 'gif', 'image/svg+xml': 'svg',
+    }
+    const fileExt = MIME_TO_EXT[file.type] || file.name.split('.').pop() || 'png'
     const fileName = `${user.id}/${Date.now()}.${fileExt}`
 
     // Upload to Supabase

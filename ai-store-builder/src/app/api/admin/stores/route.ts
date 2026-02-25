@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { verifyAdmin } from '@/lib/admin/auth'
 import { getStoresWithDetails } from '@/lib/admin/queries'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
@@ -40,11 +41,20 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { ids } = await request.json()
+    const body = await request.json()
 
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return NextResponse.json({ error: 'Store IDs required' }, { status: 400 })
+    // Validate IDs are UUIDs and enforce count limit
+    const deleteSchema = z.object({
+      ids: z.array(z.string().uuid()).min(1).max(100),
+    })
+    const validation = deleteSchema.safeParse(body)
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Invalid request: each ID must be a valid UUID, max 100 items' },
+        { status: 400 }
+      )
     }
+    const { ids } = validation.data
 
     const supabase = getSupabaseAdmin()
 

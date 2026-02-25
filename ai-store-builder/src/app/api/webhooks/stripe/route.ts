@@ -48,54 +48,59 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
     }
 
-    // We need to construct the event first to get the store_id from metadata.
-    // But we need the secret to construct the event. Try platform secret first.
-    const platformSecret = process.env.STRIPE_WEBHOOK_SECRET
+    // Verify webhook signature by trying all known secrets (platform + store-specific)
+    // without parsing untrusted payload first. This avoids the trust-before-verify flaw
+    // where an attacker-controlled store_id could be used to select a verification key.
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+      apiVersion: '2026-01-28.clover',
+    })
 
     let event: Stripe.Event | null = null
-    let verifiedWithPlatform = false
 
-    // Try platform secret first
+    // Collect all candidate webhook secrets to try
+    const secretsToTry: string[] = []
+
+    // 1. Platform secret (most common)
+    const platformSecret = process.env.STRIPE_WEBHOOK_SECRET
     if (platformSecret) {
+      secretsToTry.push(platformSecret)
+    }
+
+    // 2. All active store-specific webhook secrets
+    const { data: storesWithStripe } = await getSupabaseAdmin()
+      .from('stores')
+      .select('stripe_webhook_secret_encrypted')
+      .eq('stripe_credentials_verified', true)
+      .not('stripe_webhook_secret_encrypted', 'is', null)
+
+    if (storesWithStripe) {
+      for (const store of storesWithStripe) {
+        if (store.stripe_webhook_secret_encrypted) {
+          try {
+            const decrypted = decrypt(store.stripe_webhook_secret_encrypted)
+            if (decrypted && !secretsToTry.includes(decrypted)) {
+              secretsToTry.push(decrypted)
+            }
+          } catch {
+            // Skip stores with decryption failures
+          }
+        }
+      }
+    }
+
+    // Try each secret until one verifies the signature
+    for (const secret of secretsToTry) {
       try {
-        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-          apiVersion: '2026-01-28.clover',
-        })
-        event = stripe.webhooks.constructEvent(body, signature, platformSecret)
-        verifiedWithPlatform = true
+        event = stripe.webhooks.constructEvent(body, signature, secret)
+        break // Signature verified successfully
       } catch {
-        // Platform secret didn't work, will try store-specific below
+        // This secret didn't work, try next
       }
     }
 
     if (!event) {
-      // Parse the body to get store_id for store-specific secret lookup
-      let rawEvent: any
-      try {
-        rawEvent = JSON.parse(body)
-      } catch {
-        return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
-      }
-
-      const storeId = rawEvent?.data?.object?.metadata?.store_id
-      if (!storeId) {
-        return NextResponse.json({ error: 'Unable to verify webhook signature' }, { status: 400 })
-      }
-
-      const storeSecret = await getWebhookSecret(storeId)
-      if (!storeSecret) {
-        return NextResponse.json({ error: 'No webhook secret configured' }, { status: 500 })
-      }
-
-      try {
-        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-          apiVersion: '2026-01-28.clover',
-        })
-        event = stripe.webhooks.constructEvent(body, signature, storeSecret)
-      } catch (err) {
-        console.error('Stripe Webhook: Invalid signature (tried both platform and store secrets)')
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
-      }
+      console.error('Stripe Webhook: Invalid signature (tried all known secrets)')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
     console.log('Stripe webhook received:', event.type)

@@ -162,21 +162,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create collection' }, { status: 500 })
     }
 
-    // Add products if provided
+    // Add products if provided - verify all products belong to this store
     if (body.product_ids && body.product_ids.length > 0) {
-      const productEntries = body.product_ids.map((productId, index) => ({
-        collection_id: collection.id,
-        product_id: productId,
-        position: index
-      }))
+      const { data: validProducts } = await supabase
+        .from('products')
+        .select('id')
+        .eq('store_id', store.id)
+        .in('id', body.product_ids)
 
-      const { error: productsError } = await supabase
-        .from('collection_products')
-        .insert(productEntries)
+      const validIds = new Set((validProducts || []).map(p => p.id))
+      const verifiedProductIds = body.product_ids.filter(id => validIds.has(id))
 
-      if (productsError) {
-        console.error('[Collections] Add products error:', productsError)
-        // Collection created but products failed - return partial success
+      if (verifiedProductIds.length > 0) {
+        const productEntries = verifiedProductIds.map((productId, index) => ({
+          collection_id: collection.id,
+          product_id: productId,
+          position: index
+        }))
+
+        const { error: productsError } = await supabase
+          .from('collection_products')
+          .insert(productEntries)
+
+        if (productsError) {
+          console.error('[Collections] Add products error:', productsError)
+          // Collection created but products failed - return partial success
+        }
       }
     }
 

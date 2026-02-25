@@ -73,7 +73,7 @@ export default async function StoreLayout({ children, params }: StoreLayoutProps
       {/* Structured Data */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/<\//g, '<\\/') }}
       />
 
       {/* Marketing Tracking Scripts */}

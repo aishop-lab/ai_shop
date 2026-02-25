@@ -7,10 +7,19 @@ interface TrackingScriptsProps {
   pixels: MarketingPixels | null
 }
 
+// Sanitize a pixel/tracking ID for safe interpolation into script blocks.
+// Only allow alphanumeric characters, hyphens, underscores, and dots.
+// GA4 IDs: "G-XXXXXXXXXX", FB pixel IDs: numeric, Ads IDs: "AW-XXXXXXXXX"
+function sanitizePixelId(id: string): string {
+  return id.replace(/[^a-zA-Z0-9_.\-]/g, '')
+}
+
 export function TrackingScripts({ pixels }: TrackingScriptsProps) {
   if (!pixels) return null
 
-  const { facebook_pixel_id, google_analytics_id, google_ads_conversion_id } = pixels
+  const facebook_pixel_id = pixels.facebook_pixel_id ? sanitizePixelId(pixels.facebook_pixel_id) : null
+  const google_analytics_id = pixels.google_analytics_id ? sanitizePixelId(pixels.google_analytics_id) : null
+  const google_ads_conversion_id = pixels.google_ads_conversion_id ? sanitizePixelId(pixels.google_ads_conversion_id) : null
 
   return (
     <>

@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
+import { sanitizeSearchQuery } from '@/lib/utils/sanitize'
 import type { OrdersListResponse } from '@/lib/types/dashboard'
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
+    // Authenticate user
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const searchParams = request.nextUrl.searchParams
     const storeId = searchParams.get('store_id')
     const status = searchParams.get('status') // all, pending, confirmed, shipped, etc.
@@ -19,6 +29,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         { error: 'Store ID required' },
         { status: 400 }
       )
+    }
+
+    // Verify the authenticated user owns this store
+    const { data: store, error: storeError } = await supabase
+      .from('stores')
+      .select('id')
+      .eq('id', storeId)
+      .eq('owner_id', user.id)
+      .single()
+
+    if (storeError || !store) {
+      return NextResponse.json({ error: 'Store not found or access denied' }, { status: 403 })
     }
 
     let query = getSupabaseAdmin()
@@ -38,8 +60,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Search by order number or customer name/email (database columns: customer_name, email)
     if (search) {
+      const s = sanitizeSearchQuery(search)
       query = query.or(
-        `order_number.ilike.%${search}%,customer_name.ilike.%${search}%,email.ilike.%${search}%`
+        `order_number.ilike.%${s}%,customer_name.ilike.%${s}%,email.ilike.%${s}%`
       )
     }
 

@@ -1,7 +1,9 @@
 // Review voting API - POST to vote helpful/not helpful
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { validateSession } from '@/lib/customer/auth'
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,15 +14,38 @@ interface RouteParams {
 /**
  * POST /api/reviews/[reviewId]/vote - Vote on review helpfulness
  */
-export async function POST(request: Request, { params }: RouteParams) {
+export async function POST(request: NextRequest, { params }: RouteParams) {
     try {
+        // Rate limit votes
+        const rateLimitResult = rateLimit(request, RATE_LIMITS.AUTH)
+        if (rateLimitResult) return rateLimitResult
+
         const { reviewId } = await params
         const body = await request.json()
 
-        const { customer_email, vote_type } = body
+        const { vote_type } = body
+
+        // Require customer session authentication
+        const customerToken = request.cookies.get('customer_session')?.value
+        if (!customerToken) {
+            return NextResponse.json(
+                { success: false, error: 'Authentication required' },
+                { status: 401 }
+            )
+        }
+
+        const sessionResult = await validateSession(customerToken)
+        if (!sessionResult.success || !sessionResult.customer) {
+            return NextResponse.json(
+                { success: false, error: 'Session expired' },
+                { status: 401 }
+            )
+        }
+
+        const customer_email = sessionResult.customer.email
 
         // Validation
-        if (!customer_email || !vote_type) {
+        if (!vote_type) {
             return NextResponse.json(
                 { success: false, error: 'Missing required fields' },
                 { status: 400 }
