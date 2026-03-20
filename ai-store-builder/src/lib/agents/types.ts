@@ -31,7 +31,7 @@ export interface AgentState {
   updated_at: string
 }
 
-export type ActionStatus = 'completed' | 'failed' | 'pending_approval' | 'approved' | 'rejected' | 'expired' | 'cancelled'
+export type ActionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'rolled_back' | 'requires_approval'
 export type ActionCategory = 'communication' | 'campaign' | 'optimization' | 'analysis' | 'maintenance'
 export type ExecutionMode = 'auto' | 'approved' | 'manual'
 
@@ -102,7 +102,7 @@ export interface AgentMemory {
   expires_at: string | null
 }
 
-export type ScheduleRunStatus = 'completed' | 'failed' | 'skipped'
+export type ScheduleRunStatus = 'success' | 'failed' | 'skipped'
 
 // AgentSchedule (maps to agent_schedules table)
 export interface AgentSchedule {
@@ -194,3 +194,68 @@ export interface ConversationMessage {
   metadata: Record<string, unknown>
   created_at: string
 }
+
+// ---- Agent Execution Types ----
+
+export type ModelTier = 'fast' | 'standard' | 'advanced' | 'premium'
+
+export interface ModelConfig {
+  tier: ModelTier
+  modelId: string
+  costPer1kInput: number
+  costPer1kOutput: number
+}
+
+export type TriggerSource = 'event' | 'cron' | 'chat' | 'cross_agent'
+
+export interface AgentTrigger {
+  storeId: string
+  agentType: AgentType
+  source: TriggerSource
+  taskType?: string
+  complexity?: ModelTier
+  messages?: Array<{ role: 'user' | 'assistant'; content: string }>
+  context?: Record<string, unknown>
+}
+
+export interface AgentResult {
+  skipped: boolean
+  actions: AgentActionResult[]
+  tokensInput: number
+  tokensOutput: number
+  modelUsed: string
+  durationMs: number
+}
+
+export interface AgentActionResult {
+  actionType: string
+  actionCategory: ActionCategory
+  summary: string
+  details: Record<string, unknown>
+  status: ActionStatus
+  executionMode: ExecutionMode
+  relatedEntityType?: string
+  relatedEntityId?: string
+}
+
+// ---- Tool Registry Types ----
+
+export interface AgentToolDefinition {
+  name: string
+  description: string
+  agentType: AgentType
+  requiresApproval: (autonomyLevel: AutonomyLevel, args: Record<string, unknown>) => boolean
+  riskLevel: 'low' | 'medium' | 'high'
+}
+
+// ---- State Machine Types ----
+
+export type AgentEvent =
+  | 'start_execution'
+  | 'request_approval'
+  | 'approval_resolved'
+  | 'execution_complete'
+  | 'execution_error'
+  | 'pause'
+  | 'resume'
+  | 'reset'

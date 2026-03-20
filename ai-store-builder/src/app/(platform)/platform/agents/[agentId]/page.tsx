@@ -184,7 +184,7 @@ export default function AgentWorkspacePage() {
                               'rounded-full border px-1.5 py-px font-mono text-[9px]',
                               action.status === 'completed'
                                 ? 'border-[var(--platform-status-active)]/20 text-[var(--platform-status-active)]'
-                                : action.status === 'pending_approval'
+                                : action.status === 'requires_approval'
                                   ? 'border-[var(--platform-status-approval)]/20 text-[var(--platform-status-approval)]'
                                   : 'border-[var(--platform-status-error)]/20 text-[var(--platform-status-error)]'
                             )}
