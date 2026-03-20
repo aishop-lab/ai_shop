@@ -123,3 +123,38 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ============================================================
+   Platform Agent Dashboard Theme
+   Applied via .platform-theme class on the layout wrapper
+   ============================================================ */
+@layer base {
+  .platform-theme {
+    /* Surface hierarchy (darkest to lightest) */
+    --platform-bg: oklch(0.098 0 0);           /* #0a0a0a - page background */
+    --platform-surface: oklch(0.13 0 0);        /* ~#1a1a1a - card/panel bg */
+    --platform-surface-hover: oklch(0.16 0 0);  /* ~#222 - hover state */
+    --platform-surface-active: oklch(0.19 0 0); /* ~#2a2a2a - active/selected */
+    --platform-overlay: oklch(0.11 0 0);        /* ~#151515 - overlay/modal bg */
+
+    /* Border hierarchy */
+    --platform-border: oklch(0.2 0 0);          /* ~#2a2a2a - subtle border */
+    --platform-border-hover: oklch(0.28 0 0);   /* ~#3a3a3a - hover border */
+
+    /* Text hierarchy */
+    --platform-text-primary: oklch(0.95 0 0);   /* ~#eee - primary text */
+    --platform-text-secondary: oklch(0.65 0 0); /* ~#888 - secondary text */
+    --platform-text-muted: oklch(0.45 0 0);     /* ~#555 - muted/hint text */
+
+    /* Agent status colors */
+    --platform-status-active: oklch(0.723 0.191 142.5);    /* #22c55e green */
+    --platform-status-approval: oklch(0.795 0.184 86.047);  /* #f59e0b amber */
+    --platform-status-idle: oklch(0.551 0.027 264.364);     /* #6b7280 gray */
+    --platform-status-error: oklch(0.637 0.237 25.331);     /* #ef4444 red */
+    --platform-status-paused: oklch(0.37 0 0);              /* dim gray */
+
+    /* Accent */
+    --platform-accent: oklch(0.623 0.214 259.815);          /* #3b82f6 blue */
+    --platform-accent-hover: oklch(0.566 0.225 262.881);    /* #2563eb darker blue */
+  }
+}
