@@ -12,6 +12,8 @@ export const maxDuration = 300 // 5 min for fan-out
 const TASK_AGENT_MAP: Record<string, string> = {
   expire_approvals: '_system', // No specific agent, system-level task
   abandoned_cart_scan: 'sales',
+  daily_digest: 'analytics',
+  weekly_report: 'analytics',
 }
 
 /**
