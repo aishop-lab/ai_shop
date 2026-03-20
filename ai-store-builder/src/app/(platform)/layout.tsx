@@ -1,31 +1,48 @@
 // src/app/(platform)/layout.tsx
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useRequireAuth } from '@/lib/hooks/use-require-auth'
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard'
+import { useAgentStates } from '@/lib/hooks/use-agents'
+import { useApprovals } from '@/lib/hooks/use-approvals'
 import { FullPageLoader } from '@/components/ui/loading-spinner'
 import { PlatformSidebar } from '@/components/platform/layout/sidebar'
 import { TopBar } from '@/components/platform/layout/top-bar'
 import { MobileNav } from '@/components/platform/layout/mobile-nav'
 import { CommandPalette } from '@/components/platform/layout/command-palette'
-import { MOCK_AGENT_STATES, MOCK_APPROVALS, getPendingApprovalCount } from '@/lib/agents/mock-data'
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
-  const { isLoading } = useRequireAuth()
+  const { isLoading: authLoading } = useRequireAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [storeId, setStoreId] = useState<string | null>(null)
 
-  const pendingApprovals = useMemo(() => getPendingApprovalCount(), [])
-  const agentNavInfo = useMemo(
-    () =>
-      MOCK_AGENT_STATES.map((s) => ({
-        type: s.agent_type,
-        status: s.status,
-        enabled: s.is_enabled,
-      })),
-    []
-  )
+  // Fetch the merchant's store ID
+  useEffect(() => {
+    async function fetchStoreId() {
+      try {
+        const response = await fetch('/api/dashboard/stats')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.storeId) setStoreId(data.storeId)
+        }
+      } catch {
+        console.error('[Platform] Failed to fetch store ID')
+      }
+    }
+    fetchStoreId()
+  }, [])
+
+  // Real-time agent states and approvals
+  const { agents } = useAgentStates(storeId)
+  const { pendingCount } = useApprovals(storeId)
+
+  const agentNavInfo = agents.map((s) => ({
+    type: s.agent_type,
+    status: s.status,
+    enabled: s.is_enabled,
+  }))
 
   useKeyboardShortcuts([
     {
@@ -45,7 +62,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
     },
   ])
 
-  if (isLoading) return <FullPageLoader />
+  if (authLoading) return <FullPageLoader />
 
   return (
     <div className="platform-theme flex min-h-screen bg-[var(--platform-bg)]">
@@ -53,22 +70,20 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         agents={agentNavInfo}
-        pendingApprovals={pendingApprovals}
+        pendingApprovals={pendingCount}
       />
 
       <div className="flex flex-1 flex-col">
         <TopBar
           onMenuClick={() => setSidebarOpen(true)}
           onSearchClick={() => setCommandPaletteOpen(true)}
-          pendingApprovals={pendingApprovals}
+          pendingApprovals={pendingCount}
         />
 
-        <main className="flex-1 overflow-y-auto p-4 pb-20 lg:p-6 lg:pb-6">
-          {children}
-        </main>
+        <main className="flex-1 overflow-y-auto p-4 pb-20 lg:p-6 lg:pb-6">{children}</main>
       </div>
 
-      <MobileNav pendingApprovals={pendingApprovals} />
+      <MobileNav pendingApprovals={pendingCount} />
 
       <CommandPalette
         isOpen={commandPaletteOpen}

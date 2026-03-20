@@ -85,6 +85,20 @@ export function useAgentState(storeId: string | null, agentType: AgentType) {
   return { agent, isLoading, error, refetch }
 }
 
+/**
+ * Helper: count of enabled agents.
+ */
+export function getEnabledCount(agents: AgentState[]): number {
+  return agents.filter((a) => a.is_enabled).length
+}
+
+/**
+ * Helper: total actions across all agents.
+ */
+export function getTotalActionsCount(agents: AgentState[]): number {
+  return agents.reduce((sum, a) => sum + a.total_actions, 0)
+}
+
 type AgentStateUpdates = Partial<
   Pick<AgentState, 'is_enabled' | 'autonomy_level' | 'config' | 'status'>
 > & {

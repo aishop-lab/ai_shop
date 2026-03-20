@@ -2,20 +2,25 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { AgentType, AgentAction } from '@/lib/agents/types'
+import type { AgentType, AgentAction, ActionCategory } from '@/lib/agents/types'
 
 const MAX_FEED_SIZE = 50
 
+export interface ActivityFilters {
+  agentType?: AgentType
+  category?: ActionCategory
+  limit?: number
+}
+
 // Hook to get activity feed with real-time updates
-export function useActivityFeed(
-  storeId: string | null,
-  filters?: { agentType?: AgentType; limit?: number }
-) {
+export function useActivityFeed(storeId: string | null, filters?: ActivityFilters) {
   const [actions, setActions] = useState<AgentAction[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const limit = filters?.limit ?? 20
+  const agentType = filters?.agentType
+  const category = filters?.category
 
   const fetchActions = useCallback(async () => {
     if (!storeId) {
@@ -36,8 +41,11 @@ export function useActivityFeed(
         .order('created_at', { ascending: false })
         .limit(limit)
 
-      if (filters?.agentType) {
-        query = query.eq('agent_type', filters.agentType)
+      if (agentType) {
+        query = query.eq('agent_type', agentType)
+      }
+      if (category) {
+        query = query.eq('action_category', category)
       }
 
       const { data, error: fetchError } = await query
@@ -48,7 +56,7 @@ export function useActivityFeed(
     } finally {
       setIsLoading(false)
     }
-  }, [storeId, filters?.agentType, limit])
+  }, [storeId, agentType, category, limit])
 
   useEffect(() => {
     if (!storeId) {
@@ -73,10 +81,9 @@ export function useActivityFeed(
         (payload) => {
           const newAction = payload.new as AgentAction
 
-          // If agentType filter is active, skip actions that don't match
-          if (filters?.agentType && newAction.agent_type !== filters.agentType) {
-            return
-          }
+          // Apply client-side filters
+          if (agentType && newAction.agent_type !== agentType) return
+          if (category && newAction.action_category !== category) return
 
           setActions((prev) => {
             const updated = [newAction, ...prev]
@@ -89,7 +96,7 @@ export function useActivityFeed(
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [storeId, filters?.agentType, limit, fetchActions])
+  }, [storeId, agentType, category, limit, fetchActions])
 
   return { actions, isLoading, error, refetch: fetchActions }
 }

@@ -1,23 +1,62 @@
 // src/app/(platform)/platform/page.tsx
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { AgentCard } from '@/components/platform/command-center/agent-card'
 import { ActivityFeed } from '@/components/platform/command-center/activity-feed'
 import { ApprovalSummary } from '@/components/platform/command-center/approval-summary'
 import { QuickStats } from '@/components/platform/command-center/quick-stats'
-import {
-  MOCK_AGENT_STATES,
-  MOCK_ACTIVITY_FEED,
-  MOCK_APPROVALS,
-  getEnabledAgentCount,
-  getPendingApprovalCount,
-  getTotalActions,
-} from '@/lib/agents/mock-data'
+import { useAgentStates, getEnabledCount, getTotalActionsCount } from '@/lib/hooks/use-agents'
+import { useActivityFeed } from '@/lib/hooks/use-activity'
+import { useApprovals } from '@/lib/hooks/use-approvals'
 import { AGENT_TYPES } from '@/lib/agents/constants'
 
 export default function CommandCenterPage() {
+  const [storeId, setStoreId] = useState<string | null>(null)
+
+  // Fetch the merchant's store ID
+  useEffect(() => {
+    async function fetchStoreId() {
+      try {
+        const response = await fetch('/api/dashboard/stats')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.storeId) setStoreId(data.storeId)
+        }
+      } catch {
+        console.error('[CommandCenter] Failed to fetch store ID')
+      }
+    }
+    fetchStoreId()
+  }, [])
+
+  // Real-time hooks
+  const { agents, isLoading: agentsLoading } = useAgentStates(storeId)
+  const { actions, isLoading: activityLoading } = useActivityFeed(storeId, { limit: 6 })
+  const { approvals, pendingCount, isLoading: approvalsLoading } = useApprovals(storeId)
+
+  const isLoading = agentsLoading || activityLoading || approvalsLoading
+
+  if (isLoading && agents.length === 0) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-8">
+        <div>
+          <h1 className="font-mono text-lg font-semibold text-[var(--platform-text-primary)]">
+            Command Center
+          </h1>
+          <p className="mt-1 text-sm text-[var(--platform-text-secondary)]">
+            Loading your AI team...
+          </p>
+        </div>
+        <div className="flex h-64 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--platform-accent)] border-t-transparent" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-8">
       {/* Header */}
@@ -32,11 +71,11 @@ export default function CommandCenterPage() {
 
       {/* Quick Stats */}
       <QuickStats
-        totalActions={getTotalActions()}
-        pendingApprovals={getPendingApprovalCount()}
-        activeAgents={getEnabledAgentCount()}
+        totalActions={getTotalActionsCount(agents)}
+        pendingApprovals={pendingCount}
+        activeAgents={getEnabledCount(agents)}
         totalAgents={AGENT_TYPES.length}
-        monthlyCost={3.52}
+        monthlyCost={0}
       />
 
       {/* Two-column layout: Activity Feed + Approvals */}
@@ -48,7 +87,7 @@ export default function CommandCenterPage() {
               Recent Activity
             </h2>
           </div>
-          <ActivityFeed actions={MOCK_ACTIVITY_FEED} maxItems={6} />
+          <ActivityFeed actions={actions} maxItems={6} />
         </div>
 
         {/* Approval Queue — 1 column */}
@@ -57,7 +96,7 @@ export default function CommandCenterPage() {
             <h2 className="text-xs font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">
               Pending Approvals
             </h2>
-            {getPendingApprovalCount() > 0 && (
+            {pendingCount > 0 && (
               <Link
                 href="/platform/approvals"
                 className="flex items-center gap-1 text-[10px] text-[var(--platform-accent)] hover:underline"
@@ -66,7 +105,7 @@ export default function CommandCenterPage() {
               </Link>
             )}
           </div>
-          <ApprovalSummary approvals={MOCK_APPROVALS} maxItems={3} />
+          <ApprovalSummary approvals={approvals} maxItems={3} />
         </div>
       </div>
 
@@ -76,7 +115,7 @@ export default function CommandCenterPage() {
           Your Agents
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {MOCK_AGENT_STATES.map((agent) => (
+          {agents.map((agent) => (
             <AgentCard key={agent.id} agent={agent} />
           ))}
         </div>

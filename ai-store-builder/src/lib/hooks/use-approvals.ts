@@ -149,5 +149,42 @@ export function useApprovals(storeId: string | null) {
     []
   )
 
-  return { approvals, isLoading, error, approveAction, rejectAction, refetch: fetchApprovals }
+  /**
+   * Batch approve or reject multiple approvals via API.
+   */
+  const batchAction = useCallback(
+    async (ids: string[], action: 'approve' | 'reject', reason?: string) => {
+      if (!storeId) throw new Error('No store ID')
+
+      const response = await fetch('/api/agents/approvals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId, ids, action, reason }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || `Failed to ${action}`)
+      }
+
+      // Optimistic removal — real-time will confirm
+      setApprovals((prev) => prev.filter((a) => !ids.includes(a.id)))
+
+      return response.json()
+    },
+    [storeId]
+  )
+
+  const pendingCount = approvals.length
+
+  return {
+    approvals,
+    pendingCount,
+    isLoading,
+    error,
+    approveAction,
+    rejectAction,
+    batchAction,
+    refetch: fetchApprovals,
+  }
 }
