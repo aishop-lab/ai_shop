@@ -1,6 +1,23 @@
-# CLAUDE.md - AI Store Builder (StoreForge)
+# CLAUDE.md - Autonomous AI Agent E-Commerce Platform
 
-## Project Overview
+## Product Vision (March 2026 Pivot)
+
+> **Pivoting from "store builder with AI features" to "autonomous AI agent platform for e-commerce."**
+> Five specialized agents (Marketing, Sales, Support, Analytics, Technical) run the merchant's entire business.
+> The merchant becomes a one-man company — they provide the products, agents handle everything else.
+> See `docs/PRD.md` for the full Product Requirements Document.
+
+### Key Design Decisions
+- **UX**: Hybrid Command Center + Conversational (Linear/Vercel/Raycast dark aesthetic)
+- **Autonomy**: Auto-execute for non-money actions, approval required for spend/pricing/refunds
+- **Onboarding**: Store live in 30 seconds, agents configured in 30 minutes
+- **Build order**: Shell/infrastructure first → plug in agents one by one
+- **Branding**: Complete rebrand in progress (StoreForge name retiring)
+- **Codebase**: Evolve existing repo — keep backend business logic, redesign merchant dashboard
+
+---
+
+## Current State (Pre-Pivot)
 
 **StoreForge** - Full-stack Next.js e-commerce platform with AI-assisted store creation for Indian merchants. Production-ready with subdomain routing (`{store}.storeforge.site`).
 
