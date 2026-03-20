@@ -8,6 +8,7 @@ import { FullPageLoader } from '@/components/ui/loading-spinner'
 import { PlatformSidebar } from '@/components/platform/layout/sidebar'
 import { TopBar } from '@/components/platform/layout/top-bar'
 import { MobileNav } from '@/components/platform/layout/mobile-nav'
+import { CommandPalette } from '@/components/platform/layout/command-palette'
 import { MOCK_AGENT_STATES, MOCK_APPROVALS, getPendingApprovalCount } from '@/lib/agents/mock-data'
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
@@ -69,31 +70,10 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
 
       <MobileNav pendingApprovals={pendingApprovals} />
 
-      {/* Command Palette */}
-      {commandPaletteOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]"
-          onClick={() => setCommandPaletteOpen(false)}
-        >
-          <div className="absolute inset-0 bg-black/60" />
-          <div
-            className="relative w-full max-w-lg rounded-xl border border-[var(--platform-border)] bg-[var(--platform-surface)] shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <input
-              autoFocus
-              type="text"
-              placeholder="Type a command or search..."
-              className="w-full rounded-t-xl bg-transparent px-4 py-3 text-sm text-[var(--platform-text-primary)] outline-none placeholder:text-[var(--platform-text-muted)]"
-            />
-            <div className="border-t border-[var(--platform-border)] px-4 py-3">
-              <p className="text-xs text-[var(--platform-text-muted)]">
-                Navigation commands coming soon. Press Esc to close.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+      />
     </div>
   )
 }
