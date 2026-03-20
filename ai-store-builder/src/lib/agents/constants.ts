@@ -159,23 +159,37 @@ export const ACTION_CATEGORY_LABELS: Record<ActionCategory, string> = {
 
 /**
  * MODEL TIERS
- * Defines pricing and model selection by tier
+ * Maps tier names to model IDs and per-1k-token pricing.
+ * All tiers use Google Gemini. Fast/Standard = Flash, Advanced/Premium = Flash (larger context/thinking).
  */
 export const MODEL_TIERS = {
   fast: {
-    model: 'gemini-2.0-flash',
+    label: 'Fast',
+    provider: 'google' as const,
+    modelId: 'gemini-2.0-flash',
     costPer1kInput: 0.0001,
     costPer1kOutput: 0.0004,
   },
-  balanced: {
-    model: 'gemini-2.0-flash',
+  standard: {
+    label: 'Standard',
+    provider: 'google' as const,
+    modelId: 'gemini-2.0-flash',
+    costPer1kInput: 0.0001,
+    costPer1kOutput: 0.0004,
+  },
+  advanced: {
+    label: 'Advanced',
+    provider: 'google' as const,
+    modelId: 'gemini-2.0-flash',
     costPer1kInput: 0.0001,
     costPer1kOutput: 0.0004,
   },
   premium: {
-    model: 'claude-sonnet-4',
-    costPer1kInput: 0.003,
-    costPer1kOutput: 0.015,
+    label: 'Premium',
+    provider: 'google' as const,
+    modelId: 'gemini-2.0-flash',
+    costPer1kInput: 0.0001,
+    costPer1kOutput: 0.0004,
   },
 } as const
 
