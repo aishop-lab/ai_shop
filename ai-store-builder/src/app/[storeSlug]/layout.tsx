@@ -10,6 +10,7 @@ import StoreHeader from '@/components/store/store-header'
 import StoreFooter from '@/components/store/store-footer'
 import StoreSidebar from '@/components/store/store-sidebar'
 import { StoreClientWrapper } from '@/components/store/store-client-wrapper'
+import { ChatWidget } from '@/components/store/chat-widget'
 
 interface StoreLayoutProps {
   children: React.ReactNode
@@ -93,6 +94,7 @@ export default async function StoreLayout({ children, params }: StoreLayoutProps
                   </main>
                   <StoreFooter />
                 </div>
+                <ChatWidget storeId={store.id} />
               </StoreClientWrapper>
             </AnalyticsProvider>
           </SidebarProvider>
