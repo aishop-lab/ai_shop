@@ -1,0 +1,4 @@
+title,description,price,compare_at_price,category,inventory_count,status
+"Test Product 1","A great test product for automated testing",999,1299,"Electronics",50,"published"
+"Test Product 2","Another wonderful test product",1499,1999,"Clothing",30,"published"
+"Test Product 3","Budget friendly test item",499,699,"Accessories",100,"draft"
