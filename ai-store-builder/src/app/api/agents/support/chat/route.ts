@@ -16,6 +16,20 @@ const CHAT_RATE_LIMIT = {
 
 const MAX_MESSAGE_LENGTH = 2000
 
+/**
+ * GET /api/agents/support/chat?storeId=...
+ * Lightweight availability check — returns { available: true/false }
+ */
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const storeId = request.nextUrl.searchParams.get('storeId')
+  if (!storeId) {
+    return NextResponse.json({ available: false })
+  }
+
+  const supportState = await getAgentState(storeId, 'support')
+  return NextResponse.json({ available: supportState?.is_enabled === true })
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // Rate limit by IP — no user auth for this public endpoint
   const rateLimitResult = rateLimit(request, CHAT_RATE_LIMIT)

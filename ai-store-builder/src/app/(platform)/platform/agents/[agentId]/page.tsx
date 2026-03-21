@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import { Send } from 'lucide-react'
+import { Send, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatusDot } from '@/components/platform/shared/status-dot'
 import { MetricCard } from '@/components/platform/shared/metric-card'
@@ -14,40 +14,26 @@ import {
   STATUS_COLORS,
   AUTONOMY_LEVELS,
 } from '@/lib/agents/constants'
-import {
-  MOCK_ACTIVITY_FEED,
-  getAgentState,
-  formatTimeAgo,
-} from '@/lib/agents/mock-data'
-import type { AgentType } from '@/lib/agents/types'
+import { useAgentState } from '@/lib/hooks/use-agents'
+import { useActivityFeed } from '@/lib/hooks/use-activity'
+import type { AgentType, AutonomyLevel } from '@/lib/agents/types'
 
-// --- Mock chat messages for each agent ---
-const MOCK_CHAT: Record<AgentType, { role: 'agent' | 'merchant'; content: string }[]> = {
-  support: [
-    { role: 'agent', content: 'I resolved 3 customer tickets this morning. One was about a shipping delay on order #1847 — I sent Priya an updated tracking link and a small apology note.' },
-    { role: 'merchant', content: 'Great. Any refund requests pending?' },
-    { role: 'agent', content: 'Yes — one from Rajesh for ₹2,499 on order #1823. He received a damaged ceramic vase. I have the photos he sent. I recommend approving the refund; it falls under transit damage policy.' },
-  ],
-  sales: [
-    { role: 'agent', content: 'I sent cart recovery emails to 5 abandoned carts with a 10% discount. Two have already converted — ₹3,840 recovered so far.' },
-    { role: 'merchant', content: 'Nice. Should we increase the discount for high-value carts?' },
-    { role: 'agent', content: 'I\'d suggest 15% for carts above ₹2,000. Based on last month\'s data, that threshold gives us the best conversion-to-margin ratio. Want me to set that up?' },
-  ],
-  analytics: [
-    { role: 'agent', content: 'Today\'s digest: Revenue is ₹47,500, up 23% vs last Tuesday. I also detected a 3x traffic spike from Instagram — likely an organic mention by a creator.' },
-    { role: 'merchant', content: 'Which product was getting traction?' },
-    { role: 'agent', content: 'The handwoven cotton throw blanket (SKU: BLK-001). It had 214 views in 2 hours vs the usual 12/day. Stock is at 8 units — you may want to consider restocking soon.' },
-  ],
-  marketing: [
-    { role: 'agent', content: 'I\'m ready to start once you enable me. I\'ve already drafted a Diwali campaign strategy based on your product catalog and last year\'s performance data.' },
-    { role: 'merchant', content: 'What\'s the plan?' },
-    { role: 'agent', content: 'Three-phase: pre-sale teaser (email + WhatsApp), live sale with countdown (Meta ads), and post-sale thank you + review ask. Estimated reach: 1,200 existing customers + ~800 cold audience.' },
-  ],
-  technical: [
-    { role: 'agent', content: 'I updated meta descriptions for 12 products that were missing SEO tags. Estimated improvement: 8-12% in click-through rate from search results.' },
-    { role: 'merchant', content: 'Can you check the site speed too?' },
-    { role: 'agent', content: 'Already on it. I ran a Lighthouse audit — mobile performance score is 71. The biggest gains would come from lazy-loading product images on collection pages and reducing unused CSS. I can apply both automatically.' },
-  ],
+// ---- Helpers ----
+
+function formatTimeAgo(dateString: string): string {
+  const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000)
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
+interface ChatMessage {
+  role: 'agent' | 'merchant'
+  content: string
 }
 
 export default function AgentWorkspacePage() {
@@ -55,8 +41,18 @@ export default function AgentWorkspacePage() {
   const agentId = params.agentId as string
 
   const [activeTab, setActiveTab] = useState<'timeline' | 'chat'>('timeline')
-  const [isEnabled, setIsEnabled] = useState<boolean | null>(null)
   const [chatInput, setChatInput] = useState('')
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [isStreaming, setIsStreaming] = useState(false)
+  const [storeId, setStoreId] = useState<string | null>(null)
+  const [isTogglingEnabled, setIsTogglingEnabled] = useState(false)
+  const [isUpdatingAutonomy, setIsUpdatingAutonomy] = useState(false)
+  const [actionsPage, setActionsPage] = useState(1)
+  const [paginatedActions, setPaginatedActions] = useState<Array<Record<string, unknown>>>([])
+  const [actionsTotalPages, setActionsTotalPages] = useState(1)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const chatEndRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
 
   // Validate agentId
   if (!AGENT_TYPES.includes(agentId as AgentType)) {
@@ -73,19 +69,269 @@ export default function AgentWorkspacePage() {
   }
 
   const agentType = agentId as AgentType
-  const agentState = getAgentState(agentType)
   const colors = AGENT_COLORS[agentType]
   const displayName = AGENT_DISPLAY_NAMES[agentType]
   const description = AGENT_DESCRIPTIONS[agentType]
+
+  // Fetch storeId
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    async function fetchStoreId() {
+      try {
+        const response = await fetch('/api/dashboard/stats')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.storeId) setStoreId(data.storeId)
+        }
+      } catch {
+        console.error('[AgentWorkspace] Failed to fetch store ID')
+      }
+    }
+    fetchStoreId()
+  }, [])
+
+  // Real agent state from Supabase with real-time updates
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { agent: agentState, isLoading: isAgentLoading } = useAgentState(storeId, agentType)
+
+  // Real activity feed from Supabase with real-time updates
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { actions: realtimeActions, isLoading: isActivityLoading } = useActivityFeed(storeId, {
+    agentType,
+    limit: 20,
+  })
+
+  // Fetch paginated actions via API (for "Load more")
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const fetchActions = useCallback(
+    async (page: number, append: boolean = false) => {
+      if (!agentState?.id) return
+      setIsLoadingMore(true)
+      try {
+        const response = await fetch(
+          `/api/agents/${agentState.id}/actions?page=${page}&limit=20`
+        )
+        if (response.ok) {
+          const data = await response.json()
+          if (append) {
+            setPaginatedActions((prev) => [...prev, ...(data.actions || [])])
+          } else {
+            setPaginatedActions(data.actions || [])
+          }
+          setActionsTotalPages(data.totalPages || 1)
+        }
+      } catch {
+        console.error('[AgentWorkspace] Failed to fetch actions')
+      } finally {
+        setIsLoadingMore(false)
+      }
+    },
+    [agentState?.id]
+  )
+
+  // Use realtime actions as the primary source; paginated for "load more"
+  // When realtime actions load, sync paginated list
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (realtimeActions.length > 0 && paginatedActions.length === 0) {
+      setPaginatedActions(realtimeActions as unknown as Array<Record<string, unknown>>)
+    }
+  }, [realtimeActions, paginatedActions.length])
+
+  // Initial paginated fetch when agent state loads
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (agentState?.id) {
+      fetchActions(1)
+    }
+  }, [agentState?.id, fetchActions])
+
+  // Auto-scroll chat
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatMessages])
+
   const status = agentState?.status ?? 'idle'
   const statusColors = STATUS_COLORS[status]
   const autonomyLevel = agentState?.autonomy_level ?? 3
   const autonomyInfo = AUTONOMY_LEVELS[autonomyLevel]
-  const enabled = isEnabled ?? agentState?.is_enabled ?? false
+  const enabled = agentState?.is_enabled ?? false
 
-  // Filter activity feed for this agent
-  const agentActivity = MOCK_ACTIVITY_FEED.filter((a) => a.agent_type === agentType)
-  const mockChat = MOCK_CHAT[agentType]
+  // Merge realtime actions into paginated list (realtime prepends new ones)
+  const displayActions = (() => {
+    if (paginatedActions.length === 0) {
+      return realtimeActions as unknown as Array<Record<string, unknown>>
+    }
+    // Merge: realtime actions that are newer than the first paginated action
+    const paginatedIds = new Set(paginatedActions.map((a) => a.id))
+    const newFromRealtime = (realtimeActions as unknown as Array<Record<string, unknown>>).filter(
+      (a) => !paginatedIds.has(a.id as string)
+    )
+    return [...newFromRealtime, ...paginatedActions]
+  })()
+
+  // ---- Enable/Disable Toggle ----
+  async function handleToggleEnabled() {
+    if (!agentState?.id || isTogglingEnabled) return
+    setIsTogglingEnabled(true)
+    try {
+      const response = await fetch(`/api/agents/${agentState.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_enabled: !enabled }),
+      })
+      if (!response.ok) {
+        console.error('[AgentWorkspace] Failed to toggle agent')
+      }
+      // Real-time subscription will update the state automatically
+    } catch {
+      console.error('[AgentWorkspace] Failed to toggle agent')
+    } finally {
+      setIsTogglingEnabled(false)
+    }
+  }
+
+  // ---- Autonomy Level Change ----
+  async function handleAutonomyChange(newLevel: AutonomyLevel) {
+    if (!agentState?.id || isUpdatingAutonomy || newLevel === autonomyLevel) return
+    setIsUpdatingAutonomy(true)
+    try {
+      const response = await fetch(`/api/agents/${agentState.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autonomy_level: newLevel }),
+      })
+      if (!response.ok) {
+        console.error('[AgentWorkspace] Failed to update autonomy level')
+      }
+    } catch {
+      console.error('[AgentWorkspace] Failed to update autonomy level')
+    } finally {
+      setIsUpdatingAutonomy(false)
+    }
+  }
+
+  // ---- Streaming Chat ----
+  async function handleSendMessage() {
+    const trimmed = chatInput.trim()
+    if (!trimmed || isStreaming || !agentState?.id) return
+
+    const userMessage: ChatMessage = { role: 'merchant', content: trimmed }
+    setChatMessages((prev) => [...prev, userMessage])
+    setChatInput('')
+    setIsStreaming(true)
+
+    // Build messages array for the API (map merchant -> user, agent -> assistant)
+    const apiMessages = [...chatMessages, userMessage].map((m) => ({
+      role: m.role === 'merchant' ? 'user' : 'assistant',
+      content: m.content,
+    }))
+
+    try {
+      const response = await fetch(`/api/agents/${agentState.id}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: apiMessages }),
+      })
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        const errMsg = errData.error || 'Failed to get response'
+        setChatMessages((prev) => [
+          ...prev,
+          { role: 'agent', content: `Error: ${errMsg}` },
+        ])
+        setIsStreaming(false)
+        return
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        setChatMessages((prev) => [
+          ...prev,
+          { role: 'agent', content: 'Error: No response stream' },
+        ])
+        setIsStreaming(false)
+        return
+      }
+
+      const decoder = new TextDecoder()
+      let assistantContent = ''
+
+      // Add a placeholder message for the assistant
+      setChatMessages((prev) => [...prev, { role: 'agent', content: '' }])
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          // AI SDK UI stream protocol: text chunks are prefixed with "0:"
+          if (line.startsWith('0:')) {
+            try {
+              const text = JSON.parse(line.slice(2))
+              assistantContent += text
+              // Update the last message (the assistant placeholder)
+              setChatMessages((prev) => {
+                const updated = [...prev]
+                updated[updated.length - 1] = {
+                  role: 'agent',
+                  content: assistantContent,
+                }
+                return updated
+              })
+            } catch {
+              // Ignore parse errors on partial chunks
+            }
+          }
+        }
+      }
+
+      // If we got no content at all, show a fallback
+      if (!assistantContent) {
+        setChatMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = {
+            role: 'agent',
+            content: 'No response received.',
+          }
+          return updated
+        })
+      }
+    } catch (err) {
+      console.error('[AgentWorkspace] Chat error:', err)
+      setChatMessages((prev) => [
+        ...prev.filter((m) => m.content !== ''), // Remove empty placeholder if exists
+        { role: 'agent', content: 'Error: Failed to connect to agent.' },
+      ])
+    } finally {
+      setIsStreaming(false)
+    }
+  }
+
+  // ---- Load More Actions ----
+  function handleLoadMore() {
+    if (isLoadingMore || actionsPage >= actionsTotalPages) return
+    const nextPage = actionsPage + 1
+    setActionsPage(nextPage)
+    fetchActions(nextPage, true)
+  }
+
+  // ---- Loading State ----
+  if (isAgentLoading && !agentState) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin text-[var(--platform-text-muted)]" />
+          <p className="font-mono text-sm text-[var(--platform-text-muted)]">Loading agent...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -114,20 +360,26 @@ export default function AgentWorkspacePage() {
         {/* Enable / Disable toggle */}
         <button
           type="button"
-          onClick={() => setIsEnabled(!enabled)}
+          onClick={handleToggleEnabled}
+          disabled={isTogglingEnabled || !agentState}
           className={cn(
             'flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
+            isTogglingEnabled && 'opacity-50 cursor-not-allowed',
             enabled
               ? 'border-[var(--platform-border)] text-[var(--platform-text-secondary)] hover:border-[var(--platform-border-hover)] hover:text-[var(--platform-text-primary)]'
               : cn('border-transparent text-white', colors.bg, 'hover:opacity-80')
           )}
         >
-          <span
-            className={cn(
-              'inline-block h-1.5 w-1.5 rounded-full',
-              enabled ? 'bg-[var(--platform-status-active)]' : 'bg-zinc-500'
-            )}
-          />
+          {isTogglingEnabled ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <span
+              className={cn(
+                'inline-block h-1.5 w-1.5 rounded-full',
+                enabled ? 'bg-[var(--platform-status-active)]' : 'bg-zinc-500'
+              )}
+            />
+          )}
           {enabled ? 'Enabled' : 'Disabled'}
         </button>
       </div>
@@ -158,60 +410,90 @@ export default function AgentWorkspacePage() {
           {/* Timeline tab */}
           {activeTab === 'timeline' && (
             <div className="rounded-b-lg border border-t-0 border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 py-3 min-h-64">
-              {agentActivity.length === 0 ? (
+              {isActivityLoading && displayActions.length === 0 ? (
+                <div className="flex items-center justify-center h-40">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin text-[var(--platform-text-muted)]" />
+                    <p className="text-xs text-[var(--platform-text-muted)]">Loading activity...</p>
+                  </div>
+                </div>
+              ) : displayActions.length === 0 ? (
                 <div className="flex items-center justify-center h-40">
                   <p className="text-xs text-[var(--platform-text-muted)]">No activity yet</p>
                 </div>
               ) : (
-                <div className="divide-y divide-[var(--platform-border)]">
-                  {agentActivity.map((action, idx) => (
-                    <div key={action.id} className="flex gap-3 py-3">
-                      {/* Timeline dot + line */}
-                      <div className="flex flex-col items-center pt-1">
-                        <div className={cn('h-2 w-2 flex-shrink-0 rounded-full', colors.dot)} />
-                        {idx < agentActivity.length - 1 && (
-                          <div className="mt-1 w-px flex-1 bg-[var(--platform-border)]" />
-                        )}
-                      </div>
-                      {/* Content */}
-                      <div className="flex-1 min-w-0 pb-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-[10px] text-[var(--platform-text-muted)]">
-                            {formatTimeAgo(action.created_at)}
-                          </span>
-                          <span
-                            className={cn(
-                              'rounded-full border px-1.5 py-px font-mono text-[9px]',
-                              action.status === 'completed'
-                                ? 'border-[var(--platform-status-active)]/20 text-[var(--platform-status-active)]'
-                                : action.status === 'requires_approval'
-                                  ? 'border-[var(--platform-status-approval)]/20 text-[var(--platform-status-approval)]'
-                                  : 'border-[var(--platform-status-error)]/20 text-[var(--platform-status-error)]'
-                            )}
-                          >
-                            {action.status}
-                          </span>
-                          <span className="font-mono text-[9px] text-[var(--platform-text-muted)] uppercase tracking-wide">
-                            {action.execution_mode}
-                          </span>
+                <>
+                  <div className="divide-y divide-[var(--platform-border)]">
+                    {displayActions.map((action, idx) => (
+                      <div key={action.id as string} className="flex gap-3 py-3">
+                        {/* Timeline dot + line */}
+                        <div className="flex flex-col items-center pt-1">
+                          <div className={cn('h-2 w-2 flex-shrink-0 rounded-full', colors.dot)} />
+                          {idx < displayActions.length - 1 && (
+                            <div className="mt-1 w-px flex-1 bg-[var(--platform-border)]" />
+                          )}
                         </div>
-                        <p className="mt-1 text-xs leading-relaxed text-[var(--platform-text-secondary)]">
-                          {action.summary}
-                        </p>
-                        {action.duration_ms && (
-                          <p className="mt-0.5 font-mono text-[10px] text-[var(--platform-text-muted)]">
-                            {action.duration_ms < 1000
-                              ? `${action.duration_ms}ms`
-                              : `${(action.duration_ms / 1000).toFixed(1)}s`}
-                            {action.estimated_cost_usd > 0 && (
-                              <> · ${action.estimated_cost_usd.toFixed(4)}</>
-                            )}
+                        {/* Content */}
+                        <div className="flex-1 min-w-0 pb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-[10px] text-[var(--platform-text-muted)]">
+                              {formatTimeAgo(action.created_at as string)}
+                            </span>
+                            <span
+                              className={cn(
+                                'rounded-full border px-1.5 py-px font-mono text-[9px]',
+                                action.status === 'completed'
+                                  ? 'border-[var(--platform-status-active)]/20 text-[var(--platform-status-active)]'
+                                  : action.status === 'requires_approval'
+                                    ? 'border-[var(--platform-status-approval)]/20 text-[var(--platform-status-approval)]'
+                                    : 'border-[var(--platform-status-error)]/20 text-[var(--platform-status-error)]'
+                              )}
+                            >
+                              {action.status as string}
+                            </span>
+                            <span className="font-mono text-[9px] text-[var(--platform-text-muted)] uppercase tracking-wide">
+                              {action.execution_mode as string}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs leading-relaxed text-[var(--platform-text-secondary)]">
+                            {action.summary as string}
                           </p>
-                        )}
+                          {(action.duration_ms as number) > 0 && (
+                            <p className="mt-0.5 font-mono text-[10px] text-[var(--platform-text-muted)]">
+                              {(action.duration_ms as number) < 1000
+                                ? `${action.duration_ms}ms`
+                                : `${((action.duration_ms as number) / 1000).toFixed(1)}s`}
+                              {(action.estimated_cost_usd as number) > 0 && (
+                                <> · ${(action.estimated_cost_usd as number).toFixed(4)}</>
+                              )}
+                            </p>
+                          )}
+                        </div>
                       </div>
+                    ))}
+                  </div>
+
+                  {/* Load more button */}
+                  {actionsPage < actionsTotalPages && (
+                    <div className="flex justify-center pt-3 pb-1">
+                      <button
+                        type="button"
+                        onClick={handleLoadMore}
+                        disabled={isLoadingMore}
+                        className="flex items-center gap-1.5 rounded-md border border-[var(--platform-border)] px-3 py-1.5 text-[10px] font-medium text-[var(--platform-text-muted)] hover:border-[var(--platform-border-hover)] hover:text-[var(--platform-text-secondary)] transition-colors disabled:opacity-50"
+                      >
+                        {isLoadingMore ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Loading...
+                          </>
+                        ) : (
+                          'Load more'
+                        )}
+                      </button>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -220,8 +502,17 @@ export default function AgentWorkspacePage() {
           {activeTab === 'chat' && (
             <div className="rounded-b-lg border border-t-0 border-[var(--platform-border)] bg-[var(--platform-surface)] flex flex-col min-h-64">
               {/* Messages */}
-              <div className="flex-1 space-y-3 p-4">
-                {mockChat.map((msg, idx) => (
+              <div ref={chatContainerRef} className="flex-1 space-y-3 p-4 max-h-[500px] overflow-y-auto">
+                {chatMessages.length === 0 && (
+                  <div className="flex items-center justify-center h-32">
+                    <p className="text-xs text-[var(--platform-text-muted)]">
+                      {enabled
+                        ? `Start a conversation with ${displayName.replace(' Agent', '')}...`
+                        : `Enable ${displayName.replace(' Agent', '')} to start chatting`}
+                    </p>
+                  </div>
+                )}
+                {chatMessages.map((msg, idx) => (
                   <div
                     key={idx}
                     className={cn('flex', msg.role === 'merchant' ? 'justify-end' : 'justify-start')}
@@ -239,10 +530,16 @@ export default function AgentWorkspacePage() {
                           {displayName.replace(' Agent', '')}
                         </p>
                       )}
-                      {msg.content}
+                      {msg.content || (
+                        <span className="inline-flex items-center gap-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <span className="opacity-60">Thinking...</span>
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
+                <div ref={chatEndRef} />
               </div>
 
               {/* Input bar */}
@@ -252,18 +549,31 @@ export default function AgentWorkspacePage() {
                     type="text"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    placeholder={`Ask ${displayName.replace(' Agent', '')}...`}
-                    className="flex-1 bg-transparent text-xs text-[var(--platform-text-primary)] placeholder:text-[var(--platform-text-muted)] outline-none"
+                    placeholder={
+                      enabled
+                        ? `Ask ${displayName.replace(' Agent', '')}...`
+                        : 'Enable agent to chat'
+                    }
+                    disabled={!enabled || isStreaming}
+                    className="flex-1 bg-transparent text-xs text-[var(--platform-text-primary)] placeholder:text-[var(--platform-text-muted)] outline-none disabled:opacity-50"
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') setChatInput('')
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSendMessage()
+                      }
                     }}
                   />
                   <button
                     type="button"
-                    onClick={() => setChatInput('')}
-                    className="flex h-5 w-5 items-center justify-center rounded text-[var(--platform-text-muted)] hover:text-[var(--platform-accent)] transition-colors"
+                    onClick={handleSendMessage}
+                    disabled={!enabled || isStreaming || !chatInput.trim()}
+                    className="flex h-5 w-5 items-center justify-center rounded text-[var(--platform-text-muted)] hover:text-[var(--platform-accent)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    <Send className="h-3 w-3" />
+                    {isStreaming ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Send className="h-3 w-3" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -297,16 +607,23 @@ export default function AgentWorkspacePage() {
               <span className={cn('text-sm font-medium', colors.text)}>
                 {autonomyInfo.label}
               </span>
+              {isUpdatingAutonomy && (
+                <Loader2 className="h-3 w-3 animate-spin text-[var(--platform-text-muted)]" />
+              )}
             </div>
-            {/* Level indicators */}
+            {/* Level indicators — clickable */}
             <div className="flex gap-1 mb-2">
               {([1, 2, 3, 4, 5] as const).map((lvl) => (
-                <div
+                <button
                   key={lvl}
+                  type="button"
+                  onClick={() => handleAutonomyChange(lvl)}
+                  disabled={isUpdatingAutonomy || !agentState}
                   className={cn(
-                    'h-1 flex-1 rounded-full',
+                    'h-1 flex-1 rounded-full transition-colors cursor-pointer hover:opacity-80 disabled:cursor-not-allowed',
                     lvl <= autonomyLevel ? colors.dot : 'bg-[var(--platform-border)]'
                   )}
+                  title={`Level ${lvl} — ${AUTONOMY_LEVELS[lvl].label}`}
                 />
               ))}
             </div>

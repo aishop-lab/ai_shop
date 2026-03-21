@@ -31,12 +31,30 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [conversationId, setConversationId] = useState<string | undefined>(undefined)
   const [sessionId, setSessionId] = useState<string>('')
+  const [supportAvailable, setSupportAvailable] = useState<boolean | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Initialize session ID from localStorage on mount
   useEffect(() => {
     setSessionId(getOrCreateSessionId(storeId))
+  }, [storeId])
+
+  // Check if the support agent is enabled for this store
+  useEffect(() => {
+    let cancelled = false
+    async function checkAvailability() {
+      try {
+        const res = await fetch(`/api/agents/support/chat?storeId=${encodeURIComponent(storeId)}`)
+        if (cancelled) return
+        const data = (await res.json()) as { available?: boolean }
+        setSupportAvailable(data.available === true)
+      } catch {
+        if (!cancelled) setSupportAvailable(false)
+      }
+    }
+    checkAvailability()
+    return () => { cancelled = true }
   }, [storeId])
 
   // Scroll to bottom when messages change
@@ -79,8 +97,8 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
       })
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error((errData as { error?: string }).error ?? `HTTP ${res.status}`)
+        const errData = await res.json().catch(() => ({})) as { error?: string }
+        throw new Error(errData.error ?? `HTTP ${res.status}`)
       }
 
       const data = (await res.json()) as {
@@ -102,10 +120,14 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
 
       setMessages(prev => [...prev, agentMessage])
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'unknown'
+      const friendlyContent = errMsg === 'support_not_enabled'
+        ? 'Support chat is not currently available. Please try again later or contact us via email.'
+        : "Sorry, I couldn't process your message. Please try again."
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         role: 'agent',
-        content: "Sorry, I couldn't process your message. Please try again.",
+        content: friendlyContent,
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, errorMessage])
@@ -124,6 +146,9 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
 
   const formatTime = (date: Date) =>
     date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+  // Don't render the widget if support is unavailable or still checking
+  if (supportAvailable !== true) return null
 
   return (
     <>
