@@ -38,3 +38,6 @@ export type {
   DispatchResult,
   CrossAgentNotification,
 } from './orchestrator'
+
+// Agent implementations
+export { technicalAgent } from './technical/agent'
