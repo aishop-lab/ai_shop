@@ -234,7 +234,7 @@ export default function SecuritySettingsPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Security</h1>
+          <h1 className="text-2xl font-bold">Security</h1>
           <p className="text-muted-foreground mt-1">
             Manage your account security settings
           </p>

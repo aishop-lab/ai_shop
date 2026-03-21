@@ -249,7 +249,7 @@ export default function DashboardPage() {
                       <div
                         className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${
                           step.completed
-                            ? 'bg-green-100 text-green-600'
+                            ? 'bg-emerald-500/15 text-emerald-400'
                             : 'bg-muted text-muted-foreground'
                         }`}
                       >
@@ -297,8 +297,8 @@ export default function DashboardPage() {
                 <CardContent className="space-y-3">
                   <Link href="/dashboard/products/new" className="block">
                     <div className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary/50 hover:bg-muted/30 transition-colors cursor-pointer">
-                      <div className="p-2.5 rounded-lg bg-blue-100">
-                        <Plus className="h-5 w-5 text-blue-600" />
+                      <div className="p-2.5 rounded-lg bg-blue-500/15">
+                        <Plus className="h-5 w-5 text-blue-400" />
                       </div>
                       <div className="flex-1">
                         <h3 className="font-medium text-sm">Add Product</h3>
@@ -312,8 +312,8 @@ export default function DashboardPage() {
 
                   <Link href="/dashboard/orders" className="block">
                     <div className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary/50 hover:bg-muted/30 transition-colors cursor-pointer">
-                      <div className="p-2.5 rounded-lg bg-purple-100">
-                        <ShoppingCart className="h-5 w-5 text-purple-600" />
+                      <div className="p-2.5 rounded-lg bg-purple-500/15">
+                        <ShoppingCart className="h-5 w-5 text-purple-400" />
                       </div>
                       <div className="flex-1">
                         <h3 className="font-medium text-sm">View Orders</h3>
@@ -327,8 +327,8 @@ export default function DashboardPage() {
 
                   <Link href="/dashboard/analytics" className="block">
                     <div className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary/50 hover:bg-muted/30 transition-colors cursor-pointer">
-                      <div className="p-2.5 rounded-lg bg-green-100">
-                        <BarChart3 className="h-5 w-5 text-green-600" />
+                      <div className="p-2.5 rounded-lg bg-emerald-500/15">
+                        <BarChart3 className="h-5 w-5 text-emerald-400" />
                       </div>
                       <div className="flex-1">
                         <h3 className="font-medium text-sm">View Analytics</h3>

@@ -65,7 +65,7 @@ export function AIBotTrigger({ variant = 'floating', className }: AIBotTriggerPr
 
       {/* Notification dot for new messages */}
       {messages.length > 0 && !isOpen && (
-        <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
           {isLoading && (
             <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
           )}

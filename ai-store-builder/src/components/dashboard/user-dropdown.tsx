@@ -67,7 +67,7 @@ export function UserDropdown() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => signOut()}
-          className="cursor-pointer text-red-600 focus:text-red-600"
+          className="cursor-pointer text-red-400 focus:text-red-400"
         >
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out

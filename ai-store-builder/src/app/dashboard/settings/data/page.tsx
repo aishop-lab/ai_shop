@@ -103,7 +103,7 @@ export default function DataExportPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Data & Privacy</h1>
+          <h1 className="text-2xl font-bold">Data & Privacy</h1>
           <p className="text-muted-foreground mt-1">
             Export your data and manage privacy settings
           </p>
@@ -301,7 +301,7 @@ export default function DataExportPage() {
 
               <div className="p-4 border rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
-                  <Database className="h-4 w-4 text-gray-500" />
+                  <Database className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">settings.json</span>
                 </div>
                 <ul className="text-sm text-muted-foreground space-y-1">
@@ -314,7 +314,7 @@ export default function DataExportPage() {
 
               <div className="p-4 border rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
-                  <FileText className="h-4 w-4 text-gray-500" />
+                  <FileText className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">README.txt</span>
                 </div>
                 <ul className="text-sm text-muted-foreground space-y-1">

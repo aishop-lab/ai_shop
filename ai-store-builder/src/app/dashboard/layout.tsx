@@ -44,7 +44,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <AIBotProvider>
-      <div className="flex min-h-screen">
+      <div className="dark flex min-h-screen bg-background">
         <Sidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}

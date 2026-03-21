@@ -203,7 +203,7 @@ export function LogoEditor({
     <div className="space-y-4">
       {/* Current Logo Display */}
       <div className="flex items-start gap-4">
-        <div className="relative w-20 h-20 rounded-lg border bg-white overflow-hidden flex items-center justify-center">
+        <div className="relative w-20 h-20 rounded-lg border bg-background overflow-hidden flex items-center justify-center">
           {currentLogoUrl ? (
             <Image
               src={currentLogoUrl}
@@ -299,7 +299,7 @@ export function LogoEditor({
                 className={`relative w-20 h-20 rounded-lg border-2 overflow-hidden transition-all ${
                   selectedLogoIndex === index
                     ? 'border-purple-500 ring-2 ring-purple-500 ring-offset-2'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-purple-300'
+                    : 'border-border hover:border-purple-300'
                 }`}
               >
                 <Image
@@ -438,7 +438,7 @@ export function LogoEditor({
                 size="sm"
                 variant="outline"
                 onClick={handleApplyColors}
-                className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
               >
                 Apply to Brand
               </Button>

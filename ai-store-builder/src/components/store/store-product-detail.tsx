@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Minus, Plus, ShoppingCart, Share2, ChevronLeft, ChevronRight, Check, Truck, Shield, RotateCcw } from 'lucide-react'
+import { Minus, Plus, ShoppingCart, Share2, ChevronLeft, ChevronRight, Check, Truck, Shield, RotateCcw, X } from 'lucide-react'
 import type { Product } from '@/lib/types/store'
 import type { ProductWithVariants, VariantSelection, ProductVariant } from '@/lib/types/variant'
 import { useStore } from '@/lib/contexts/store-context'
@@ -13,6 +13,7 @@ import ProductCard from './themes/modern-minimal/product-card'
 import { ReviewsList } from '@/components/reviews/reviews-list'
 import { PincodeChecker } from './pincode-checker'
 import WishlistButton from './wishlist-button'
+import { toast } from 'sonner'
 
 interface StoreProductDetailProps {
   product: Product | ProductWithVariants
@@ -25,6 +26,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
   const [quantity, setQuantity] = useState(1)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isAdding, setIsAdding] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   const baseUrl = `/${store.slug}`
 
   // Check if product has variants
@@ -118,6 +120,27 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
     setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length)
   }
 
+  // Lightbox keyboard handler
+  const handleLightboxKeyDown = useCallback((e: KeyboardEvent) => {
+    if (!lightboxOpen) return
+    if (e.key === 'Escape') setLightboxOpen(false)
+    if (e.key === 'ArrowRight') setSelectedImageIndex((prev) => (prev + 1) % images.length)
+    if (e.key === 'ArrowLeft') setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length)
+  }, [lightboxOpen, images.length])
+
+  useEffect(() => {
+    if (lightboxOpen) {
+      document.addEventListener('keydown', handleLightboxKeyDown)
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.removeEventListener('keydown', handleLightboxKeyDown)
+      document.body.style.overflow = ''
+    }
+  }, [lightboxOpen, handleLightboxKeyDown])
+
   return (
     <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
       {/* Breadcrumb */}
@@ -133,7 +156,14 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
         {/* Image Gallery */}
         <div className="space-y-4">
           {/* Main Image */}
-          <div className="aspect-square relative rounded-lg overflow-hidden bg-gray-100">
+          <div
+            className={`aspect-square relative rounded-lg overflow-hidden bg-gray-100${currentImage ? ' cursor-zoom-in' : ''}`}
+            onClick={() => { if (currentImage) setLightboxOpen(true) }}
+            role="button"
+            tabIndex={currentImage ? 0 : undefined}
+            aria-label={currentImage ? `View ${product.title} fullscreen` : undefined}
+            onKeyDown={(e) => { if (currentImage && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setLightboxOpen(true) } }}
+          >
             {currentImage ? (
               <Image
                 src={currentImage}
@@ -168,14 +198,16 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
             {images.length > 1 && (
               <>
                 <button
-                  onClick={prevImage}
+                  onClick={(e) => { e.stopPropagation(); prevImage() }}
                   className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/80 rounded-full hover:bg-white"
+                  aria-label="Previous image"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button
-                  onClick={nextImage}
+                  onClick={(e) => { e.stopPropagation(); nextImage() }}
                   className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/80 rounded-full hover:bg-white"
+                  aria-label="Next image"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
@@ -194,6 +226,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
                     ? 'border-[var(--color-primary)]'
                     : 'border-transparent'
                     }`}
+                  aria-label={`View image ${index + 1}`}
                 >
                   <Image
                     src={image.url}
@@ -300,6 +333,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     className="p-3 hover:bg-gray-100"
                     disabled={needsVariantSelection}
+                    aria-label="Decrease quantity"
                   >
                     <Minus className="w-4 h-4" />
                   </button>
@@ -308,6 +342,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
                     onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))}
                     className="p-3 hover:bg-gray-100"
                     disabled={needsVariantSelection}
+                    aria-label="Increase quantity"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -340,7 +375,27 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
                   )}
                 </button>
                 <WishlistButton productId={product.id} size="lg" />
-                <button className="p-4 border rounded-lg hover:bg-gray-50">
+                <button
+                  className="p-4 border rounded-lg hover:bg-gray-50"
+                  aria-label="Share product"
+                  onClick={async () => {
+                    const shareUrl = `${window.location.origin}${baseUrl}/products/${product.id}`
+                    const shareData = { title: product.title, url: shareUrl }
+                    if (navigator.share) {
+                      try {
+                        await navigator.share(shareData)
+                      } catch (err) {
+                        if ((err as Error).name !== 'AbortError') {
+                          await navigator.clipboard.writeText(shareUrl)
+                          toast.success('Link copied to clipboard')
+                        }
+                      }
+                    } else {
+                      await navigator.clipboard.writeText(shareUrl)
+                      toast.success('Link copied to clipboard')
+                    }
+                  }}
+                >
                   <Share2 className="w-5 h-5" />
                 </button>
               </div>
@@ -391,6 +446,70 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
       <section className="mt-16 pt-12 border-t">
         <ReviewsList productId={product.id} />
       </section>
+
+      {/* Image Lightbox */}
+      {lightboxOpen && currentImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={() => setLightboxOpen(false)}
+          role="dialog"
+          aria-label="Image lightbox"
+          aria-modal="true"
+        >
+          {/* Close Button */}
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 p-2 text-white/80 hover:text-white z-10"
+            aria-label="Close lightbox"
+          >
+            <X className="w-8 h-8" />
+          </button>
+
+          {/* Previous Arrow */}
+          {images.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); prevImage() }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full z-10"
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="w-8 h-8" />
+            </button>
+          )}
+
+          {/* Lightbox Image */}
+          <div
+            className="relative w-full h-full max-w-[90vw] max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Image
+              src={currentImage}
+              alt={product.title}
+              fill
+              className="object-contain"
+              sizes="90vw"
+              priority
+            />
+          </div>
+
+          {/* Next Arrow */}
+          {images.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); nextImage() }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full z-10"
+              aria-label="Next image"
+            >
+              <ChevronRight className="w-8 h-8" />
+            </button>
+          )}
+
+          {/* Image Counter */}
+          {images.length > 1 && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/80 text-sm">
+              {selectedImageIndex + 1} / {images.length}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

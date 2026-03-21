@@ -1,12 +1,12 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'StoreForge - AI-Powered E-commerce for Indian Merchants',
-  description: 'Create your online store in minutes with AI assistance. Accept UPI, cards, COD. Built for Indian businesses.',
-  keywords: 'ecommerce, online store, india, ai, shopify alternative, razorpay, upi',
+  title: 'StoreForge - Autonomous AI Agents for E-commerce',
+  description: 'Five AI agents run your entire online business — marketing, sales, support, analytics, and technical operations. Store live in 30 seconds.',
+  keywords: 'ecommerce, ai agents, autonomous, online store, india, shopify alternative',
   openGraph: {
-    title: 'StoreForge - AI-Powered E-commerce',
-    description: 'Create your online store in minutes with AI assistance.',
+    title: 'StoreForge - Autonomous AI Agents for E-commerce',
+    description: 'Five AI agents run your entire online business. Store live in 30 seconds.',
     url: 'https://storeforge.site',
     siteName: 'StoreForge',
     type: 'website',
@@ -14,8 +14,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'StoreForge - AI-Powered E-commerce',
-    description: 'Create your online store in minutes with AI assistance.',
+    title: 'StoreForge - Autonomous AI Agents for E-commerce',
+    description: 'Five AI agents run your entire online business. Store live in 30 seconds.',
   },
 }
 
@@ -25,7 +25,7 @@ export default function MarketingLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen bg-zinc-950">
       {children}
     </div>
   )

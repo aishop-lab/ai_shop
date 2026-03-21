@@ -29,11 +29,11 @@ function getStatusBadge(status: string) {
   switch (status) {
     case 'active':
     case 'published':
-      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+      return <Badge className="bg-green-500/15 text-green-400 hover:bg-green-500/15">Active</Badge>
     case 'draft':
-      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Draft</Badge>
+      return <Badge className="bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/15">Draft</Badge>
     case 'archived':
-      return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Archived</Badge>
+      return <Badge className="bg-zinc-500/15 text-zinc-400 hover:bg-zinc-500/15">Archived</Badge>
     default:
       return <Badge variant="secondary">{status}</Badge>
   }
@@ -203,7 +203,7 @@ export default function AdminProductsPage() {
       header: 'Stock',
       hideOnMobile: true,
       render: (product: ProductWithStore) => (
-        <span className={`text-sm ${product.total_inventory <= 5 ? 'text-red-600 font-medium' : ''}`}>
+        <span className={`text-sm ${product.total_inventory <= 5 ? 'text-red-400 font-medium' : ''}`}>
           {product.total_inventory}
         </span>
       )

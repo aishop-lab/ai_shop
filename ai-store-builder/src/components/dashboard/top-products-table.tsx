@@ -33,7 +33,7 @@ export default function TopProductsTable({ products }: TopProductsTableProps) {
           <span className="text-sm font-medium text-muted-foreground w-4">
             {index + 1}
           </span>
-          <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+          <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-muted flex-shrink-0">
             {product.product_image ? (
               <Image
                 src={product.product_image}
@@ -43,7 +43,7 @@ export default function TopProductsTable({ products }: TopProductsTableProps) {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <Package className="w-5 h-5 text-gray-300" />
+                <Package className="w-5 h-5 text-muted-foreground" />
               </div>
             )}
           </div>

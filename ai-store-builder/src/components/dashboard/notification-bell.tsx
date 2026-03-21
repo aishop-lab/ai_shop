@@ -208,7 +208,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                   onClick={() => handleNotificationClick(notification)}
                   className={cn(
                     'w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors',
-                    !notification.read && 'bg-blue-50/50'
+                    !notification.read && 'bg-blue-500/10'
                   )}
                 >
                   <div className="flex gap-3">

@@ -9,6 +9,7 @@ import { useStore, useIsHydrated } from '@/lib/contexts/store-context'
 import { toast } from 'sonner'
 import type { CartValidationResult } from '@/lib/types/cart'
 import { formatVariantAttributes } from '@/lib/products/variant-utils'
+import { CartPageSkeleton } from './skeletons'
 
 export default function StoreCartPage() {
   const router = useRouter()
@@ -91,14 +92,7 @@ export default function StoreCartPage() {
   }
   
   if (!isHydrated) {
-    return (
-      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-48 mb-8"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    )
+    return <CartPageSkeleton />
   }
   
   if (cart.length === 0) {
@@ -163,7 +157,7 @@ export default function StoreCartPage() {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Cart Items */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4" aria-label="Cart items" role="list">
           {cart.map((item) => {
             const primaryImage = item.product.images?.[0]?.url
             // Use variant quantity if available, otherwise product quantity
@@ -231,6 +225,7 @@ export default function StoreCartPage() {
                       <button
                         onClick={() => updateQuantity(item.product.id, item.quantity - 1, variantId)}
                         className="p-2 hover:bg-gray-100"
+                        aria-label="Decrease quantity"
                       >
                         <Minus className="w-4 h-4" />
                       </button>
@@ -239,6 +234,7 @@ export default function StoreCartPage() {
                         onClick={() => updateQuantity(item.product.id, Math.min(maxQuantity, item.quantity + 1), variantId)}
                         disabled={item.quantity >= maxQuantity}
                         className="p-2 hover:bg-gray-100 disabled:opacity-50"
+                        aria-label="Increase quantity"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
@@ -247,6 +243,7 @@ export default function StoreCartPage() {
                     <button
                       onClick={() => removeFromCart(item.product.id, variantId)}
                       className="p-2 text-gray-400 hover:text-red-500"
+                      aria-label={`Remove ${item.product.title} from cart`}
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>

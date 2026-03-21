@@ -198,7 +198,7 @@ export default function CouponsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold">Coupons</h1>
+                    <h1 className="text-2xl font-bold">Coupons</h1>
                     <p className="text-muted-foreground">
                         Create and manage discount coupons for your store
                     </p>
@@ -336,7 +336,7 @@ export default function CouponsPage() {
                                                         {coupon.active ? 'Deactivate' : 'Activate'}
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
-                                                        className="text-red-600"
+                                                        className="text-red-400"
                                                         onClick={() => setDeleteId(coupon.id)}
                                                     >
                                                         <Trash2 className="w-4 h-4 mr-2" />

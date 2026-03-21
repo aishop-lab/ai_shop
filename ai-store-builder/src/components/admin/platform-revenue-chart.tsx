@@ -35,14 +35,14 @@ export function PlatformRevenueChart({ data }: PlatformRevenueChartProps) {
       <AreaChart data={data}>
         <defs>
           <linearGradient id="colorPlatformRevenue" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#dc2626" stopOpacity={0} />
+            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
         <XAxis
           dataKey="date"
-          stroke="#9ca3af"
+          stroke="#52525b"
           fontSize={12}
           tickLine={false}
           axisLine={false}
@@ -52,7 +52,7 @@ export function PlatformRevenueChart({ data }: PlatformRevenueChartProps) {
           }}
         />
         <YAxis
-          stroke="#9ca3af"
+          stroke="#52525b"
           fontSize={12}
           tickLine={false}
           axisLine={false}
@@ -71,7 +71,7 @@ export function PlatformRevenueChart({ data }: PlatformRevenueChartProps) {
             if (active && payload && payload.length) {
               const data = payload[0].payload as RevenueTrendData
               return (
-                <div className="bg-white p-3 border rounded-lg shadow-lg">
+                <div className="bg-zinc-900 border-zinc-700 text-zinc-100 p-3 border rounded-lg shadow-lg">
                   <p className="text-sm font-medium mb-1">
                     {new Date(data.date).toLocaleDateString('en-IN', {
                       weekday: 'short',
@@ -79,10 +79,10 @@ export function PlatformRevenueChart({ data }: PlatformRevenueChartProps) {
                       day: 'numeric'
                     })}
                   </p>
-                  <p className="text-sm text-red-600 font-semibold">
+                  <p className="text-sm text-blue-400 font-semibold">
                     Revenue: {formatCurrency(data.revenue, 'INR')}
                   </p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-zinc-400">
                     Orders: {data.orders}
                   </p>
                 </div>
@@ -94,7 +94,7 @@ export function PlatformRevenueChart({ data }: PlatformRevenueChartProps) {
         <Area
           type="monotone"
           dataKey="revenue"
-          stroke="#dc2626"
+          stroke="#3b82f6"
           strokeWidth={2}
           fill="url(#colorPlatformRevenue)"
         />

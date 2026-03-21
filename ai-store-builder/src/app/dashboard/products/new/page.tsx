@@ -75,7 +75,7 @@ export default function NewProductPage() {
             Back to Products
           </Button>
         </Link>
-        <h1 className="text-3xl font-bold">Add New Product</h1>
+        <h1 className="text-2xl font-bold">Add New Product</h1>
         <p className="text-muted-foreground mt-1">
           Upload images and fill in product details
         </p>

@@ -232,7 +232,7 @@ export default function DomainSettingsPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Domain Settings</h1>
+          <h1 className="text-2xl font-bold">Domain Settings</h1>
           <p className="text-muted-foreground mt-1">
             Configure your store's domain
           </p>

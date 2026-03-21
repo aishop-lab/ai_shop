@@ -237,7 +237,7 @@ function TrendIndicator({ value }: { value: number }) {
   return (
     <span
       className={`flex items-center gap-0.5 text-xs ${
-        isPositive ? 'text-green-600' : 'text-red-600'
+        isPositive ? 'text-emerald-400' : 'text-red-400'
       }`}
     >
       <Icon className="h-3 w-3" />

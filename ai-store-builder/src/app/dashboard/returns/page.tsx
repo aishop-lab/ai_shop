@@ -114,27 +114,27 @@ function ReturnsPageContent() {
     const statusConfig: Record<string, { label: string; className: string; icon: typeof Package }> = {
       rto_initiated: {
         label: 'RTO Initiated',
-        className: 'bg-orange-100 text-orange-800',
+        className: 'bg-orange-500/15 text-orange-300',
         icon: RotateCcw,
       },
       rto_in_transit: {
         label: 'RTO In Transit',
-        className: 'bg-blue-100 text-blue-800',
+        className: 'bg-blue-500/15 text-blue-300',
         icon: Truck,
       },
       rto_delivered: {
         label: 'RTO Received',
-        className: 'bg-green-100 text-green-800',
+        className: 'bg-emerald-500/15 text-emerald-300',
         icon: CheckCircle,
       },
       returned: {
         label: 'Returned',
-        className: 'bg-gray-100 text-gray-800',
+        className: 'bg-muted text-muted-foreground',
         icon: PackageX,
       },
       cancelled: {
         label: 'Cancelled',
-        className: 'bg-red-100 text-red-800',
+        className: 'bg-red-500/15 text-red-300',
         icon: XCircle,
       },
     }
@@ -153,7 +153,7 @@ function ReturnsPageContent() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -170,7 +170,7 @@ function ReturnsPageContent() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold">Returns & RTO</h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-muted-foreground mt-1">
               Manage return-to-origin shipments and customer returns
             </p>
           </div>
@@ -190,11 +190,11 @@ function ReturnsPageContent() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-100 rounded-lg">
+              <div className="p-3 bg-orange-500/15 rounded-lg">
                 <RotateCcw className="w-6 h-6 text-orange-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total RTO</p>
+                <p className="text-sm text-muted-foreground">Total RTO</p>
                 <p className="text-2xl font-bold">{stats.total_rto}</p>
               </div>
             </div>
@@ -204,11 +204,11 @@ function ReturnsPageContent() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Truck className="w-6 h-6 text-blue-600" />
+              <div className="p-3 bg-blue-500/15 rounded-lg">
+                <Truck className="w-6 h-6 text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">In Transit</p>
+                <p className="text-sm text-muted-foreground">In Transit</p>
                 <p className="text-2xl font-bold">{stats.rto_in_transit}</p>
               </div>
             </div>
@@ -218,11 +218,11 @@ function ReturnsPageContent() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-green-600" />
+              <div className="p-3 bg-emerald-500/15 rounded-lg">
+                <CheckCircle className="w-6 h-6 text-emerald-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Received Back</p>
+                <p className="text-sm text-muted-foreground">Received Back</p>
                 <p className="text-2xl font-bold">{stats.rto_delivered}</p>
               </div>
             </div>
@@ -232,11 +232,11 @@ function ReturnsPageContent() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-red-100 rounded-lg">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
+              <div className="p-3 bg-red-500/15 rounded-lg">
+                <AlertTriangle className="w-6 h-6 text-red-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">RTO Rate</p>
+                <p className="text-sm text-muted-foreground">RTO Rate</p>
                 <p className="text-2xl font-bold">{stats.rto_rate.toFixed(1)}%</p>
               </div>
             </div>
@@ -246,15 +246,15 @@ function ReturnsPageContent() {
 
       {/* RTO Value Alert */}
       {stats.total_rto_value > 0 && (
-        <Card className="border-orange-200 bg-orange-50">
+        <Card className="border-orange-500/30 bg-orange-500/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0" />
+              <AlertTriangle className="w-5 h-5 text-orange-400 flex-shrink-0" />
               <div>
-                <p className="font-medium text-orange-800">
+                <p className="font-medium text-orange-300">
                   Total RTO Value: {formatCurrency(stats.total_rto_value)}
                 </p>
-                <p className="text-sm text-orange-700">
+                <p className="text-sm text-orange-400/80">
                   This represents the total order value of all RTO shipments. Consider analyzing RTO reasons to reduce returns.
                 </p>
               </div>
@@ -276,7 +276,7 @@ function ReturnsPageContent() {
 
         <form onSubmit={handleSearch} className="flex-1 flex gap-2">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -301,9 +301,9 @@ function ReturnsPageContent() {
         <CardContent>
           {orders.length === 0 ? (
             <div className="text-center py-12">
-              <PackageX className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-600 font-medium">No RTO orders found</p>
-              <p className="text-sm text-gray-500 mt-1">
+              <PackageX className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground font-medium">No RTO orders found</p>
+              <p className="text-sm text-muted-foreground mt-1">
                 Orders returned to origin will appear here
               </p>
             </div>
@@ -312,7 +312,7 @@ function ReturnsPageContent() {
               {orders.map((order) => (
                 <div
                   key={order.id}
-                  className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     {/* Order Info */}
@@ -320,7 +320,7 @@ function ReturnsPageContent() {
                       <div className="flex items-center gap-3 mb-2">
                         <Link
                           href={`/dashboard/orders/${order.id}`}
-                          className="font-mono font-medium text-blue-600 hover:underline"
+                          className="font-mono font-medium text-blue-400 hover:underline"
                         >
                           {order.order_number}
                         </Link>
@@ -329,23 +329,23 @@ function ReturnsPageContent() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                         <div>
-                          <span className="text-gray-500">Customer: </span>
+                          <span className="text-muted-foreground">Customer: </span>
                           <span className="font-medium">{order.customer_name}</span>
                         </div>
                         <div>
-                          <span className="text-gray-500">Amount: </span>
+                          <span className="text-muted-foreground">Amount: </span>
                           <span className="font-medium">{formatCurrency(order.total)}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-gray-400" />
-                          <span className="text-gray-600">
+                          <MapPin className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">
                             {order.shipping_address.city}, {order.shipping_address.state}
                           </span>
                         </div>
                         {order.courier_name && order.awb_code && (
                           <div className="flex items-center gap-1">
-                            <Truck className="w-3 h-3 text-gray-400" />
-                            <span className="text-gray-600">
+                            <Truck className="w-3 h-3 text-muted-foreground" />
+                            <span className="text-muted-foreground">
                               {order.courier_name}: {order.awb_code}
                             </span>
                           </div>
@@ -353,15 +353,15 @@ function ReturnsPageContent() {
                       </div>
 
                       {order.rto_reason && (
-                        <div className="mt-2 p-2 bg-orange-50 rounded text-sm">
-                          <span className="text-orange-700 font-medium">RTO Reason: </span>
-                          <span className="text-orange-600">{order.rto_reason}</span>
+                        <div className="mt-2 p-2 bg-orange-500/10 rounded text-sm">
+                          <span className="text-orange-300 font-medium">RTO Reason: </span>
+                          <span className="text-orange-400">{order.rto_reason}</span>
                         </div>
                       )}
                     </div>
 
                     {/* Timeline */}
-                    <div className="flex flex-col gap-1 text-xs text-gray-500 min-w-[160px]">
+                    <div className="flex flex-col gap-1 text-xs text-muted-foreground min-w-[160px]">
                       <div className="flex items-center gap-2">
                         <Clock className="w-3 h-3" />
                         <span>
@@ -378,7 +378,7 @@ function ReturnsPageContent() {
                       )}
                       {order.rto_delivered_at && (
                         <div className="flex items-center gap-2">
-                          <CheckCircle className="w-3 h-3 text-green-500" />
+                          <CheckCircle className="w-3 h-3 text-emerald-400" />
                           <span>
                             Received {format(new Date(order.rto_delivered_at), 'MMM d, h:mm a')}
                           </span>
@@ -413,46 +413,46 @@ function ReturnsPageContent() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex gap-3 p-3 bg-gray-50 rounded-lg">
-              <div className="p-2 bg-blue-100 rounded-lg h-fit">
-                <MapPin className="w-4 h-4 text-blue-600" />
+            <div className="flex gap-3 p-3 bg-muted rounded-lg">
+              <div className="p-2 bg-blue-500/15 rounded-lg h-fit">
+                <MapPin className="w-4 h-4 text-blue-400" />
               </div>
               <div>
                 <p className="font-medium text-sm">Verify Addresses</p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-muted-foreground">
                   Use pincode validation at checkout to ensure accurate delivery addresses
                 </p>
               </div>
             </div>
-            <div className="flex gap-3 p-3 bg-gray-50 rounded-lg">
-              <div className="p-2 bg-green-100 rounded-lg h-fit">
-                <Package className="w-4 h-4 text-green-600" />
+            <div className="flex gap-3 p-3 bg-muted rounded-lg">
+              <div className="p-2 bg-emerald-500/15 rounded-lg h-fit">
+                <Package className="w-4 h-4 text-emerald-400" />
               </div>
               <div>
                 <p className="font-medium text-sm">Product Accuracy</p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-muted-foreground">
                   Ensure product images and descriptions match actual items
                 </p>
               </div>
             </div>
-            <div className="flex gap-3 p-3 bg-gray-50 rounded-lg">
-              <div className="p-2 bg-orange-100 rounded-lg h-fit">
+            <div className="flex gap-3 p-3 bg-muted rounded-lg">
+              <div className="p-2 bg-orange-500/15 rounded-lg h-fit">
                 <Truck className="w-4 h-4 text-orange-600" />
               </div>
               <div>
                 <p className="font-medium text-sm">Fast Delivery</p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-muted-foreground">
                   Quick delivery reduces customer cancellations and fake orders
                 </p>
               </div>
             </div>
-            <div className="flex gap-3 p-3 bg-gray-50 rounded-lg">
-              <div className="p-2 bg-purple-100 rounded-lg h-fit">
-                <CheckCircle className="w-4 h-4 text-purple-600" />
+            <div className="flex gap-3 p-3 bg-muted rounded-lg">
+              <div className="p-2 bg-purple-500/15 rounded-lg h-fit">
+                <CheckCircle className="w-4 h-4 text-purple-400" />
               </div>
               <div>
                 <p className="font-medium text-sm">Order Confirmation</p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-muted-foreground">
                   Send WhatsApp confirmations to verify customer intent
                 </p>
               </div>
@@ -468,7 +468,7 @@ export default function ReturnsPage() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     }>
       <ReturnsPageContent />

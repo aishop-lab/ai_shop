@@ -305,7 +305,7 @@ function RefundsPageContent() {
                 </thead>
                 <tbody className="divide-y">
                   {refunds.map((refund) => (
-                    <tr key={refund.id} className="hover:bg-muted/30">
+                    <tr key={refund.id} className="hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3">
                         <Link
                           href={`/dashboard/orders/${refund.order_id}`}

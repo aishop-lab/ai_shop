@@ -43,7 +43,7 @@ export function StoreStatusCard({ store }: StoreStatusCardProps) {
           <div className="flex items-center gap-2 text-sm">
             <span
               className={`inline-flex items-center gap-1.5 ${
-                isLive ? 'text-green-600' : 'text-yellow-600'
+                isLive ? 'text-emerald-400' : 'text-yellow-400'
               }`}
             >
               <span

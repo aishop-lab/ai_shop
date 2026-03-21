@@ -24,14 +24,14 @@ export default function LowStockAlert({ products }: LowStockAlertProps) {
   const lowStock = products.filter(p => p.quantity > 0)
 
   return (
-    <Alert variant="destructive" className="bg-orange-50 border-orange-200 text-orange-900">
-      <AlertTriangle className="h-4 w-4 text-orange-600" />
-      <AlertTitle className="text-orange-800">Inventory Alert</AlertTitle>
-      <AlertDescription className="text-orange-700">
+    <Alert variant="destructive" className="bg-orange-500/10 border-orange-500/30 text-orange-300">
+      <AlertTriangle className="h-4 w-4 text-orange-400" />
+      <AlertTitle className="text-orange-300">Inventory Alert</AlertTitle>
+      <AlertDescription className="text-orange-400/90">
         <div className="mt-2 space-y-2">
           {outOfStock.length > 0 && (
             <div className="flex items-start gap-2">
-              <span className="text-xs font-semibold uppercase text-red-600 bg-red-100 px-2 py-0.5 rounded">
+              <span className="text-xs font-semibold uppercase text-red-400 bg-red-500/15 px-2 py-0.5 rounded">
                 Out of Stock
               </span>
               <span className="text-sm">
@@ -41,7 +41,7 @@ export default function LowStockAlert({ products }: LowStockAlertProps) {
           )}
           {lowStock.length > 0 && (
             <div className="flex items-start gap-2">
-              <span className="text-xs font-semibold uppercase text-orange-600 bg-orange-100 px-2 py-0.5 rounded">
+              <span className="text-xs font-semibold uppercase text-orange-400 bg-orange-500/15 px-2 py-0.5 rounded">
                 Low Stock
               </span>
               <span className="text-sm">
@@ -50,7 +50,7 @@ export default function LowStockAlert({ products }: LowStockAlertProps) {
             </div>
           )}
           <Link href="/dashboard/products?filter=low_stock" className="inline-block mt-2">
-            <Button variant="outline" size="sm" className="border-orange-300 hover:bg-orange-100">
+            <Button variant="outline" size="sm" className="border-orange-500/30 hover:bg-orange-500/10">
               <Package className="h-4 w-4 mr-2" />
               Manage Inventory
               <ArrowRight className="h-3 w-3 ml-1" />

@@ -179,7 +179,7 @@ export default function ProductsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Products</h1>
+          <h1 className="text-2xl font-bold">Products</h1>
           <p className="text-muted-foreground mt-1">
             Manage your store products
           </p>
@@ -424,7 +424,7 @@ function ProductListItem({
       {/* Info */}
       <div className="flex-1 min-w-0">
         <Link href={`/dashboard/products/${product.id}`}>
-          <h3 className="font-medium truncate hover:text-primary">{product.title}</h3>
+          <h3 className="font-medium truncate hover:text-primary transition-colors">{product.title}</h3>
         </Link>
         <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
           <span>{formatPrice(product.price)}</span>
@@ -436,8 +436,8 @@ function ProductListItem({
       {/* Status */}
       <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${
         product.status === 'published' 
-          ? 'bg-green-100 text-green-800'
-          : 'bg-yellow-100 text-yellow-800'
+          ? 'bg-emerald-500/15 text-emerald-300'
+          : 'bg-yellow-500/15 text-yellow-300'
       }`}>
         {product.status}
       </span>
@@ -451,7 +451,7 @@ function ProductListItem({
           variant="ghost" 
           size="sm" 
           onClick={() => onDelete(product.id)}
-          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
         >
           Delete
         </Button>

@@ -162,9 +162,9 @@ export default function AdminSellersPage() {
               <Badge
                 variant="secondary"
                 className={`ml-2 text-xs ${
-                  seller.store_status === 'active' ? 'bg-green-100 text-green-800' :
-                  seller.store_status === 'suspended' ? 'bg-red-100 text-red-800' :
-                  'bg-yellow-100 text-yellow-800'
+                  seller.store_status === 'active' ? 'bg-green-500/15 text-green-400' :
+                  seller.store_status === 'suspended' ? 'bg-red-500/15 text-red-400' :
+                  'bg-yellow-500/15 text-yellow-400'
                 }`}
               >
                 {seller.store_status}
@@ -212,7 +212,7 @@ export default function AdminSellersPage() {
       render: (seller: SellerDetails) => (
         <Badge
           variant="secondary"
-          className={seller.onboarding_completed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
+          className={seller.onboarding_completed ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400'}
         >
           {seller.onboarding_completed ? 'Completed' : 'Onboarding'}
         </Badge>

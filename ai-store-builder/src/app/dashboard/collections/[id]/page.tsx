@@ -222,7 +222,7 @@ export default function EditCollectionPage({
       <div className="mb-6">
         <Link
           href="/dashboard/collections"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Collections

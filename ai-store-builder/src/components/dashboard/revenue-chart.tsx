@@ -41,10 +41,10 @@ export default function RevenueChart({ data }: RevenueChartProps) {
             <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
         <XAxis
           dataKey="date"
-          stroke="#9ca3af"
+          stroke="hsl(var(--muted-foreground))"
           fontSize={12}
           tickLine={false}
           axisLine={false}
@@ -54,7 +54,7 @@ export default function RevenueChart({ data }: RevenueChartProps) {
           }}
         />
         <YAxis
-          stroke="#9ca3af"
+          stroke="hsl(var(--muted-foreground))"
           fontSize={12}
           tickLine={false}
           axisLine={false}
@@ -70,7 +70,7 @@ export default function RevenueChart({ data }: RevenueChartProps) {
             if (active && payload && payload.length) {
               const data = payload[0].payload as RevenueTrendData
               return (
-                <div className="bg-white p-3 border rounded-lg shadow-lg">
+                <div className="bg-background p-3 border rounded-lg shadow-lg">
                   <p className="text-sm font-medium mb-1">
                     {new Date(data.date).toLocaleDateString('en-IN', {
                       weekday: 'short',
@@ -78,10 +78,10 @@ export default function RevenueChart({ data }: RevenueChartProps) {
                       day: 'numeric'
                     })}
                   </p>
-                  <p className="text-sm text-blue-600 font-semibold">
+                  <p className="text-sm text-blue-400 font-semibold">
                     Revenue: {formatCurrency(data.revenue, 'INR')}
                   </p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Orders: {data.orders}
                   </p>
                 </div>

@@ -131,28 +131,28 @@ export default function AgentHealthDashboardPage() {
           value={summary.totalActive}
           description="Enabled across all stores"
           icon={Bot}
-          iconColor="text-green-600"
+          iconColor="text-green-500"
         />
         <AdminStatsCard
           title="Agents with Errors"
           value={summary.errored}
           description="Currently in error state"
           icon={AlertTriangle}
-          iconColor="text-red-600"
+          iconColor="text-red-500"
         />
         <AdminStatsCard
           title="Pending Approvals"
           value={summary.pendingApprovals}
           description="Awaiting merchant action"
           icon={Clock}
-          iconColor="text-amber-600"
+          iconColor="text-amber-500"
         />
         <AdminStatsCard
           title="Total Actions (24h)"
           value={summary.actions24h}
           description="Actions executed today"
           icon={Zap}
-          iconColor="text-purple-600"
+          iconColor="text-purple-500"
         />
       </div>
 

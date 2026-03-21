@@ -4,6 +4,7 @@ import { useCallback, useState, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import Image from 'next/image'
 import { X, Upload, GripVertical, ImageIcon, Sparkles, Loader2, AlertTriangle, CheckCircle, FileWarning, Minimize2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -346,7 +347,7 @@ export default function ImageUploader({
       })
     } catch (error) {
       console.error('Enhancement failed:', error)
-      alert(error instanceof Error ? error.message : 'Failed to enhance image')
+      toast.error(error instanceof Error ? error.message : 'Failed to enhance image')
     } finally {
       setEnhancingIndex(null)
     }
@@ -362,7 +363,7 @@ export default function ImageUploader({
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const totalWithNew = totalImageCount + acceptedFiles.length
     if (totalWithNew > maxImages) {
-      alert(`Maximum ${maxImages} images allowed`)
+      toast.error(`Maximum ${maxImages} images allowed`)
       const allowedCount = maxImages - totalImageCount
       acceptedFiles = acceptedFiles.slice(0, allowedCount)
     }

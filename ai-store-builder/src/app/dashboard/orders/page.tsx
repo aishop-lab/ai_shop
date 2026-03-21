@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Search, Download, ChevronRight, RefreshCw, Filter } from 'lucide-react'
+import { Search, Download, ChevronRight, RefreshCw, Filter, ShoppingCart } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -103,7 +103,7 @@ export default function OrdersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Orders</h1>
+          <h1 className="text-2xl font-bold">Orders</h1>
           <p className="text-muted-foreground">Manage and fulfill customer orders</p>
         </div>
         <div className="flex gap-2">
@@ -151,13 +151,12 @@ export default function OrdersPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
         </div>
       ) : orders.length === 0 ? (
-        <div className="text-center py-12 bg-muted/30 rounded-lg">
-          <p className="text-muted-foreground">No orders found</p>
-          {search && (
-            <p className="text-sm text-muted-foreground mt-1">
-              Try a different search term
-            </p>
-          )}
+        <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/30 rounded-lg">
+          <ShoppingCart className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold">No orders yet</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            {search ? 'Try a different search term' : 'Orders will appear here when customers make purchases'}
+          </p>
         </div>
       ) : (
         <div className="bg-card rounded-lg border">

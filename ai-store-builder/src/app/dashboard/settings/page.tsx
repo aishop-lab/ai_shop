@@ -234,7 +234,7 @@ export default function SettingsPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold">Store Settings</h1>
+            <h1 className="text-2xl font-bold">Store Settings</h1>
             <p className="text-muted-foreground mt-1">
               Manage your store configuration
             </p>
@@ -547,15 +547,15 @@ export default function SettingsPage() {
               <h4 className="font-medium mb-3">Payment Methods</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${store.settings?.payments?.razorpay_enabled ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                  <span className={`w-2 h-2 rounded-full ${store.settings?.payments?.razorpay_enabled ? 'bg-green-500' : 'bg-muted'}`}></span>
                   Razorpay {store.settings?.payments?.razorpay_enabled ? '(Enabled)' : '(Disabled)'}
                 </p>
                 <p className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${store.settings?.payments?.upi_enabled ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                  <span className={`w-2 h-2 rounded-full ${store.settings?.payments?.upi_enabled ? 'bg-green-500' : 'bg-muted'}`}></span>
                   UPI {store.settings?.payments?.upi_enabled ? '(Enabled)' : '(Disabled)'}
                 </p>
                 <p className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${store.settings?.payments?.stripe_enabled ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                  <span className={`w-2 h-2 rounded-full ${store.settings?.payments?.stripe_enabled ? 'bg-green-500' : 'bg-muted'}`}></span>
                   Stripe {store.settings?.payments?.stripe_enabled ? '(Enabled)' : '(Disabled)'}
                 </p>
               </div>

@@ -91,28 +91,28 @@ export default function AdminOverviewPage() {
           value={stats?.totalStores || 0}
           description={`${stats?.activeStores || 0} active, ${stats?.draftStores || 0} draft, ${stats?.suspendedStores || 0} suspended`}
           icon={Store}
-          iconColor="text-blue-600"
+          iconColor="text-blue-500"
         />
         <AdminStatsCard
           title="Total Sellers"
           value={stats?.totalSellers || 0}
           description={`${stats?.onboardedSellers || 0} completed onboarding`}
           icon={Users}
-          iconColor="text-green-600"
+          iconColor="text-green-500"
         />
         <AdminStatsCard
           title="Total Orders"
           value={stats?.totalOrders || 0}
           description={`${stats?.todayOrders || 0} today`}
           icon={ShoppingCart}
-          iconColor="text-purple-600"
+          iconColor="text-purple-500"
         />
         <AdminStatsCard
           title="Total Revenue"
           value={formatCurrency(stats?.totalRevenue || 0, 'INR')}
           description={`${formatCurrency(stats?.todayRevenue || 0, 'INR')} today`}
           icon={DollarSign}
-          iconColor="text-red-600"
+          iconColor="text-green-500"
         />
       </div>
 

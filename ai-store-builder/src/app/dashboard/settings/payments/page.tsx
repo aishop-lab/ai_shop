@@ -254,7 +254,7 @@ export default function PaymentsSettingsPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Payment Settings</h1>
+          <h1 className="text-2xl font-bold">Payment Settings</h1>
           <p className="text-muted-foreground mt-1">
             Configure your Razorpay account for direct payment settlement
           </p>

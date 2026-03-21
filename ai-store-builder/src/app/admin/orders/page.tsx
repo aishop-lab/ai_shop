@@ -27,13 +27,13 @@ import type { OrderWithDetails } from '@/lib/admin/queries'
 function getPaymentBadge(status: string) {
   switch (status) {
     case 'paid':
-      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>
+      return <Badge className="bg-green-500/15 text-green-400 hover:bg-green-500/15">Paid</Badge>
     case 'pending':
-      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>
+      return <Badge className="bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/15">Pending</Badge>
     case 'failed':
-      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Failed</Badge>
+      return <Badge className="bg-red-500/15 text-red-400 hover:bg-red-500/15">Failed</Badge>
     case 'refunded':
-      return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Refunded</Badge>
+      return <Badge className="bg-zinc-500/15 text-zinc-400 hover:bg-zinc-500/15">Refunded</Badge>
     default:
       return <Badge variant="secondary">{status}</Badge>
   }
@@ -41,17 +41,17 @@ function getPaymentBadge(status: string) {
 
 function getStatusBadge(status: string) {
   const colors: Record<string, string> = {
-    unfulfilled: 'bg-orange-100 text-orange-800',
-    processing: 'bg-blue-100 text-blue-800',
-    packed: 'bg-purple-100 text-purple-800',
-    shipped: 'bg-indigo-100 text-indigo-800',
-    out_for_delivery: 'bg-cyan-100 text-cyan-800',
-    delivered: 'bg-green-100 text-green-800',
-    cancelled: 'bg-red-100 text-red-800'
+    unfulfilled: 'bg-orange-500/15 text-orange-400',
+    processing: 'bg-blue-500/15 text-blue-400',
+    packed: 'bg-purple-500/15 text-purple-400',
+    shipped: 'bg-indigo-500/15 text-indigo-400',
+    out_for_delivery: 'bg-cyan-500/15 text-cyan-400',
+    delivered: 'bg-green-500/15 text-green-400',
+    cancelled: 'bg-red-500/15 text-red-400'
   }
 
   return (
-    <Badge className={`${colors[status] || 'bg-gray-100 text-gray-800'} hover:${colors[status] || 'bg-gray-100'}`}>
+    <Badge className={`${colors[status] || 'bg-zinc-500/15 text-zinc-400'}`}>
       {status.replace('_', ' ')}
     </Badge>
   )

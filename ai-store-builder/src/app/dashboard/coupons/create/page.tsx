@@ -106,7 +106,7 @@ export default function CreateCouponPage() {
                         Back to Coupons
                     </Button>
                 </Link>
-                <h1 className="text-3xl font-bold">Create Coupon</h1>
+                <h1 className="text-2xl font-bold">Create Coupon</h1>
                 <p className="text-muted-foreground mt-1">
                     Set up a new discount coupon for your customers
                 </p>

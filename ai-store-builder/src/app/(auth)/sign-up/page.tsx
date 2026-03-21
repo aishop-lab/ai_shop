@@ -119,8 +119,8 @@ function SignUpContent() {
       <CardContent>
         {/* Show message if redirected from sign-in */}
         {prefillEmail && (
-          <Alert className="mb-4 bg-blue-50 border-blue-200">
-            <AlertDescription className="text-blue-800">
+          <Alert className="mb-4 border-blue-500/30 bg-blue-500/10">
+            <AlertDescription className="text-blue-400">
               No account found for <strong>{prefillEmail}</strong>. Create one below to get started.
             </AlertDescription>
           </Alert>

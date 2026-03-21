@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { RatingStars } from '@/components/reviews/rating-stars'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
-import { CheckCircle, XCircle, Clock } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Loader2, MessageSquare } from 'lucide-react'
 
 interface Review {
     id: string
@@ -109,8 +109,8 @@ export default function ReviewsModerationPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold">Reviews</h1>
-                <p className="text-gray-600 mt-1">Manage customer reviews for your products</p>
+                <h1 className="text-2xl font-bold">Reviews</h1>
+                <p className="text-muted-foreground mt-1">Manage customer reviews for your products</p>
             </div>
 
             <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
@@ -137,12 +137,15 @@ export default function ReviewsModerationPage() {
                 <TabsContent value={filter} className="mt-6">
                     {isLoading ? (
                         <Card className="p-8 text-center">
-                            <p className="text-gray-500">Loading reviews...</p>
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-2" />
+                            <p className="text-muted-foreground">Loading reviews...</p>
                         </Card>
                     ) : reviews.length === 0 ? (
                         <Card className="p-8 text-center">
-                            <p className="text-gray-500">
-                                No {filter} reviews found.
+                            <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold">No {filter} reviews found</h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                {filter === 'pending' ? 'New reviews will appear here for moderation' : `Reviews you have ${filter} will appear here`}
                             </p>
                         </Card>
                     ) : (
@@ -164,9 +167,9 @@ export default function ReviewsModerationPage() {
                                                         )}
                                                     </div>
                                                     <p className="font-semibold">{review.customer_name}</p>
-                                                    <p className="text-sm text-gray-500">{review.customer_email}</p>
+                                                    <p className="text-sm text-muted-foreground">{review.customer_email}</p>
                                                 </div>
-                                                <span className="text-sm text-gray-500">
+                                                <span className="text-sm text-muted-foreground">
                                                     {format(new Date(review.created_at), 'MMM dd, yyyy')}
                                                 </span>
                                             </div>
@@ -177,10 +180,10 @@ export default function ReviewsModerationPage() {
                                             )}
 
                                             {/* Review Text */}
-                                            <p className="text-gray-700">{review.review_text}</p>
+                                            <p className="text-foreground">{review.review_text}</p>
 
                                             {/* Product Info */}
-                                            <p className="text-sm text-gray-500">
+                                            <p className="text-sm text-muted-foreground">
                                                 Product: <span className="font-medium">{review.product_title}</span>
                                             </p>
                                         </div>

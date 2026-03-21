@@ -146,7 +146,7 @@ export default function EditCouponPage({ params }: PageProps) {
                         Back to Coupons
                     </Button>
                 </Link>
-                <h1 className="text-3xl font-bold">Edit Coupon</h1>
+                <h1 className="text-2xl font-bold">Edit Coupon</h1>
                 <p className="text-muted-foreground mt-1">
                     Update coupon settings
                 </p>

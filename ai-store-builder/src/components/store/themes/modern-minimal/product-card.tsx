@@ -3,9 +3,10 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { ShoppingCart, Heart, Eye, Star } from 'lucide-react'
+import { ShoppingCart, Eye, Star } from 'lucide-react'
 import type { Product } from '@/lib/types/store'
 import { useStore } from '@/lib/contexts/store-context'
+import WishlistButton from '@/components/store/wishlist-button'
 import { useState } from 'react'
 
 interface ProductCardProps {
@@ -99,12 +100,9 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
           {/* Quick Actions */}
           {showQuickView && (
             <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
-                aria-label="Add to wishlist"
-              >
-                <Heart className="w-4 h-4 text-gray-700" />
-              </button>
+              <div onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                <WishlistButton productId={product.id} size="sm" className="bg-white rounded-full shadow-md border-0" />
+              </div>
               <button
                 onClick={(e) => {
                   e.preventDefault()
@@ -112,7 +110,7 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
                   router.push(`${baseUrl}/products/${product.id}`)
                 }}
                 className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
-                aria-label="Quick view"
+                aria-label={`Quick view ${product.title}`}
               >
                 <Eye className="w-4 h-4 text-gray-700" />
               </button>

@@ -220,7 +220,7 @@ export default function ShippingProvidersPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -243,7 +243,7 @@ export default function ShippingProvidersPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold">Shipping Providers</h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-muted-foreground mt-1">
               Connect your shipping accounts for automatic shipment creation
             </p>
           </div>
@@ -255,13 +255,13 @@ export default function ShippingProvidersPage() {
       </div>
 
       {/* Info Alert */}
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-blue-500/20 bg-blue-500/10">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-blue-800">Multi-Provider Support</p>
-              <p className="text-sm text-blue-700 mt-1">
+              <p className="font-medium text-blue-300">Multi-Provider Support</p>
+              <p className="text-sm text-blue-400 mt-1">
                 Connect multiple shipping providers and choose the best one for each order.
                 You can also handle deliveries yourself without any provider.
               </p>
@@ -281,9 +281,9 @@ export default function ShippingProvidersPage() {
         <CardContent>
           {settings?.providers.length === 0 ? (
             <div className="text-center py-8">
-              <Truck className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-600 font-medium">No providers connected</p>
-              <p className="text-sm text-gray-500 mt-1">
+              <Truck className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground font-medium">No providers connected</p>
+              <p className="text-sm text-muted-foreground mt-1">
                 Add a shipping provider to enable automatic shipment creation
               </p>
               <Button onClick={() => setShowAddDialog(true)} className="mt-4">
@@ -315,24 +315,24 @@ export default function ShippingProvidersPage() {
                             </span>
                           )}
                           {provider.isActive ? (
-                            <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
+                            <span className="text-xs px-2 py-0.5 bg-emerald-500/15 text-emerald-400 rounded-full">
                               Active
                             </span>
                           ) : (
-                            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
+                            <span className="text-xs px-2 py-0.5 bg-muted text-muted-foreground rounded-full">
                               Inactive
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                           {settings?.availableProviders[provider.provider]?.description}
                         </p>
                         {provider.pickupLocation && (
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className="text-sm text-muted-foreground mt-1">
                             Pickup: {provider.pickupLocation}
                           </p>
                         )}
-                        <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                        <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
                           {Object.entries(provider.maskedCredentials).map(([key, value]) => (
                             <span key={key}>
                               {key}: {value}
@@ -354,7 +354,7 @@ export default function ShippingProvidersPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                         onClick={() => handleRemoveProvider(provider.provider)}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -381,7 +381,7 @@ export default function ShippingProvidersPage() {
           <div className="flex items-center justify-between">
             <div>
               <Label className="font-medium">Auto-create Shipments</Label>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <p className="text-sm text-muted-foreground mt-0.5">
                 Automatically create shipments when orders are placed
               </p>
               {!settings?.providers.length && (
@@ -400,7 +400,7 @@ export default function ShippingProvidersPage() {
           {/* Courier Strategy */}
           <div className="space-y-2">
             <Label className="font-medium">Courier Selection Strategy</Label>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               How to select courier when multiple options are available
             </p>
             <Select
@@ -423,12 +423,12 @@ export default function ShippingProvidersPage() {
           {/* Default Package Dimensions */}
           <div className="space-y-3">
             <Label className="font-medium">Default Package Dimensions</Label>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Used when product dimensions are not specified
             </p>
             <div className="grid grid-cols-4 gap-4">
               <div>
-                <Label className="text-xs text-gray-500">Length (cm)</Label>
+                <Label className="text-xs text-muted-foreground">Length (cm)</Label>
                 <Input
                   type="number"
                   value={settings?.defaultPackageDimensions?.length || 20}
@@ -444,7 +444,7 @@ export default function ShippingProvidersPage() {
                 />
               </div>
               <div>
-                <Label className="text-xs text-gray-500">Breadth (cm)</Label>
+                <Label className="text-xs text-muted-foreground">Breadth (cm)</Label>
                 <Input
                   type="number"
                   value={settings?.defaultPackageDimensions?.breadth || 15}
@@ -460,7 +460,7 @@ export default function ShippingProvidersPage() {
                 />
               </div>
               <div>
-                <Label className="text-xs text-gray-500">Height (cm)</Label>
+                <Label className="text-xs text-muted-foreground">Height (cm)</Label>
                 <Input
                   type="number"
                   value={settings?.defaultPackageDimensions?.height || 10}
@@ -476,7 +476,7 @@ export default function ShippingProvidersPage() {
                 />
               </div>
               <div>
-                <Label className="text-xs text-gray-500">Weight (kg)</Label>
+                <Label className="text-xs text-muted-foreground">Weight (kg)</Label>
                 <Input
                   type="number"
                   step="0.1"
@@ -511,22 +511,22 @@ export default function ShippingProvidersPage() {
             <div className="flex items-center gap-3 mb-3">
               <span className="text-2xl">🚀</span>
               <span className="font-semibold text-lg">Shiprocket</span>
-              <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Easiest Setup</span>
+              <span className="text-xs px-2 py-0.5 bg-emerald-500/15 text-emerald-400 rounded-full">Easiest Setup</span>
             </div>
             <div className="space-y-3 text-sm">
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Shiprocket is the easiest to set up - just use your login credentials.
               </p>
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                <p className="font-medium text-gray-800">Steps:</p>
-                <ol className="list-decimal list-inside space-y-2 text-gray-700">
+              <div className="bg-muted rounded-lg p-4 space-y-2">
+                <p className="font-medium text-foreground">Steps:</p>
+                <ol className="list-decimal list-inside space-y-2 text-foreground/80">
                   <li>
                     Go to{' '}
                     <a
                       href="https://app.shiprocket.in/register"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                      className="text-blue-400 hover:underline inline-flex items-center gap-1"
                     >
                       app.shiprocket.in/register
                       <ExternalLink className="w-3 h-3" />
@@ -553,22 +553,22 @@ export default function ShippingProvidersPage() {
             <div className="flex items-center gap-3 mb-3">
               <span className="text-2xl">📦</span>
               <span className="font-semibold text-lg">Delhivery</span>
-              <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Requires Approval</span>
+              <span className="text-xs px-2 py-0.5 bg-blue-500/15 text-blue-400 rounded-full">Requires Approval</span>
             </div>
             <div className="space-y-3 text-sm">
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Delhivery requires you to apply for a business account and get approved for API access.
               </p>
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                <p className="font-medium text-gray-800">Steps:</p>
-                <ol className="list-decimal list-inside space-y-2 text-gray-700">
+              <div className="bg-muted rounded-lg p-4 space-y-2">
+                <p className="font-medium text-foreground">Steps:</p>
+                <ol className="list-decimal list-inside space-y-2 text-foreground/80">
                   <li>
                     Go to{' '}
                     <a
                       href="https://www.delhivery.com/seller-signup"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                      className="text-blue-400 hover:underline inline-flex items-center gap-1"
                     >
                       delhivery.com/seller-signup
                       <ExternalLink className="w-3 h-3" />
@@ -583,7 +583,7 @@ export default function ShippingProvidersPage() {
                       href="https://track.delhivery.com"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                      className="text-blue-400 hover:underline inline-flex items-center gap-1"
                     >
                       track.delhivery.com
                       <ExternalLink className="w-3 h-3" />
@@ -594,7 +594,7 @@ export default function ShippingProvidersPage() {
                   <li>Come back here and enter your API Token and Client Name</li>
                 </ol>
               </div>
-              <div className="flex items-start gap-2 text-blue-700 bg-blue-50 p-3 rounded-lg">
+              <div className="flex items-start gap-2 text-blue-400 bg-blue-500/10 p-3 rounded-lg">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <p className="text-xs">
                   If you can&apos;t find API settings, email <strong>support@delhivery.com</strong> or call <strong>011-4891-1111</strong> and request API access.
@@ -608,22 +608,22 @@ export default function ShippingProvidersPage() {
             <div className="flex items-center gap-3 mb-3">
               <span className="text-2xl">✈️</span>
               <span className="font-semibold text-lg">Blue Dart</span>
-              <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">Enterprise</span>
+              <span className="text-xs px-2 py-0.5 bg-purple-500/15 text-purple-400 rounded-full">Enterprise</span>
             </div>
             <div className="space-y-3 text-sm">
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Blue Dart provides API access for business accounts with regular shipping volume.
               </p>
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                <p className="font-medium text-gray-800">Steps:</p>
-                <ol className="list-decimal list-inside space-y-2 text-gray-700">
+              <div className="bg-muted rounded-lg p-4 space-y-2">
+                <p className="font-medium text-foreground">Steps:</p>
+                <ol className="list-decimal list-inside space-y-2 text-foreground/80">
                   <li>
                     Visit{' '}
                     <a
                       href="https://www.bluedart.com/customer-service-contact-us"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                      className="text-blue-400 hover:underline inline-flex items-center gap-1"
                     >
                       bluedart.com/contact-us
                       <ExternalLink className="w-3 h-3" />
@@ -639,7 +639,7 @@ export default function ShippingProvidersPage() {
                   <li>Come back here and enter all four credentials</li>
                 </ol>
               </div>
-              <div className="flex items-start gap-2 text-purple-700 bg-purple-50 p-3 rounded-lg">
+              <div className="flex items-start gap-2 text-purple-400 bg-purple-500/10 p-3 rounded-lg">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <p className="text-xs">
                   You can also call Blue Dart at <strong>1860-233-1234</strong> for faster onboarding. Mention you need NetConnect API access.
@@ -656,19 +656,19 @@ export default function ShippingProvidersPage() {
               <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">US Shipping</span>
             </div>
             <div className="space-y-3 text-sm">
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Shippo connects you to USPS, UPS, FedEx, and DHL with a single API token. Best for US-based stores.
               </p>
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                <p className="font-medium text-gray-800">Steps:</p>
-                <ol className="list-decimal list-inside space-y-2 text-gray-700">
+              <div className="bg-muted rounded-lg p-4 space-y-2">
+                <p className="font-medium text-foreground">Steps:</p>
+                <ol className="list-decimal list-inside space-y-2 text-foreground/80">
                   <li>
                     Go to{' '}
                     <a
                       href="https://apps.goshippo.com/register"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                      className="text-blue-400 hover:underline inline-flex items-center gap-1"
                     >
                       apps.goshippo.com/register
                       <ExternalLink className="w-3 h-3" />
@@ -683,12 +683,12 @@ export default function ShippingProvidersPage() {
                       href="https://apps.goshippo.com/settings/api"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                      className="text-blue-400 hover:underline inline-flex items-center gap-1"
                     >
                       Settings → API
                       <ExternalLink className="w-3 h-3" />
                     </a>{' '}
-                    and copy your <strong>Live API Token</strong> (starts with <code className="bg-gray-200 px-1 rounded">shippo_live_</code>)
+                    and copy your <strong>Live API Token</strong> (starts with <code className="bg-muted px-1 rounded">shippo_live_</code>)
                   </li>
                   <li>Come back here and paste the API Token</li>
                   <li>(Optional) Connect your own USPS, UPS, or FedEx carrier accounts in Shippo for negotiated rates</li>
@@ -713,13 +713,13 @@ export default function ShippingProvidersPage() {
           </div>
 
           {/* Self Delivery Guide */}
-          <div className="border rounded-lg p-4 bg-gray-50">
+          <div className="border rounded-lg p-4 bg-muted">
             <div className="flex items-center gap-3 mb-3">
               <span className="text-2xl">🏠</span>
               <span className="font-semibold text-lg">Self Delivery</span>
-              <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full">No Setup Required</span>
+              <span className="text-xs px-2 py-0.5 bg-muted text-foreground/80 rounded-full">No Setup Required</span>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-muted-foreground">
               <p>
                 Handle deliveries yourself without any shipping provider. Perfect for local deliveries,
                 in-store pickup, or if you have your own delivery staff.
@@ -789,7 +789,7 @@ export default function ShippingProvidersPage() {
                       onChange={(e) => setPickupLocation(e.target.value)}
                       placeholder="Primary"
                     />
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       Name of your pickup location as configured in {settings.availableProviders[selectedProvider].name}
                     </p>
                   </div>
@@ -806,7 +806,7 @@ export default function ShippingProvidersPage() {
                   <Switch checked={skipValidation} onCheckedChange={setSkipValidation} />
                   <div>
                     <Label>Skip credential validation</Label>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       Save without testing the connection (useful if API is temporarily unavailable)
                     </p>
                   </div>

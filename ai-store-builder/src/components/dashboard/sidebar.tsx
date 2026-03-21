@@ -100,13 +100,13 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
                 <span
                   className={cn(
                     'inline-flex items-center gap-1.5 text-xs',
-                    isLive ? 'text-green-600' : 'text-yellow-600'
+                    isLive ? 'text-emerald-400' : 'text-yellow-400'
                   )}
                 >
                   <span
                     className={cn(
                       'w-1.5 h-1.5 rounded-full',
-                      isLive ? 'bg-green-500' : 'bg-yellow-500'
+                      isLive ? 'bg-emerald-500' : 'bg-yellow-500'
                     )}
                   />
                   {isLive ? 'Live' : 'Draft'}
@@ -254,7 +254,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
               <Link
                 href="/admin"
                 onClick={onClose}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
               >
                 <Shield className="h-5 w-5" />
                 Admin Panel

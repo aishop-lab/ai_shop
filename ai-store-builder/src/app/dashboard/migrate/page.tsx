@@ -248,7 +248,7 @@ export default function MigratePage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Store Migration</h1>
+          <h1 className="text-2xl font-bold">Store Migration</h1>
           <p className="text-muted-foreground mt-1">
             Import your store data from Shopify or Etsy
           </p>

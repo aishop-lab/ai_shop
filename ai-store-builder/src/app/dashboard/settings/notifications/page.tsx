@@ -268,7 +268,7 @@ export default function NotificationsSettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -284,20 +284,20 @@ export default function NotificationsSettingsPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold">Notification Settings</h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-muted-foreground mt-1">
             Configure email and WhatsApp notifications for your store
           </p>
         </div>
       </div>
 
       {/* Info Alert */}
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-blue-500/20 bg-blue-500/10">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-blue-800">Custom Notification Services</p>
-              <p className="text-sm text-blue-700 mt-1">
+              <p className="font-medium text-blue-300">Custom Notification Services</p>
+              <p className="text-sm text-blue-400 mt-1">
                 Connect your own Resend (email) and MSG91 (WhatsApp) accounts for branded notifications.
                 If not configured, your store will use platform credentials.
               </p>
@@ -326,7 +326,7 @@ export default function NotificationsSettingsPage() {
               <CardTitle className="flex items-center justify-between">
                 <span>Resend Credentials</span>
                 {emailStatus?.configured && (
-                  <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                  <span className="text-xs px-2 py-1 bg-emerald-500/15 text-emerald-400 rounded-full">
                     Connected
                   </span>
                 )}
@@ -338,33 +338,33 @@ export default function NotificationsSettingsPage() {
             <CardContent className="space-y-4">
               {emailStatus?.configured ? (
                 <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <div className="bg-muted p-4 rounded-lg space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">From Email:</span>
+                      <span className="text-sm text-muted-foreground">From Email:</span>
                       <span className="text-sm font-medium">{emailStatus.from_email}</span>
                     </div>
                     {emailStatus.from_name && (
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">From Name:</span>
+                        <span className="text-sm text-muted-foreground">From Name:</span>
                         <span className="text-sm font-medium">{emailStatus.from_name}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">API Key:</span>
+                      <span className="text-sm text-muted-foreground">API Key:</span>
                       <span className="text-sm font-mono">{emailStatus.api_key_masked}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Enable Email Notifications</Label>
-                      <p className="text-xs text-gray-500">Send transactional emails to customers</p>
+                      <p className="text-xs text-muted-foreground">Send transactional emails to customers</p>
                     </div>
                     <Switch
                       checked={emailStatus.notifications_enabled}
                       onCheckedChange={(checked) => toggleNotificationsEnabled('email', checked)}
                     />
                   </div>
-                  <Button variant="outline" className="text-red-600" onClick={removeEmailCredentials}>
+                  <Button variant="outline" className="text-red-400" onClick={removeEmailCredentials}>
                     <Trash2 className="w-4 h-4 mr-2" />
                     Remove Credentials
                   </Button>
@@ -388,7 +388,7 @@ export default function NotificationsSettingsPage() {
                       value={emailCredentials.from_email}
                       onChange={(e) => setEmailCredentials(prev => ({ ...prev, from_email: e.target.value }))}
                     />
-                    <p className="text-xs text-gray-500 mt-1">Must be a verified domain in Resend</p>
+                    <p className="text-xs text-muted-foreground mt-1">Must be a verified domain in Resend</p>
                   </div>
                   <div>
                     <Label>From Name (optional)</Label>
@@ -402,7 +402,7 @@ export default function NotificationsSettingsPage() {
                     <Switch checked={skipEmailValidation} onCheckedChange={setSkipEmailValidation} />
                     <div>
                       <Label>Skip validation</Label>
-                      <p className="text-xs text-gray-500">Save without verifying credentials</p>
+                      <p className="text-xs text-muted-foreground">Save without verifying credentials</p>
                     </div>
                   </div>
                   <Button onClick={saveEmailCredentials} disabled={saving}>
@@ -421,14 +421,14 @@ export default function NotificationsSettingsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3 text-sm">
-                <ol className="list-decimal list-inside space-y-2 text-gray-700">
+                <ol className="list-decimal list-inside space-y-2 text-foreground/80">
                   <li>
                     Go to{' '}
                     <a
                       href="https://resend.com/signup"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                      className="text-blue-400 hover:underline inline-flex items-center gap-1"
                     >
                       resend.com/signup
                       <ExternalLink className="w-3 h-3" />
@@ -442,7 +442,7 @@ export default function NotificationsSettingsPage() {
                       href="https://resend.com/api-keys"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                      className="text-blue-400 hover:underline inline-flex items-center gap-1"
                     >
                       resend.com/api-keys
                       <ExternalLink className="w-3 h-3" />
@@ -470,7 +470,7 @@ export default function NotificationsSettingsPage() {
               <CardTitle className="flex items-center justify-between">
                 <span>MSG91 Credentials</span>
                 {whatsappStatus?.configured && (
-                  <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                  <span className="text-xs px-2 py-1 bg-emerald-500/15 text-emerald-400 rounded-full">
                     Connected
                   </span>
                 )}
@@ -482,33 +482,33 @@ export default function NotificationsSettingsPage() {
             <CardContent className="space-y-4">
               {whatsappStatus?.configured ? (
                 <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <div className="bg-muted p-4 rounded-lg space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">WhatsApp Number:</span>
+                      <span className="text-sm text-muted-foreground">WhatsApp Number:</span>
                       <span className="text-sm font-medium">{whatsappStatus.whatsapp_number}</span>
                     </div>
                     {whatsappStatus.sender_id && (
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Sender ID:</span>
+                        <span className="text-sm text-muted-foreground">Sender ID:</span>
                         <span className="text-sm font-medium">{whatsappStatus.sender_id}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Auth Key:</span>
+                      <span className="text-sm text-muted-foreground">Auth Key:</span>
                       <span className="text-sm font-mono">{whatsappStatus.auth_key_masked}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Enable WhatsApp Notifications</Label>
-                      <p className="text-xs text-gray-500">Send order updates via WhatsApp</p>
+                      <p className="text-xs text-muted-foreground">Send order updates via WhatsApp</p>
                     </div>
                     <Switch
                       checked={whatsappStatus.notifications_enabled}
                       onCheckedChange={(checked) => toggleNotificationsEnabled('whatsapp', checked)}
                     />
                   </div>
-                  <Button variant="outline" className="text-red-600" onClick={removeWhatsAppCredentials}>
+                  <Button variant="outline" className="text-red-400" onClick={removeWhatsAppCredentials}>
                     <Trash2 className="w-4 h-4 mr-2" />
                     Remove Credentials
                   </Button>
@@ -531,7 +531,7 @@ export default function NotificationsSettingsPage() {
                       value={whatsappCredentials.whatsapp_number}
                       onChange={(e) => setWhatsappCredentials(prev => ({ ...prev, whatsapp_number: e.target.value }))}
                     />
-                    <p className="text-xs text-gray-500 mt-1">Your MSG91 integrated WhatsApp number</p>
+                    <p className="text-xs text-muted-foreground mt-1">Your MSG91 integrated WhatsApp number</p>
                   </div>
                   <div>
                     <Label>Sender ID (optional)</Label>
@@ -557,14 +557,14 @@ export default function NotificationsSettingsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3 text-sm">
-                <ol className="list-decimal list-inside space-y-2 text-gray-700">
+                <ol className="list-decimal list-inside space-y-2 text-foreground/80">
                   <li>
                     Go to{' '}
                     <a
                       href="https://msg91.com/signup"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                      className="text-blue-400 hover:underline inline-flex items-center gap-1"
                     >
                       msg91.com/signup
                       <ExternalLink className="w-3 h-3" />
@@ -580,7 +580,7 @@ export default function NotificationsSettingsPage() {
                       href="https://control.msg91.com/app/settings/api-key"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                      className="text-blue-400 hover:underline inline-flex items-center gap-1"
                     >
                       control.msg91.com
                       <ExternalLink className="w-3 h-3" />
@@ -622,11 +622,11 @@ export default function NotificationsSettingsPage() {
               <div key={key} className="flex items-center justify-between py-3 border-b last:border-0">
                 <div>
                   <p className="font-medium">{label}</p>
-                  <p className="text-sm text-gray-500">{description}</p>
+                  <p className="text-sm text-muted-foreground">{description}</p>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-gray-400" />
+                    <Mail className="w-4 h-4 text-muted-foreground" />
                     <Switch
                       checked={notificationSettings[`${key}_email` as keyof NotificationSettings]}
                       onCheckedChange={(checked) =>
@@ -635,7 +635,7 @@ export default function NotificationsSettingsPage() {
                     />
                   </div>
                   <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-gray-400" />
+                    <MessageSquare className="w-4 h-4 text-muted-foreground" />
                     <Switch
                       checked={notificationSettings[`${key}_whatsapp` as keyof NotificationSettings]}
                       onCheckedChange={(checked) =>
@@ -651,10 +651,10 @@ export default function NotificationsSettingsPage() {
             <div className="flex items-center justify-between py-3">
               <div>
                 <p className="font-medium">Low Stock Alerts</p>
-                <p className="text-sm text-gray-500">Alert when products are running low</p>
+                <p className="text-sm text-muted-foreground">Alert when products are running low</p>
               </div>
               <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-gray-400" />
+                <Mail className="w-4 h-4 text-muted-foreground" />
                 <Switch
                   checked={notificationSettings.low_stock_alert_email}
                   onCheckedChange={(checked) =>

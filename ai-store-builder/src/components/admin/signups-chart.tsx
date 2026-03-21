@@ -34,10 +34,10 @@ export function SignupsChart({ data }: SignupsChartProps) {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
         <XAxis
           dataKey="date"
-          stroke="#9ca3af"
+          stroke="#52525b"
           fontSize={12}
           tickLine={false}
           axisLine={false}
@@ -47,7 +47,7 @@ export function SignupsChart({ data }: SignupsChartProps) {
           }}
         />
         <YAxis
-          stroke="#9ca3af"
+          stroke="#52525b"
           fontSize={12}
           tickLine={false}
           axisLine={false}
@@ -57,7 +57,7 @@ export function SignupsChart({ data }: SignupsChartProps) {
           content={({ active, payload, label }) => {
             if (active && payload && payload.length && label) {
               return (
-                <div className="bg-white p-3 border rounded-lg shadow-lg">
+                <div className="bg-zinc-900 border-zinc-700 text-zinc-100 p-3 border rounded-lg shadow-lg">
                   <p className="text-sm font-medium mb-2">
                     {new Date(String(label)).toLocaleDateString('en-IN', {
                       weekday: 'short',

@@ -119,11 +119,11 @@ function Verify2FAContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+    <div className="dark min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-            <Mail className="h-6 w-6 text-blue-600" />
+          <div className="mx-auto mb-4 w-12 h-12 bg-blue-500/15 rounded-full flex items-center justify-center">
+            <Mail className="h-6 w-6 text-blue-400" />
           </div>
           <CardTitle>Check your email</CardTitle>
           <CardDescription>
@@ -223,7 +223,7 @@ function Verify2FAContent() {
 export default function Verify2FAPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="dark min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     }>

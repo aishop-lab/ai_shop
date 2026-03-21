@@ -153,28 +153,28 @@ export default function AbandonedCartsPage() {
     switch (cartStatus) {
       case 'active':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/15 text-yellow-300">
             <Clock className="w-3 h-3" />
             Active
           </span>
         )
       case 'recovered':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-300">
             <CheckCircle className="w-3 h-3" />
             Recovered
           </span>
         )
       case 'expired':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
             <XCircle className="w-3 h-3" />
             Expired
           </span>
         )
       case 'unsubscribed':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-500/15 text-red-300">
             <XCircle className="w-3 h-3" />
             Unsubscribed
           </span>
@@ -189,7 +189,7 @@ export default function AbandonedCartsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Abandoned Carts</h1>
+          <h1 className="text-2xl font-bold">Abandoned Carts</h1>
           <p className="text-muted-foreground">Recover lost sales with email reminders</p>
         </div>
         <Button variant="outline" onClick={fetchCarts} disabled={loading}>
@@ -213,10 +213,10 @@ export default function AbandonedCartsPage() {
 
         <div className="bg-card border rounded-lg p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <CheckCircle className="w-4 h-4 text-green-600" />
+            <CheckCircle className="w-4 h-4 text-emerald-400" />
             <span className="text-sm">Recovered</span>
           </div>
-          <p className="text-2xl font-bold text-green-600">{stats.recovered}</p>
+          <p className="text-2xl font-bold text-emerald-400">{stats.recovered}</p>
         </div>
 
         <div className="bg-card border rounded-lg p-4">
@@ -224,15 +224,15 @@ export default function AbandonedCartsPage() {
             <XCircle className="w-4 h-4" />
             <span className="text-sm">Expired</span>
           </div>
-          <p className="text-2xl font-bold text-gray-500">{stats.expired}</p>
+          <p className="text-2xl font-bold text-muted-foreground">{stats.expired}</p>
         </div>
 
         <div className="bg-card border rounded-lg p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <TrendingUp className="w-4 h-4 text-blue-600" />
+            <TrendingUp className="w-4 h-4 text-blue-400" />
             <span className="text-sm">Recovery Rate</span>
           </div>
-          <p className="text-2xl font-bold text-blue-600">{stats.recovery_rate.toFixed(1)}%</p>
+          <p className="text-2xl font-bold text-blue-400">{stats.recovery_rate.toFixed(1)}%</p>
         </div>
       </div>
 
@@ -343,7 +343,7 @@ export default function AbandonedCartsPage() {
                   )}
 
                   {cart.recovery_status === 'recovered' && cart.recovered_at && (
-                    <span className="text-xs text-green-600">
+                    <span className="text-xs text-emerald-400">
                       Recovered {format(new Date(cart.recovered_at), 'MMM d, yyyy')}
                     </span>
                   )}

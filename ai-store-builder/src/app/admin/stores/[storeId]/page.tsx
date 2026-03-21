@@ -28,11 +28,11 @@ import type { StoreWithDetails } from '@/lib/admin/queries'
 function getStatusBadge(status: string) {
   switch (status) {
     case 'active':
-      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+      return <Badge className="bg-green-500/15 text-green-400 hover:bg-green-500/15">Active</Badge>
     case 'draft':
-      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Draft</Badge>
+      return <Badge className="bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/15">Draft</Badge>
     case 'suspended':
-      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Suspended</Badge>
+      return <Badge className="bg-red-500/15 text-red-400 hover:bg-red-500/15">Suspended</Badge>
     default:
       return <Badge variant="secondary">{status}</Badge>
   }
@@ -248,25 +248,25 @@ export default function AdminStoreDetailPage() {
           title="Products"
           value={store.products_count}
           icon={Package}
-          iconColor="text-blue-600"
+          iconColor="text-blue-500"
         />
         <AdminStatsCard
           title="Orders"
           value={store.orders_count}
           icon={ShoppingCart}
-          iconColor="text-purple-600"
+          iconColor="text-purple-500"
         />
         <AdminStatsCard
           title="Revenue"
           value={formatCurrency(store.revenue, 'INR')}
           icon={DollarSign}
-          iconColor="text-green-600"
+          iconColor="text-green-500"
         />
         <AdminStatsCard
           title="Customers"
           value={customersCount}
           icon={Users}
-          iconColor="text-orange-600"
+          iconColor="text-orange-500"
         />
       </div>
 

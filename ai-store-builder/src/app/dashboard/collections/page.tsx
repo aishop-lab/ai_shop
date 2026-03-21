@@ -282,7 +282,7 @@ export default function CollectionsPage() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        className="text-red-600"
+                        className="text-red-400"
                         onClick={() => deleteCollection(collection.id)}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />

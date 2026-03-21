@@ -45,15 +45,15 @@ function ConfirmEmailContent() {
   }, [searchParams])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="dark min-h-screen flex items-center justify-center bg-background px-4">
       <div className="max-w-md w-full text-center">
         {status === 'loading' && (
           <div className="space-y-4">
             <Loader2 className="h-16 w-16 text-primary mx-auto animate-spin" />
-            <h1 className="text-2xl font-semibold text-gray-900">
+            <h1 className="text-2xl font-semibold text-foreground">
               Verifying your email...
             </h1>
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               Please wait a moment
             </p>
           </div>
@@ -61,17 +61,17 @@ function ConfirmEmailContent() {
 
         {status === 'success' && (
           <div className="space-y-4">
-            <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="h-12 w-12 text-green-600" />
+            <div className="mx-auto w-20 h-20 bg-emerald-500/15 rounded-full flex items-center justify-center">
+              <CheckCircle2 className="h-12 w-12 text-emerald-400" />
             </div>
-            <h1 className="text-2xl font-semibold text-gray-900">
+            <h1 className="text-2xl font-semibold text-foreground">
               Email Verified!
             </h1>
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               Your email has been verified successfully.
             </p>
-            <div className="pt-4 p-4 bg-gray-100 rounded-lg">
-              <p className="text-sm text-gray-600">
+            <div className="pt-4 p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">
                 You can now close this tab and continue where you left off.
               </p>
             </div>
@@ -80,13 +80,13 @@ function ConfirmEmailContent() {
 
         {status === 'error' && (
           <div className="space-y-4">
-            <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center">
-              <XCircle className="h-12 w-12 text-red-600" />
+            <div className="mx-auto w-20 h-20 bg-red-500/15 rounded-full flex items-center justify-center">
+              <XCircle className="h-12 w-12 text-red-400" />
             </div>
-            <h1 className="text-2xl font-semibold text-gray-900">
+            <h1 className="text-2xl font-semibold text-foreground">
               Verification Failed
             </h1>
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               {errorMessage}
             </p>
             <div className="pt-4">
@@ -100,9 +100,9 @@ function ConfirmEmailContent() {
           </div>
         )}
 
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-400">
-            StoreForge - Build your online store with AI
+        <div className="mt-8 pt-6 border-t border-border">
+          <p className="text-xs text-muted-foreground">
+            AI Store — Your AI-powered commerce platform
           </p>
         </div>
       </div>
@@ -112,11 +112,11 @@ function ConfirmEmailContent() {
 
 function ConfirmEmailFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="dark min-h-screen flex items-center justify-center bg-background px-4">
       <div className="max-w-md w-full text-center">
         <div className="space-y-4">
           <Loader2 className="h-16 w-16 text-primary mx-auto animate-spin" />
-          <h1 className="text-2xl font-semibold text-gray-900">
+          <h1 className="text-2xl font-semibold text-foreground">
             Loading...
           </h1>
         </div>

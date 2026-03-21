@@ -201,7 +201,7 @@ export default function ShippingSettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -213,13 +213,13 @@ export default function ShippingSettingsPage() {
         <div>
           <Link
             href="/dashboard/settings"
-            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-2"
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back to Settings
           </Link>
           <h1 className="text-2xl font-bold">Shipping Settings</h1>
-          <p className="text-gray-600 mt-1">Configure shipping rates and delivery zones</p>
+          <p className="text-muted-foreground mt-1">Configure shipping rates and delivery zones</p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
           {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
@@ -243,7 +243,7 @@ export default function ShippingSettingsPage() {
             <div>
               <Label htmlFor="flat_rate">Flat Rate (All India)</Label>
               <div className="relative mt-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                   ₹
                 </span>
                 <Input
@@ -261,7 +261,7 @@ export default function ShippingSettingsPage() {
             <div>
               <Label htmlFor="free_threshold">Free Shipping Above</Label>
               <div className="relative mt-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                   ₹
                 </span>
                 <Input
@@ -278,7 +278,7 @@ export default function ShippingSettingsPage() {
                   min={0}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Set to 0 to disable free shipping
               </p>
             </div>
@@ -291,7 +291,7 @@ export default function ShippingSettingsPage() {
                 <Label htmlFor="cod_enabled" className="text-base font-medium">
                   Cash on Delivery
                 </Label>
-                <p className="text-sm text-gray-500">Allow customers to pay on delivery</p>
+                <p className="text-sm text-muted-foreground">Allow customers to pay on delivery</p>
               </div>
               <Switch
                 id="cod_enabled"
@@ -304,7 +304,7 @@ export default function ShippingSettingsPage() {
               <div className="ml-0 md:ml-6">
                 <Label htmlFor="cod_fee">COD Fee</Label>
                 <div className="relative mt-1 max-w-xs">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                     ₹
                   </span>
                   <Input
@@ -318,7 +318,7 @@ export default function ShippingSettingsPage() {
                     min={0}
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Additional fee charged for COD orders
                 </p>
               </div>
@@ -382,7 +382,7 @@ export default function ShippingSettingsPage() {
                 <div key={zone.id} className="border rounded-lg">
                   {/* Zone Header */}
                   <div
-                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted"
                     onClick={() => setExpandedZone(expandedZone === zone.id ? null : zone.id)}
                   >
                     <div className="flex items-center gap-3">
@@ -391,7 +391,7 @@ export default function ShippingSettingsPage() {
                       </div>
                       <div>
                         <p className="font-medium">{zone.name}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">
                           {zone.is_default
                             ? 'Covers all unmatched areas'
                             : zone.type === 'states'
@@ -415,16 +415,16 @@ export default function ShippingSettingsPage() {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                       {expandedZone === zone.id ? (
-                        <ChevronUp className="w-5 h-5 text-gray-400" />
+                        <ChevronUp className="w-5 h-5 text-muted-foreground" />
                       ) : (
-                        <ChevronDown className="w-5 h-5 text-gray-400" />
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
                       )}
                     </div>
                   </div>
 
                   {/* Zone Details (Expanded) */}
                   {expandedZone === zone.id && (
-                    <div className="border-t p-4 bg-gray-50">
+                    <div className="border-t p-4 bg-muted">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
                           <Label htmlFor={`zone-name-${zone.id}`}>Zone Name</Label>
@@ -438,7 +438,7 @@ export default function ShippingSettingsPage() {
                         <div>
                           <Label htmlFor={`zone-rate-${zone.id}`}>Flat Rate</Label>
                           <div className="relative mt-1">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                               ₹
                             </span>
                             <Input
@@ -475,7 +475,7 @@ export default function ShippingSettingsPage() {
                         <div>
                           <Label htmlFor={`zone-threshold-${zone.id}`}>Free Shipping Above</Label>
                           <div className="relative mt-1">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                               ₹
                             </span>
                             <Input
@@ -499,7 +499,7 @@ export default function ShippingSettingsPage() {
                       <div className="flex items-center justify-between mb-4 p-3 bg-white rounded-lg border">
                         <div>
                           <Label className="font-medium">COD Available</Label>
-                          <p className="text-xs text-gray-500">Allow COD for this zone</p>
+                          <p className="text-xs text-muted-foreground">Allow COD for this zone</p>
                         </div>
                         <Switch
                           checked={zone.cod_available ?? settings.cod_enabled}
@@ -520,14 +520,14 @@ export default function ShippingSettingsPage() {
                                 className={`flex items-center gap-2 p-2 rounded cursor-pointer text-sm ${
                                   zone.states?.includes(state.code)
                                     ? 'bg-blue-50 text-blue-700'
-                                    : 'hover:bg-gray-50'
+                                    : 'hover:bg-muted'
                                 }`}
                               >
                                 <input
                                   type="checkbox"
                                   checked={zone.states?.includes(state.code) || false}
                                   onChange={() => toggleZoneState(zone.id, state.code)}
-                                  className="rounded border-gray-300"
+                                  className="rounded border-muted-foreground/30"
                                 />
                                 <span className="truncate" title={state.name}>
                                   {state.name}
@@ -553,8 +553,8 @@ export default function ShippingSettingsPage() {
               ))}
 
               {(!settings.config?.zones || settings.config.zones.length === 0) && (
-                <div className="text-center py-8 text-gray-500">
-                  <MapPin className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <div className="text-center py-8 text-muted-foreground">
+                  <MapPin className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                   <p className="font-medium">No shipping zones configured</p>
                   <p className="text-sm mt-1">
                     Use the quick add buttons above to create zones, or the flat rate will be used
@@ -633,14 +633,14 @@ export default function ShippingSettingsPage() {
                   min={0}
                   step={0.1}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Weight included in base shipping rate
                 </p>
               </div>
               <div>
                 <Label htmlFor="per_kg">Additional Rate per kg</Label>
                 <div className="relative mt-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                     ₹
                   </span>
                   <Input
@@ -666,19 +666,19 @@ export default function ShippingSettingsPage() {
                     min={0}
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Extra charge for each kg above base weight
                 </p>
               </div>
             </div>
 
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600">
+            <div className="mt-4 p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">
                 <strong>Example:</strong> With base weight of{' '}
                 {settings.config.weight_based.base_weight} kg and ₹
                 {settings.config.weight_based.per_kg_rate}/kg rate:
               </p>
-              <ul className="text-sm text-gray-500 mt-2 space-y-1">
+              <ul className="text-sm text-muted-foreground mt-2 space-y-1">
                 <li>• 0.5 kg package: No extra charge (within base weight)</li>
                 <li>
                   • 2 kg package: +₹

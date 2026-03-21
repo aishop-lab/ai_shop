@@ -216,6 +216,7 @@ export default function MiniCart() {
                           <button
                             onClick={() => removeFromCart(item.product.id, variantId)}
                             className="text-xs text-gray-400 hover:text-red-500"
+                            aria-label={`Remove ${item.product.title} from cart`}
                           >
                             Remove
                           </button>
