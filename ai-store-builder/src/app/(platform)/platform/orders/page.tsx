@@ -1,153 +1,28 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Search, ChevronDown, ShoppingBag, X, User, CreditCard, Package, Bot } from 'lucide-react'
+import { Search, ChevronDown, ShoppingBag, X, User, CreditCard, Package, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { AgentBadge } from '@/components/platform/shared/agent-badge'
-import type { AgentType } from '@/lib/agents/types'
+import { createClient } from '@/lib/supabase/client'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 type OrderStatus = 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
-type PaymentMethod = 'razorpay' | 'cod'
+type PaymentMethod = 'razorpay' | 'cod' | 'stripe'
 
-interface AgentActivity {
-  agentType: AgentType
-  message: string
-  at: string
-}
-
-interface MockOrder {
+interface OrderData {
   id: string
   order_number: string
   customer_name: string
   email: string
   total: number
   status: OrderStatus
-  items_count: number
   created_at: string
   payment_method: PaymentMethod
-  agent_activity: AgentActivity[] | null
+  order_items: { id: string }[]
 }
-
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-const MOCK_ORDERS: MockOrder[] = [
-  {
-    id: '1',
-    order_number: '1841',
-    customer_name: 'Priya Sharma',
-    email: 'priya.sharma@gmail.com',
-    total: 3198,
-    status: 'delivered',
-    items_count: 2,
-    created_at: '2026-03-18T09:14:00Z',
-    payment_method: 'razorpay',
-    agent_activity: [
-      { agentType: 'support', message: 'Responded to shipping query', at: '2026-03-18T11:30:00Z' },
-      { agentType: 'sales', message: 'Sent post-delivery review request', at: '2026-03-20T09:00:00Z' },
-    ],
-  },
-  {
-    id: '2',
-    order_number: '1842',
-    customer_name: 'Rahul Verma',
-    email: 'rahul.verma@outlook.com',
-    total: 1899,
-    status: 'shipped',
-    items_count: 1,
-    created_at: '2026-03-18T14:22:00Z',
-    payment_method: 'razorpay',
-    agent_activity: [
-      { agentType: 'support', message: 'Sent shipment tracking link via WhatsApp', at: '2026-03-19T10:05:00Z' },
-    ],
-  },
-  {
-    id: '3',
-    order_number: '1843',
-    customer_name: 'Anjali Mehta',
-    email: 'anjali.mehta@yahoo.in',
-    total: 5498,
-    status: 'processing',
-    items_count: 3,
-    created_at: '2026-03-19T08:05:00Z',
-    payment_method: 'razorpay',
-    agent_activity: [
-      { agentType: 'sales', message: 'Sent follow-up discount for next order', at: '2026-03-19T12:00:00Z' },
-    ],
-  },
-  {
-    id: '4',
-    order_number: '1844',
-    customer_name: 'Vikram Nair',
-    email: 'vikram.nair@gmail.com',
-    total: 449,
-    status: 'confirmed',
-    items_count: 1,
-    created_at: '2026-03-19T11:47:00Z',
-    payment_method: 'cod',
-    agent_activity: null,
-  },
-  {
-    id: '5',
-    order_number: '1845',
-    customer_name: 'Sunita Patel',
-    email: 'sunita.patel@gmail.com',
-    total: 2798,
-    status: 'cancelled',
-    items_count: 2,
-    created_at: '2026-03-19T16:33:00Z',
-    payment_method: 'razorpay',
-    agent_activity: [
-      { agentType: 'support', message: 'Initiated refund process after cancellation', at: '2026-03-19T17:00:00Z' },
-      { agentType: 'sales', message: 'Sent win-back coupon (10% off) via email', at: '2026-03-20T09:30:00Z' },
-    ],
-  },
-  {
-    id: '6',
-    order_number: '1846',
-    customer_name: 'Karthik Iyer',
-    email: 'karthik.iyer@hotmail.com',
-    total: 799,
-    status: 'delivered',
-    items_count: 1,
-    created_at: '2026-03-20T07:10:00Z',
-    payment_method: 'cod',
-    agent_activity: [
-      { agentType: 'support', message: 'Responded to shipping query', at: '2026-03-20T08:45:00Z' },
-    ],
-  },
-  {
-    id: '7',
-    order_number: '1847',
-    customer_name: 'Deepa Krishnan',
-    email: 'deepa.k@gmail.com',
-    total: 4998,
-    status: 'processing',
-    items_count: 2,
-    created_at: '2026-03-20T09:55:00Z',
-    payment_method: 'razorpay',
-    agent_activity: null,
-  },
-  {
-    id: '8',
-    order_number: '1848',
-    customer_name: 'Amit Gupta',
-    email: 'amit.gupta@gmail.com',
-    total: 1249,
-    status: 'confirmed',
-    items_count: 1,
-    created_at: '2026-03-20T12:03:00Z',
-    payment_method: 'razorpay',
-    agent_activity: [
-      { agentType: 'sales', message: 'Sent follow-up discount for next order', at: '2026-03-20T13:00:00Z' },
-    ],
-  },
-]
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -209,7 +84,51 @@ type StatusFilter = 'all' | OrderStatus
 export default function OrdersPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [selectedOrder, setSelectedOrder] = useState<MockOrder | null>(null)
+  const [selectedOrder, setSelectedOrder] = useState<OrderData | null>(null)
+  const [orders, setOrders] = useState<OrderData[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [storeId, setStoreId] = useState<string | null>(null)
+
+  // Fetch the merchant's store ID
+  useEffect(() => {
+    async function fetchStoreId() {
+      try {
+        const response = await fetch('/api/dashboard/stats')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.storeId) setStoreId(data.storeId)
+        }
+      } catch {
+        console.error('[Orders] Failed to fetch store ID')
+      }
+    }
+    fetchStoreId()
+  }, [])
+
+  // Fetch orders from Supabase
+  useEffect(() => {
+    if (!storeId) return
+    async function fetchOrders() {
+      try {
+        setIsLoading(true)
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('orders')
+          .select('id, order_number, customer_name, email, total, status, created_at, payment_method, order_items(id)')
+          .eq('store_id', storeId)
+          .order('created_at', { ascending: false })
+          .limit(50)
+
+        if (error) throw error
+        setOrders((data as OrderData[]) ?? [])
+      } catch (err) {
+        console.error('[Orders] Failed to fetch orders:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchOrders()
+  }, [storeId])
 
   // Close panel on Escape
   useEffect(() => {
@@ -222,15 +141,33 @@ export default function OrdersPage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    return MOCK_ORDERS.filter((o) => {
+    return orders.filter((o) => {
       const matchesSearch =
-        o.order_number.includes(q) ||
-        o.customer_name.toLowerCase().includes(q) ||
-        o.email.toLowerCase().includes(q)
+        (o.order_number?.toString() ?? '').includes(q) ||
+        (o.customer_name ?? '').toLowerCase().includes(q) ||
+        (o.email ?? '').toLowerCase().includes(q)
       const matchesStatus = statusFilter === 'all' || o.status === statusFilter
       return matchesSearch && matchesStatus
     })
-  }, [search, statusFilter])
+  }, [search, statusFilter, orders])
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div>
+          <h1 className="font-mono text-lg font-semibold text-[var(--platform-text-primary)]">
+            Orders
+          </h1>
+          <p className="mt-0.5 text-sm text-[var(--platform-text-secondary)]">
+            Loading orders...
+          </p>
+        </div>
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-[var(--platform-text-muted)]" />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -243,7 +180,7 @@ export default function OrdersPage() {
             Orders
           </h1>
           <p className="mt-0.5 text-sm text-[var(--platform-text-secondary)]">
-            {MOCK_ORDERS.length} orders total
+            {orders.length} orders total
           </p>
         </div>
       </div>
@@ -302,7 +239,6 @@ export default function OrdersPage() {
                 <Th align="right">Items</Th>
                 <Th>Status</Th>
                 <Th>Payment</Th>
-                <Th>Agent Activity</Th>
                 <Th>Date</Th>
               </tr>
             </thead>
@@ -324,7 +260,7 @@ export default function OrdersPage() {
 
       {filtered.length > 0 && (
         <p className="text-center font-mono text-[10px] text-[var(--platform-text-muted)]">
-          {filtered.length} of {MOCK_ORDERS.length} orders
+          {filtered.length} of {orders.length} orders
         </p>
       )}
 
@@ -379,14 +315,13 @@ function Th({ children, align = 'left' }: { children: React.ReactNode; align?: '
 // ---------------------------------------------------------------------------
 
 interface OrderRowProps {
-  order: MockOrder
+  order: OrderData
   isSelected: boolean
   onClick: () => void
 }
 
 function OrderRow({ order, isSelected, onClick }: OrderRowProps) {
-  const sc = STATUS_CONFIG[order.status]
-  const firstActivity = order.agent_activity?.[0] ?? null
+  const sc = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.confirmed
 
   return (
     <tr
@@ -416,7 +351,7 @@ function OrderRow({ order, isSelected, onClick }: OrderRowProps) {
 
       {/* Items */}
       <td className="px-4 py-3 text-right">
-        <span className="font-mono text-[var(--platform-text-secondary)]">{order.items_count}</span>
+        <span className="font-mono text-[var(--platform-text-secondary)]">{order.order_items?.length ?? 0}</span>
       </td>
 
       {/* Status */}
@@ -437,25 +372,6 @@ function OrderRow({ order, isSelected, onClick }: OrderRowProps) {
         <PaymentBadge method={order.payment_method} />
       </td>
 
-      {/* Agent Activity */}
-      <td className="px-4 py-3">
-        {firstActivity ? (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <AgentBadge agentType={firstActivity.agentType} size="sm" />
-            <span className="max-w-[180px] truncate text-[var(--platform-text-muted)]">
-              {firstActivity.message}
-            </span>
-            {(order.agent_activity?.length ?? 0) > 1 && (
-              <span className="font-mono text-[10px] text-[var(--platform-text-muted)]">
-                +{(order.agent_activity?.length ?? 1) - 1}
-              </span>
-            )}
-          </div>
-        ) : (
-          <span className="font-mono text-[var(--platform-text-muted)]">—</span>
-        )}
-      </td>
-
       {/* Date */}
       <td className="px-4 py-3">
         <span className="font-mono text-[var(--platform-text-muted)]">{formatDate(order.created_at)}</span>
@@ -469,16 +385,20 @@ function OrderRow({ order, isSelected, onClick }: OrderRowProps) {
 // ---------------------------------------------------------------------------
 
 function PaymentBadge({ method }: { method: PaymentMethod }) {
+  const config = method === 'razorpay'
+    ? { cls: 'border-indigo-500/20 bg-indigo-500/10 text-indigo-400', label: 'Razorpay' }
+    : method === 'stripe'
+    ? { cls: 'border-purple-500/20 bg-purple-500/10 text-purple-400', label: 'Stripe' }
+    : { cls: 'border-zinc-500/20 bg-zinc-500/10 text-zinc-400', label: 'COD' }
+
   return (
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10px]',
-        method === 'razorpay'
-          ? 'border-indigo-500/20 bg-indigo-500/10 text-indigo-400'
-          : 'border-zinc-500/20 bg-zinc-500/10 text-zinc-400',
+        config.cls,
       )}
     >
-      {method === 'razorpay' ? 'Razorpay' : 'COD'}
+      {config.label}
     </span>
   )
 }
@@ -488,12 +408,12 @@ function PaymentBadge({ method }: { method: PaymentMethod }) {
 // ---------------------------------------------------------------------------
 
 interface OrderDetailProps {
-  order: MockOrder
+  order: OrderData
   onClose: () => void
 }
 
 function OrderDetail({ order, onClose }: OrderDetailProps) {
-  const sc = STATUS_CONFIG[order.status]
+  const sc = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.confirmed
 
   return (
     <>
@@ -524,13 +444,13 @@ function OrderDetail({ order, onClose }: OrderDetailProps) {
       <div className="flex-1 overflow-y-auto">
         {/* Customer section */}
         <Section icon={<User className="h-3.5 w-3.5" />} title="Customer">
-          <InfoRow label="Name" value={order.customer_name} mono />
-          <InfoRow label="Email" value={order.email} mono />
+          <InfoRow label="Name" value={order.customer_name ?? '—'} mono />
+          <InfoRow label="Email" value={order.email ?? '—'} mono />
         </Section>
 
         {/* Items section */}
         <Section icon={<Package className="h-3.5 w-3.5" />} title="Items">
-          <InfoRow label="Item count" value={String(order.items_count)} mono />
+          <InfoRow label="Item count" value={String(order.order_items?.length ?? 0)} mono />
           <InfoRow label="Order total" value={formatPrice(order.total)} mono />
         </Section>
 
@@ -553,33 +473,6 @@ function OrderDetail({ order, onClose }: OrderDetailProps) {
             <PaymentBadge method={order.payment_method} />
           </div>
           <InfoRow label="Placed at" value={formatDateTime(order.created_at)} mono />
-        </Section>
-
-        {/* Agent Activity section */}
-        <Section icon={<Bot className="h-3.5 w-3.5" />} title="Agent Activity">
-          {order.agent_activity && order.agent_activity.length > 0 ? (
-            <ul className="space-y-3 pt-1">
-              {order.agent_activity.map((activity, i) => (
-                <li key={i} className="flex gap-2.5">
-                  <div className="mt-0.5 flex-shrink-0">
-                    <AgentBadge agentType={activity.agentType} size="sm" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] leading-relaxed text-[var(--platform-text-secondary)]">
-                      {activity.message}
-                    </p>
-                    <p className="mt-0.5 font-mono text-[10px] text-[var(--platform-text-muted)]">
-                      {formatDateTime(activity.at)}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="py-1 text-[11px] text-[var(--platform-text-muted)]">
-              No agent activity for this order.
-            </p>
-          )}
         </Section>
       </div>
     </>

@@ -1,58 +1,15 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Check, X, ChevronDown, ChevronUp, Clock } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { Check, X, ChevronDown, ChevronUp, Clock, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AgentBadge } from '@/components/platform/shared/agent-badge'
 import { KeyboardHint } from '@/components/platform/shared/keyboard-hint'
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard'
-import { MOCK_APPROVALS, formatTimeAgo } from '@/lib/agents/mock-data'
+import { useApprovals } from '@/lib/hooks/use-approvals'
+import { formatTimeAgo } from '@/lib/agents/mock-data'
 import { AGENT_TYPES } from '@/lib/agents/constants'
 import type { AgentApproval, AgentType, ApprovalPriority } from '@/lib/agents/types'
-
-// --- Additional mock approvals for demo ---
-const EXTRA_APPROVALS: AgentApproval[] = [
-  {
-    id: 'approval-4',
-    store_id: 'mock-store',
-    agent_type: 'sales',
-    action_type: 'win_back_campaign',
-    summary: 'Send win-back email to 45 dormant customers (no purchase in 90 days)',
-    reasoning:
-      'These 45 customers were active buyers but went silent 90+ days ago. A personalized win-back with a "we miss you" message and a small 10% loyalty reward has a typical 12-18% re-engagement rate for this segment. No spend involved — just email.',
-    details: { customer_count: 45, dormant_days: 90, discount_percent: 10 },
-    priority: 'normal',
-    expires_at: null,
-    status: 'pending',
-    resolved_by: null,
-    resolved_at: null,
-    rejection_reason: null,
-    modifications: null,
-    created_at: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'approval-5',
-    store_id: 'mock-store',
-    agent_type: 'analytics',
-    action_type: 'report_publish',
-    summary: 'Publish weekly performance report to merchant email',
-    reasoning:
-      'Weekly summary covering revenue, top products, customer acquisition, and agent actions. Report is already generated — this just needs confirmation to send to your registered email address.',
-    details: { report_type: 'weekly_summary', delivery: 'email' },
-    priority: 'low',
-    expires_at: null,
-    status: 'pending',
-    resolved_by: null,
-    resolved_at: null,
-    rejection_reason: null,
-    modifications: null,
-    created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-  },
-]
-
-const ALL_APPROVALS: AgentApproval[] = [...MOCK_APPROVALS, ...EXTRA_APPROVALS]
 
 // --- Priority config ---
 const PRIORITY_CONFIG: Record<ApprovalPriority, { label: string; dotClass: string; order: number }> = {
@@ -70,14 +27,38 @@ export default function ApprovalsPage() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [decisions, setDecisions] = useState<Record<string, CardDecision>>({})
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [storeId, setStoreId] = useState<string | null>(null)
+
+  // Fetch the merchant's store ID
+  useEffect(() => {
+    async function fetchStoreId() {
+      try {
+        const response = await fetch('/api/dashboard/stats')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.storeId) setStoreId(data.storeId)
+        }
+      } catch {
+        console.error('[Approvals] Failed to fetch store ID')
+      }
+    }
+    fetchStoreId()
+  }, [])
+
+  const {
+    approvals,
+    isLoading,
+    approveAction,
+    rejectAction,
+  } = useApprovals(storeId)
 
   // Filtered + sorted list (pending first, sorted by priority)
   const filteredApprovals = useMemo(() => {
-    return ALL_APPROVALS
+    return approvals
       .filter((a) => agentFilter === 'all' || a.agent_type === agentFilter)
       .filter((a) => priorityFilter === 'all' || a.priority === priorityFilter)
       .sort((a, b) => PRIORITY_CONFIG[a.priority].order - PRIORITY_CONFIG[b.priority].order)
-  }, [agentFilter, priorityFilter])
+  }, [agentFilter, priorityFilter, approvals])
 
   const pendingCount = filteredApprovals.filter((a) => !decisions[a.id]).length
 
@@ -90,12 +71,14 @@ export default function ApprovalsPage() {
     })
   }
 
-  function approve(id: string) {
+  async function approve(id: string) {
     setDecisions((prev) => ({ ...prev, [id]: 'approved' }))
+    await approveAction(id)
   }
 
-  function reject(id: string) {
+  async function reject(id: string) {
     setDecisions((prev) => ({ ...prev, [id]: 'rejected' }))
+    await rejectAction(id)
   }
 
   // Keyboard navigation — clamp index to list bounds
@@ -209,7 +192,11 @@ export default function ApprovalsPage() {
       </div>
 
       {/* Approval cards */}
-      {filteredApprovals.length === 0 ? (
+      {isLoading ? (
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-[var(--platform-text-muted)]" />
+        </div>
+      ) : filteredApprovals.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-[var(--platform-border)] bg-[var(--platform-surface)] py-20">
           <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--platform-surface-hover)]">
             <Check className="h-5 w-5 text-[var(--platform-status-active)]" />

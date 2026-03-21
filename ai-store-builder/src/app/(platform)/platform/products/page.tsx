@@ -1,79 +1,39 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   Plus,
   Search,
   ChevronDown,
-  ChevronUp,
   AlertTriangle,
   Package,
-  Lightbulb,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { AgentBadge } from '@/components/platform/shared/agent-badge'
-import type { AgentType } from '@/lib/agents/types'
+import { createClient } from '@/lib/supabase/client'
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Types
 // ---------------------------------------------------------------------------
 
-interface MockProduct {
+interface ProductImage {
+  original_url: string
+  thumbnail_url: string | null
+  position: number
+}
+
+interface ProductData {
   id: string
   title: string
   price: number
   status: 'active' | 'draft'
   inventory: number
   category: string
-  image: null
+  product_images: ProductImage[]
   created_at: string
 }
-
-const MOCK_PRODUCTS: MockProduct[] = [
-  { id: '1',  title: 'Handmade Silver Jhumka Earrings',  price: 1299, status: 'active', inventory: 45,  category: 'Jewelry',     image: null, created_at: '2026-03-10' },
-  { id: '2',  title: 'Organic Turmeric Face Cream',      price: 599,  status: 'active', inventory: 120, category: 'Skincare',    image: null, created_at: '2026-03-08' },
-  { id: '3',  title: 'Block Print Cotton Kurta - Blue',  price: 1899, status: 'active', inventory: 8,   category: 'Clothing',    image: null, created_at: '2026-03-05' },
-  { id: '4',  title: 'Brass Diya Set (Pack of 4)',       price: 449,  status: 'draft',  inventory: 200, category: 'Home Decor',  image: null, created_at: '2026-03-01' },
-  { id: '5',  title: 'Darjeeling First Flush Tea - 100g',price: 799,  status: 'active', inventory: 0,   category: 'Food',        image: null, created_at: '2026-02-28' },
-  { id: '6',  title: 'Embroidered Silk Clutch',          price: 2499, status: 'active', inventory: 23,  category: 'Accessories', image: null, created_at: '2026-02-25' },
-  { id: '7',  title: 'Ayurvedic Hair Oil - 200ml',       price: 349,  status: 'active', inventory: 89,  category: 'Haircare',   image: null, created_at: '2026-02-20' },
-  { id: '8',  title: 'Marble Coaster Set',               price: 999,  status: 'draft',  inventory: 34,  category: 'Home Decor',  image: null, created_at: '2026-02-15' },
-  { id: '9',  title: 'Handloom Pashmina Shawl',          price: 4999, status: 'active', inventory: 5,   category: 'Clothing',    image: null, created_at: '2026-02-10' },
-  { id: '10', title: 'Rose Water Toner Spray',           price: 299,  status: 'active', inventory: 156, category: 'Skincare',    image: null, created_at: '2026-02-05' },
-]
-
-// ---------------------------------------------------------------------------
-// Agent insights
-// ---------------------------------------------------------------------------
-
-interface AgentInsight {
-  id: string
-  agentType: AgentType
-  message: string
-  action: string
-}
-
-const AGENT_INSIGHTS: AgentInsight[] = [
-  {
-    id: 'i1',
-    agentType: 'technical',
-    message: '3 products are missing meta descriptions and will have reduced search visibility.',
-    action: 'Auto-fix SEO →',
-  },
-  {
-    id: 'i2',
-    agentType: 'sales',
-    message: '"Darjeeling First Flush Tea" is out of stock — 12 customers searched for it this week.',
-    action: 'Notify me when restocked →',
-  },
-  {
-    id: 'i3',
-    agentType: 'analytics',
-    message: '"Silver Jhumka Earrings" is your top performer — 23 units sold this month.',
-    action: 'View full report →',
-  },
-]
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -90,8 +50,6 @@ function formatDate(dateStr: string): string {
 
 const LOW_STOCK_THRESHOLD = 10
 
-const UNIQUE_CATEGORIES = Array.from(new Set(MOCK_PRODUCTS.map((p) => p.category))).sort()
-
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -100,16 +58,81 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft'>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [insightsOpen, setInsightsOpen] = useState(true)
+  const [products, setProducts] = useState<ProductData[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [storeId, setStoreId] = useState<string | null>(null)
+
+  // Fetch the merchant's store ID
+  useEffect(() => {
+    async function fetchStoreId() {
+      try {
+        const response = await fetch('/api/dashboard/stats')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.storeId) setStoreId(data.storeId)
+        }
+      } catch {
+        console.error('[Products] Failed to fetch store ID')
+      }
+    }
+    fetchStoreId()
+  }, [])
+
+  // Fetch products from Supabase
+  useEffect(() => {
+    if (!storeId) return
+    async function fetchProducts() {
+      try {
+        setIsLoading(true)
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('products')
+          .select('id, title, price, status, inventory, category, created_at, product_images(original_url, thumbnail_url, position)')
+          .eq('store_id', storeId)
+          .order('created_at', { ascending: false })
+          .limit(50)
+
+        if (error) throw error
+        setProducts((data as ProductData[]) ?? [])
+      } catch (err) {
+        console.error('[Products] Failed to fetch products:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchProducts()
+  }, [storeId])
+
+  const uniqueCategories = useMemo(() => {
+    return Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort()
+  }, [products])
 
   const filtered = useMemo(() => {
-    return MOCK_PRODUCTS.filter((p) => {
-      const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase())
+    return products.filter((p) => {
+      const matchesSearch = (p.title ?? '').toLowerCase().includes(search.toLowerCase())
       const matchesStatus = statusFilter === 'all' || p.status === statusFilter
       const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter
       return matchesSearch && matchesStatus && matchesCategory
     })
-  }, [search, statusFilter, categoryFilter])
+  }, [search, statusFilter, categoryFilter, products])
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div>
+          <h1 className="font-mono text-lg font-semibold text-[var(--platform-text-primary)]">
+            Products
+          </h1>
+          <p className="mt-0.5 text-sm text-[var(--platform-text-secondary)]">
+            Loading products...
+          </p>
+        </div>
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-[var(--platform-text-muted)]" />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -122,7 +145,7 @@ export default function ProductsPage() {
             Products
           </h1>
           <p className="mt-0.5 text-sm text-[var(--platform-text-secondary)]">
-            {MOCK_PRODUCTS.length} products in your catalog
+            {products.length} products in your catalog
           </p>
         </div>
         <Link
@@ -136,45 +159,6 @@ export default function ProductsPage() {
           <Plus className="h-3.5 w-3.5" />
           Add Product
         </Link>
-      </div>
-
-      {/* ----------------------------------------------------------------- */}
-      {/* Agent Insights Panel                                                */}
-      {/* ----------------------------------------------------------------- */}
-      <div className="rounded-xl border border-[var(--platform-border)] bg-[var(--platform-surface)] overflow-hidden">
-        {/* Panel header — toggle */}
-        <button
-          type="button"
-          onClick={() => setInsightsOpen((v) => !v)}
-          className={cn(
-            'flex w-full items-center justify-between px-4 py-3',
-            'text-left transition-colors hover:bg-[var(--platform-surface-hover)]',
-          )}
-        >
-          <div className="flex items-center gap-2">
-            <Lightbulb className="h-3.5 w-3.5 text-[var(--platform-accent)]" />
-            <span className="text-xs font-medium text-[var(--platform-text-primary)]">
-              Agent Insights
-            </span>
-            <span className="inline-flex items-center rounded-full bg-[var(--platform-accent)]/10 px-1.5 py-px font-mono text-[10px] text-[var(--platform-accent)]">
-              {AGENT_INSIGHTS.length}
-            </span>
-          </div>
-          {insightsOpen ? (
-            <ChevronUp className="h-3.5 w-3.5 text-[var(--platform-text-muted)]" />
-          ) : (
-            <ChevronDown className="h-3.5 w-3.5 text-[var(--platform-text-muted)]" />
-          )}
-        </button>
-
-        {/* Insight cards */}
-        {insightsOpen && (
-          <div className="grid gap-px border-t border-[var(--platform-border)] bg-[var(--platform-border)] sm:grid-cols-3">
-            {AGENT_INSIGHTS.map((insight) => (
-              <InsightCard key={insight.id} insight={insight} />
-            ))}
-          </div>
-        )}
       </div>
 
       {/* ----------------------------------------------------------------- */}
@@ -217,7 +201,7 @@ export default function ProductsPage() {
           onChange={setCategoryFilter}
           options={[
             { value: 'all', label: 'All categories' },
-            ...UNIQUE_CATEGORIES.map((c) => ({ value: c, label: c })),
+            ...uniqueCategories.map((c) => ({ value: c, label: c })),
           ]}
         />
       </div>
@@ -261,7 +245,7 @@ export default function ProductsPage() {
       {/* Count footer */}
       {filtered.length > 0 && (
         <p className="text-center font-mono text-[10px] text-[var(--platform-text-muted)]">
-          {filtered.length} of {MOCK_PRODUCTS.length} products
+          {filtered.length} of {products.length} products
         </p>
       )}
     </div>
@@ -272,36 +256,15 @@ export default function ProductsPage() {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-interface InsightCardProps {
-  insight: AgentInsight
-}
-
-function InsightCard({ insight }: InsightCardProps) {
-  return (
-    <div className="bg-[var(--platform-surface)] px-4 py-3 hover:bg-[var(--platform-surface-hover)] transition-colors">
-      <div className="mb-2">
-        <AgentBadge agentType={insight.agentType} size="sm" />
-      </div>
-      <p className="text-[11px] leading-relaxed text-[var(--platform-text-secondary)]">
-        {insight.message}
-      </p>
-      <button
-        type="button"
-        className="mt-2 font-mono text-[10px] text-[var(--platform-accent)] hover:underline transition-colors"
-      >
-        {insight.action}
-      </button>
-    </div>
-  )
-}
-
 interface ProductRowProps {
-  product: MockProduct
+  product: ProductData
 }
 
 function ProductRow({ product }: ProductRowProps) {
   const isOutOfStock = product.inventory === 0
   const isLowStock = !isOutOfStock && product.inventory < LOW_STOCK_THRESHOLD
+  const sortedImages = [...(product.product_images ?? [])].sort((a, b) => a.position - b.position)
+  const primaryImage = sortedImages[0]?.thumbnail_url || sortedImages[0]?.original_url || null
 
   return (
     <Link href={`/platform/products/${product.id}`} className="contents">
@@ -314,10 +277,20 @@ function ProductRow({ product }: ProductRowProps) {
         {/* Product */}
         <td className="px-4 py-3">
           <div className="flex items-center gap-3">
-            {/* Placeholder image */}
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-[var(--platform-border)] bg-[var(--platform-surface)]">
-              <Package className="h-3.5 w-3.5 text-[var(--platform-text-muted)]" />
-            </div>
+            {/* Product image or placeholder */}
+            {primaryImage ? (
+              <Image
+                src={primaryImage}
+                alt={product.title}
+                width={32}
+                height={32}
+                className="h-8 w-8 flex-shrink-0 rounded-md border border-[var(--platform-border)] object-cover"
+              />
+            ) : (
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-[var(--platform-border)] bg-[var(--platform-surface)]">
+                <Package className="h-3.5 w-3.5 text-[var(--platform-text-muted)]" />
+              </div>
+            )}
             <div className="min-w-0">
               <p className="truncate font-medium text-[var(--platform-text-primary)]">
                 {product.title}

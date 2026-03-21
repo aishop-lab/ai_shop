@@ -1,11 +1,12 @@
 // src/app/(platform)/platform/settings/agents/page.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AgentBadge } from '@/components/platform/shared/agent-badge'
+import { useAgentStates, useUpdateAgentState } from '@/lib/hooks/use-agents'
 import {
   AGENT_TYPES,
   AGENT_DISPLAY_NAMES,
@@ -53,11 +54,13 @@ function AgentConfigCard({
   settings,
   onToggle,
   onAutonomyChange,
+  saving,
 }: {
   agentType: AgentType
   settings: AgentSettings
   onToggle: () => void
   onAutonomyChange: (level: AutonomyLevel) => void
+  saving?: boolean
 }) {
   const hints = AGENT_CONFIG_HINTS[agentType]
   const currentLevel = AUTONOMY_LEVELS[settings.autonomy]
@@ -74,6 +77,10 @@ function AgentConfigCard({
             {AGENT_DESCRIPTIONS[agentType]}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          {saving && (
+            <span className="font-mono text-[10px] text-[var(--platform-text-muted)]">Saving...</span>
+          )}
         {/* Toggle */}
         <button
           type="button"
@@ -93,6 +100,7 @@ function AgentConfigCard({
             )}
           />
         </button>
+        </div>
       </div>
 
       {/* Autonomy selector */}
@@ -154,25 +162,103 @@ function AgentConfigCard({
 }
 
 export default function AgentConfigPage() {
-  const [agentSettings, setAgentSettings] = useState<Record<AgentType, AgentSettings>>(
-    () =>
-      Object.fromEntries(
-        AGENT_TYPES.map((type) => [type, { enabled: true, autonomy: DEFAULT_AUTONOMY_LEVEL }])
-      ) as Record<AgentType, AgentSettings>
-  )
+  const [storeId, setStoreId] = useState<string | null>(null)
+  const [savingAgents, setSavingAgents] = useState<Set<AgentType>>(new Set())
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
-  function handleToggle(agentType: AgentType) {
-    setAgentSettings((prev) => ({
-      ...prev,
-      [agentType]: { ...prev[agentType], enabled: !prev[agentType].enabled },
-    }))
-  }
+  // Fetch the merchant's store ID
+  useEffect(() => {
+    async function fetchStoreId() {
+      try {
+        const response = await fetch('/api/dashboard/stats')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.storeId) setStoreId(data.storeId)
+        }
+      } catch {
+        console.error('[AgentConfig] Failed to fetch store ID')
+      }
+    }
+    fetchStoreId()
+  }, [])
 
-  function handleAutonomyChange(agentType: AgentType, level: AutonomyLevel) {
-    setAgentSettings((prev) => ({
-      ...prev,
-      [agentType]: { ...prev[agentType], autonomy: level },
-    }))
+  const { agents, isLoading } = useAgentStates(storeId)
+  const { updateAgent } = useUpdateAgentState()
+
+  // Build settings from real agent states
+  const agentSettings: Record<AgentType, AgentSettings> = Object.fromEntries(
+    AGENT_TYPES.map((type) => {
+      const agentState = agents.find((a) => a.agent_type === type)
+      return [
+        type,
+        {
+          enabled: agentState?.is_enabled ?? true,
+          autonomy: agentState?.autonomy_level ?? DEFAULT_AUTONOMY_LEVEL,
+        },
+      ]
+    })
+  ) as Record<AgentType, AgentSettings>
+
+  const showToast = useCallback((msg: string) => {
+    setSaveMessage(msg)
+    setTimeout(() => setSaveMessage(null), 2000)
+  }, [])
+
+  const handleToggle = useCallback(async (agentType: AgentType) => {
+    if (!storeId) return
+    const agentState = agents.find((a) => a.agent_type === agentType)
+    if (!agentState) return
+
+    setSavingAgents((prev) => new Set(prev).add(agentType))
+    const result = await updateAgent(storeId, agentType, { is_enabled: !agentState.is_enabled })
+    setSavingAgents((prev) => { const next = new Set(prev); next.delete(agentType); return next })
+
+    if (result) {
+      showToast(`${AGENT_DISPLAY_NAMES[agentType]} ${result.is_enabled ? 'enabled' : 'disabled'}`)
+    } else {
+      showToast('Failed to update — please try again')
+    }
+  }, [storeId, agents, updateAgent, showToast])
+
+  const handleAutonomyChange = useCallback(async (agentType: AgentType, level: AutonomyLevel) => {
+    if (!storeId) return
+    const agentState = agents.find((a) => a.agent_type === agentType)
+    if (!agentState) return
+
+    setSavingAgents((prev) => new Set(prev).add(agentType))
+    const result = await updateAgent(storeId, agentType, { autonomy_level: level })
+    setSavingAgents((prev) => { const next = new Set(prev); next.delete(agentType); return next })
+
+    if (result) {
+      showToast(`${AGENT_DISPLAY_NAMES[agentType]} autonomy set to level ${level}`)
+    } else {
+      showToast('Failed to update — please try again')
+    }
+  }, [storeId, agents, updateAgent, showToast])
+
+  if (isLoading && agents.length === 0) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-8">
+        <div className="space-y-1">
+          <Link
+            href="/platform/settings"
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--platform-text-muted)] transition-colors hover:text-[var(--platform-text-secondary)]"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Settings
+          </Link>
+          <h1 className="font-mono text-lg font-semibold text-[var(--platform-text-primary)]">
+            Agent Configuration
+          </h1>
+          <p className="text-sm text-[var(--platform-text-secondary)]">
+            Loading agent settings...
+          </p>
+        </div>
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-[var(--platform-text-muted)]" />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -203,9 +289,17 @@ export default function AgentConfigPage() {
             settings={agentSettings[agentType]}
             onToggle={() => handleToggle(agentType)}
             onAutonomyChange={(level) => handleAutonomyChange(agentType, level)}
+            saving={savingAgents.has(agentType)}
           />
         ))}
       </div>
+
+      {/* Toast notification */}
+      {saveMessage && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 py-2 shadow-lg">
+          <p className="font-mono text-xs text-[var(--platform-text-primary)]">{saveMessage}</p>
+        </div>
+      )}
     </div>
   )
 }

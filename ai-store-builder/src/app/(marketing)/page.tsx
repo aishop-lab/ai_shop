@@ -1,81 +1,152 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import {
-  Sparkles,
   Store,
-  CreditCard,
-  Truck,
-  BarChart3,
-  Shield,
   ArrowRight,
   Check,
+  Megaphone,
+  TrendingUp,
+  Headphones,
+  BarChart3,
+  Settings,
   Zap,
-  Globe,
-  Smartphone
 } from 'lucide-react'
 
-const features = [
+const agents = [
   {
-    icon: Sparkles,
-    title: 'AI-Powered Setup',
-    description: 'Describe your business and let AI create product descriptions, suggest prices, and generate store content.'
+    icon: Megaphone,
+    name: 'Marketing Agent',
+    color: 'text-purple-400',
+    bg: 'bg-purple-500/10',
+    border: 'border-purple-500/20',
+    description: 'Runs Meta & Google ad campaigns, creates content, manages social media.',
+    highlight: 'Auto-optimizes ad spend based on ROAS',
   },
   {
-    icon: CreditCard,
-    title: 'Indian Payments',
-    description: 'Accept UPI, cards, net banking, and COD through Razorpay. Built for Indian customers.'
+    icon: TrendingUp,
+    name: 'Sales Agent',
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-500/10',
+    border: 'border-emerald-500/20',
+    description: 'Recovers abandoned carts, creates targeted discounts, segments customers.',
+    highlight: 'Sends personalized recovery emails with dynamic discounts',
   },
   {
-    icon: Truck,
-    title: 'Shipping Integration',
-    description: 'Automatic Shiprocket integration for nationwide delivery with real-time tracking.'
+    icon: Headphones,
+    name: 'Support Agent',
+    color: 'text-blue-400',
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/20',
+    description: 'Handles customer inquiries across chat, email, and WhatsApp.',
+    highlight: 'Resolves 80% of queries without merchant involvement',
   },
   {
     icon: BarChart3,
-    title: 'Analytics Dashboard',
-    description: 'Track sales, revenue, and customer behavior with detailed analytics and reports.'
+    name: 'Analytics Agent',
+    color: 'text-amber-400',
+    bg: 'bg-amber-500/10',
+    border: 'border-amber-500/20',
+    description: 'Surfaces insights, detects anomalies, generates daily reports.',
+    highlight: 'Alerts you when metrics deviate from normal patterns',
   },
   {
-    icon: Shield,
-    title: 'Secure & Reliable',
-    description: 'Enterprise-grade security with automatic SSL, secure payments, and data protection.'
+    icon: Settings,
+    name: 'Technical Agent',
+    color: 'text-cyan-400',
+    bg: 'bg-cyan-500/10',
+    border: 'border-cyan-500/20',
+    description: 'Optimizes SEO, generates structured data, audits images.',
+    highlight: 'Maintains store health score and fixes issues automatically',
   },
-  {
-    icon: Globe,
-    title: 'Your Own Domain',
-    description: 'Get yourstore.storeforge.site instantly, or connect your custom domain.'
-  }
 ]
 
-const pricingFeatures = [
-  'Unlimited products',
-  'AI product descriptions',
-  'UPI & card payments',
-  'Shiprocket shipping',
-  'Custom subdomain',
-  'Analytics dashboard',
-  'GST invoices',
-  'Email notifications',
-  '24/7 support'
+const steps = [
+  {
+    number: '1',
+    title: 'Describe Your Store',
+    description: 'Tell us your business name and category. Pick a theme. That\'s it.',
+  },
+  {
+    number: '2',
+    title: 'Upload Products',
+    description: 'Drop product images. AI extracts titles, descriptions, prices, and categories.',
+  },
+  {
+    number: '3',
+    title: 'Agents Take Over',
+    description: 'Your AI team starts working immediately — optimizing SEO, recovering carts, answering customers.',
+  },
+]
+
+const pricingTiers = [
+  {
+    name: 'Free',
+    price: '0',
+    period: '/month',
+    features: [
+      '50 products',
+      '5 AI agent actions/day',
+      'Website chat support',
+      'Basic analytics',
+      'SEO optimization',
+    ],
+    cta: 'Get Started Free',
+    href: '/sign-up',
+    popular: false,
+  },
+  {
+    name: 'Pro',
+    price: '2,999',
+    period: '/month',
+    features: [
+      'Unlimited products',
+      'Unlimited agent actions',
+      'Email + WhatsApp support channels',
+      'Advanced analytics & reports',
+      'Priority agent execution',
+    ],
+    cta: 'Start Pro Trial',
+    href: '/sign-up?plan=pro',
+    popular: true,
+  },
+  {
+    name: 'Business',
+    price: '9,999',
+    period: '/month',
+    features: [
+      'Everything in Pro',
+      'Meta & Google Ads integration',
+      'Custom agent configurations',
+      'Dedicated support',
+      'API access',
+    ],
+    cta: 'Contact Sales',
+    href: '/contact',
+    popular: false,
+  },
 ]
 
 export default function LandingPage() {
   return (
-    <>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
-              <Store className="h-8 w-8 text-primary" />
-              <span className="text-xl font-bold">StoreForge</span>
+              <Store className="h-7 w-7 text-white" />
+              <span className="text-lg font-bold text-white tracking-tight">StoreForge</span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <Link href="/sign-in">
-                <Button variant="ghost">Sign In</Button>
+                <Button variant="ghost" className="text-zinc-400 hover:text-white hover:bg-zinc-800">
+                  Sign In
+                </Button>
               </Link>
               <Link href="/sign-up">
-                <Button>Get Started</Button>
+                <Button className="bg-blue-600 hover:bg-blue-500 text-white">
+                  Launch Your Store
+                </Button>
               </Link>
             </div>
           </div>
@@ -83,255 +154,219 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
-            <Sparkles className="h-4 w-4" />
-            AI-Powered E-commerce
-          </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight">
-            Build Your Online Store
+      <section className="pt-32 sm:pt-40 pb-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-[1.1] tracking-tight">
+            Hire an AI team.
             <br />
-            <span className="text-primary">In Minutes, Not Days</span>
+            Launch a store in 30 seconds.
           </h1>
-          <p className="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
-            The AI-first e-commerce platform built for Indian merchants. Accept payments, ship products,
-            and grow your business - all with intelligent automation.
+          <p className="text-lg sm:text-xl text-zinc-400 mb-10 max-w-2xl mx-auto leading-relaxed">
+            Five autonomous AI agents run your entire online business — marketing, sales, support,
+            analytics, and technical operations. You provide the products. They handle everything else.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/sign-up">
-              <Button size="lg" className="gap-2 text-lg px-8 py-6">
-                Start Free Trial
-                <ArrowRight className="h-5 w-5" />
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-500 text-white gap-2 text-base px-8 py-6 h-auto">
+                Launch Your Store
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="#features">
-              <Button variant="outline" size="lg" className="text-lg px-8 py-6">
-                See Features
+            <Link href="#how-it-works">
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white bg-transparent text-base px-8 py-6 h-auto"
+              >
+                See How It Works
               </Button>
             </Link>
           </div>
-          <p className="text-sm text-slate-500 mt-4">
-            No credit card required. Setup in 10 minutes.
+          <p className="text-sm text-zinc-500 mt-6">
+            Free to start &middot; No credit card required &middot; Store live in 30 seconds
           </p>
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="py-12 bg-slate-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-3xl sm:text-4xl font-bold mb-2">1000+</div>
-              <div className="text-slate-400">Active Stores</div>
-            </div>
-            <div>
-              <div className="text-3xl sm:text-4xl font-bold mb-2">50K+</div>
-              <div className="text-slate-400">Products Listed</div>
-            </div>
-            <div>
-              <div className="text-3xl sm:text-4xl font-bold mb-2">10M+</div>
-              <div className="text-slate-400">GMV Processed</div>
-            </div>
-            <div>
-              <div className="text-3xl sm:text-4xl font-bold mb-2">4.9/5</div>
-              <div className="text-slate-400">Merchant Rating</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8">
+      {/* Agent Showcase Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-              Everything You Need to Sell Online
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4 tracking-tight">
+              Meet Your AI Team
             </h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              From AI-powered product management to integrated shipping, we handle the complexity
-              so you can focus on your business.
+            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
+              Five specialized agents work 24/7, coordinating with each other to grow your business.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature) => (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {agents.map((agent) => (
               <div
-                key={feature.title}
-                className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-primary/50 hover:shadow-lg transition-all"
+                key={agent.name}
+                className={`bg-zinc-900 border border-zinc-800 rounded-xl p-6 hover:border-zinc-700 transition-colors`}
               >
-                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
-                  <feature.icon className="h-6 w-6 text-primary" />
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-10 h-10 ${agent.bg} rounded-lg flex items-center justify-center`}>
+                    <agent.icon className={`h-5 w-5 ${agent.color}`} />
+                  </div>
+                  <h3 className={`text-base font-semibold ${agent.color}`}>{agent.name}</h3>
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">{feature.title}</h3>
-                <p className="text-slate-600">{feature.description}</p>
+                <p className="text-zinc-400 text-sm leading-relaxed mb-4">
+                  {agent.description}
+                </p>
+                <div className="flex items-start gap-2 text-sm">
+                  <Zap className={`h-4 w-4 ${agent.color} mt-0.5 shrink-0`} />
+                  <span className="text-zinc-300">{agent.highlight}</span>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
-        <div className="max-w-7xl mx-auto">
+      {/* How It Works Section */}
+      <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 border-t border-zinc-800">
+        <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-              Launch Your Store in 3 Steps
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4 tracking-tight">
+              Live in 30 Seconds. Optimized 24/7.
             </h2>
-            <p className="text-xl text-slate-600">
-              Our AI-powered onboarding makes setup effortless
-            </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-6">
-                1
+            {steps.map((step, index) => (
+              <div key={step.number} className="relative text-center">
+                {/* Connector line (hidden on mobile, shown on md+) */}
+                {index < steps.length - 1 && (
+                  <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-px bg-zinc-800" />
+                )}
+                <div className="w-16 h-16 bg-blue-600/10 border border-blue-500/20 text-blue-400 rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-6">
+                  {step.number}
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">{step.title}</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed">{step.description}</p>
               </div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">Describe Your Business</h3>
-              <p className="text-slate-600">
-                Tell us about your products and target customers. Our AI understands your needs.
-              </p>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Comparison Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 border-t border-zinc-800">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4 tracking-tight">
+              Replace Your Entire Operations Team
+            </h2>
+          </div>
+          <div className="space-y-4">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <p className="text-zinc-400 text-sm mb-1">Hiring an agency</p>
+                <p className="text-zinc-200 font-medium">Marketing, support, analytics staff</p>
+              </div>
+              <span className="text-zinc-500 font-semibold text-lg whitespace-nowrap">
+                &#8377;50,000 &ndash; &#8377;2,00,000/mo
+              </span>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-6">
-                2
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <p className="text-zinc-400 text-sm mb-1">Shopify + 6-12 apps</p>
+                <p className="text-zinc-200 font-medium">Abandoned cart, SEO, analytics, support plugins</p>
               </div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">Upload Products</h3>
-              <p className="text-slate-600">
-                Add product photos and let AI generate titles, descriptions, and price suggestions.
-              </p>
+              <span className="text-zinc-500 font-semibold text-lg whitespace-nowrap">
+                &#8377;15,000 &ndash; &#8377;50,000/mo
+              </span>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-6">
-                3
+            <div className="bg-blue-600/10 border border-blue-500/30 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <p className="text-blue-400 text-sm mb-1">StoreForge AI Agents</p>
+                <p className="text-white font-medium">5 agents, all channels, fully autonomous</p>
               </div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">Start Selling</h3>
-              <p className="text-slate-600">
-                Your store is live with payments and shipping ready. Share your link and start selling!
-              </p>
+              <span className="text-blue-400 font-bold text-lg whitespace-nowrap">Free to start</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Mobile Preview */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
-                <Smartphone className="h-4 w-4" />
-                Mobile-First Design
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-6">
-                Beautiful Stores That Work Everywhere
-              </h2>
-              <p className="text-xl text-slate-600 mb-6">
-                Your customers shop on mobile. Our themes are optimized for phones, tablets, and
-                desktops - ensuring a seamless experience everywhere.
-              </p>
-              <ul className="space-y-4">
-                {['4 professional themes', 'Custom colors & fonts', 'Fast loading times', 'SEO optimized'].map((item) => (
-                  <li key={item} className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                      <Check className="h-4 w-4 text-green-600" />
-                    </div>
-                    <span className="text-slate-700">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="relative">
-              <div className="bg-gradient-to-br from-primary/20 to-primary/5 rounded-3xl p-8">
-                <div className="bg-white rounded-2xl shadow-2xl p-4 max-w-xs mx-auto">
-                  <div className="aspect-[9/16] bg-slate-100 rounded-xl flex items-center justify-center">
-                    <div className="text-center text-slate-400">
-                      <Store className="h-12 w-12 mx-auto mb-2" />
-                      <p className="text-sm">Store Preview</p>
-                    </div>
+      {/* Pricing Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 border-t border-zinc-800">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4 tracking-tight">
+              Simple Pricing
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {pricingTiers.map((tier) => (
+              <div
+                key={tier.name}
+                className={`relative rounded-xl p-6 sm:p-8 ${
+                  tier.popular
+                    ? 'bg-zinc-900 border-2 border-blue-500/50'
+                    : 'bg-zinc-900 border border-zinc-800'
+                }`}
+              >
+                {tier.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                      Most Popular
+                    </span>
+                  </div>
+                )}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-3">{tier.name}</h3>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl sm:text-4xl font-bold text-white">&#8377;{tier.price}</span>
+                    <span className="text-zinc-500 text-sm">{tier.period}</span>
                   </div>
                 </div>
+                <ul className="space-y-3 mb-8">
+                  {tier.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2 text-sm">
+                      <Check className="h-4 w-4 text-blue-400 mt-0.5 shrink-0" />
+                      <span className="text-zinc-300">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link href={tier.href}>
+                  <Button
+                    className={`w-full ${
+                      tier.popular
+                        ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                        : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700'
+                    }`}
+                  >
+                    {tier.cta}
+                  </Button>
+                </Link>
               </div>
-            </div>
+            ))}
           </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
-        <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Simple, Transparent Pricing
-          </h2>
-          <p className="text-xl text-slate-400 mb-12">
-            Start free, upgrade as you grow. No hidden fees.
-          </p>
-          <div className="bg-white text-slate-900 rounded-3xl p-8 sm:p-12 max-w-2xl mx-auto">
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
-              <Zap className="h-4 w-4" />
-              Most Popular
-            </div>
-            <div className="mb-6">
-              <span className="text-5xl font-bold">Free</span>
-              <span className="text-slate-500 ml-2">to start</span>
-            </div>
-            <p className="text-slate-600 mb-8">
-              Only pay transaction fees when you make sales. 2% per transaction.
-            </p>
-            <div className="grid sm:grid-cols-2 gap-4 mb-8">
-              {pricingFeatures.map((feature) => (
-                <div key={feature} className="flex items-center gap-2 text-left">
-                  <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                  <span>{feature}</span>
-                </div>
-              ))}
-            </div>
-            <Link href="/sign-up">
-              <Button size="lg" className="w-full text-lg py-6">
-                Create Your Store
-                <ArrowRight className="h-5 w-5 ml-2" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-            Ready to Start Selling?
-          </h2>
-          <p className="text-xl text-slate-600 mb-8">
-            Join thousands of Indian merchants who trust StoreForge for their online business.
-          </p>
-          <Link href="/sign-up">
-            <Button size="lg" className="gap-2 text-lg px-8 py-6">
-              Get Started Free
-              <ArrowRight className="h-5 w-5" />
-            </Button>
-          </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t bg-slate-50">
+      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-zinc-800">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
-              <Store className="h-6 w-6 text-primary" />
-              <span className="font-bold">StoreForge</span>
+              <Store className="h-5 w-5 text-zinc-400" />
+              <span className="font-semibold text-zinc-300">StoreForge</span>
             </div>
-            <div className="flex items-center gap-6 text-sm text-slate-600">
-              <Link href="/privacy" className="hover:text-primary">Privacy</Link>
-              <Link href="/terms" className="hover:text-primary">Terms</Link>
-              <Link href="/contact" className="hover:text-primary">Contact</Link>
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-zinc-500">
+              <Link href="#" className="hover:text-zinc-300 transition-colors">Product</Link>
+              <Link href="#" className="hover:text-zinc-300 transition-colors">Pricing</Link>
+              <Link href="#" className="hover:text-zinc-300 transition-colors">Blog</Link>
+              <Link href="#" className="hover:text-zinc-300 transition-colors">Support</Link>
+              <Link href="/privacy" className="hover:text-zinc-300 transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-zinc-300 transition-colors">Terms</Link>
             </div>
-            <p className="text-sm text-slate-500">
-              Made in India
+            <p className="text-sm text-zinc-600">
+              &copy; 2026 StoreForge. Built in India.
             </p>
           </div>
         </div>
       </footer>
-    </>
+    </div>
   )
 }
