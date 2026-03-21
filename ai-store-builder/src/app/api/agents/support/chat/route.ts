@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit } from '@/lib/rate-limit'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { getAgentState } from '@/lib/agents/db'
 import { routeIncomingMessage } from '@/lib/agents/support/channels'
 
 const CHAT_RATE_LIMIT = {
@@ -61,6 +62,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   if (storeError || !store) {
     return NextResponse.json({ error: 'Store not found' }, { status: 404 })
+  }
+
+  // Check if the support agent is enabled for this store
+  const supportState = await getAgentState(storeId, 'support')
+  if (!supportState?.is_enabled) {
+    return NextResponse.json(
+      { error: 'support_not_enabled', message: 'Support chat is not currently available for this store.' },
+      { status: 403 }
+    )
   }
 
   try {
