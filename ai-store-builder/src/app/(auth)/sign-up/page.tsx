@@ -4,11 +4,11 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Check, X } from 'lucide-react'
 
 import { useAuth } from '@/lib/contexts/auth-context'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { PasswordStrength } from '@/components/auth/password-strength'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { toast } from 'sonner'
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -54,6 +55,7 @@ type SignUpFormData = z.infer<typeof signUpSchema>
 
 function SignUpContent() {
   const { signUp, signInWithGoogle } = useAuth()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const prefillEmail = searchParams.get('email') || ''
   const [showPassword, setShowPassword] = useState(false)
@@ -80,6 +82,7 @@ function SignUpContent() {
   }, [prefillEmail, form])
 
   const password = form.watch('password')
+  const confirmPassword = form.watch('confirmPassword')
 
   const onSubmit = async (data: SignUpFormData) => {
     setIsSubmitting(true)
@@ -90,9 +93,10 @@ function SignUpContent() {
         full_name: data.full_name,
         phone: data.phone || undefined
       })
+      toast.success('Account created! Redirecting...')
+      setTimeout(() => router.push('/onboarding'), 2000)
     } catch {
       // Error is handled in signUp function
-    } finally {
       setIsSubmitting(false)
     }
   }
@@ -160,6 +164,7 @@ function SignUpContent() {
                       placeholder="Priya Kumar"
                       autoComplete="name"
                       autoFocus
+                      disabled={isSubmitting}
                       {...field}
                     />
                   </FormControl>
@@ -179,6 +184,7 @@ function SignUpContent() {
                       type="email"
                       placeholder="you@example.com"
                       autoComplete="email"
+                      disabled={isSubmitting}
                       {...field}
                     />
                   </FormControl>
@@ -196,11 +202,13 @@ function SignUpContent() {
                   <FormControl>
                     <Input
                       type="tel"
-                      placeholder="9876543210"
+                      placeholder="+1 234 567 8900"
                       autoComplete="tel"
+                      disabled={isSubmitting}
                       {...field}
                     />
                   </FormControl>
+                  <p className="text-xs text-muted-foreground">Optional — include country code</p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -218,6 +226,7 @@ function SignUpContent() {
                         type={showPassword ? 'text' : 'password'}
                         placeholder="••••••••"
                         autoComplete="new-password"
+                        disabled={isSubmitting}
                         {...field}
                       />
                       <button
@@ -252,6 +261,7 @@ function SignUpContent() {
                         type={showConfirmPassword ? 'text' : 'password'}
                         placeholder="••••••••"
                         autoComplete="new-password"
+                        disabled={isSubmitting}
                         {...field}
                       />
                       <button
@@ -269,6 +279,19 @@ function SignUpContent() {
                     </div>
                   </FormControl>
                   <FormMessage />
+                  {confirmPassword && !form.formState.errors.confirmPassword && (
+                    password === confirmPassword ? (
+                      <p className="flex items-center gap-1.5 text-sm text-emerald-500">
+                        <Check className="h-3.5 w-3.5" />
+                        Passwords match
+                      </p>
+                    ) : (
+                      <p className="flex items-center gap-1.5 text-sm text-red-500">
+                        <X className="h-3.5 w-3.5" />
+                        Passwords don&apos;t match
+                      </p>
+                    )
+                  )}
                 </FormItem>
               )}
             />

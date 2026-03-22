@@ -2,8 +2,9 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -114,6 +115,7 @@ export default function SignInPage() {
                       placeholder="you@example.com"
                       autoComplete="email"
                       autoFocus
+                      disabled={isSubmitting}
                       {...field}
                     />
                   </FormControl>
@@ -142,6 +144,7 @@ export default function SignInPage() {
                         type={showPassword ? 'text' : 'password'}
                         placeholder="••••••••"
                         autoComplete="current-password"
+                        disabled={isSubmitting}
                         {...field}
                       />
                       <button
