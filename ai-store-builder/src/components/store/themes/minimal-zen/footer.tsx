@@ -29,10 +29,10 @@ export default function MinimalZenFooter() {
           <div>
             <h4 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-4">Navigation</h4>
             <ul className="space-y-3">
-              <li><Link href={baseUrl} className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Home</Link></li>
-              <li><Link href={`${baseUrl}/products`} className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Products</Link></li>
-              <li><Link href={`${baseUrl}/about`} className="text-sm text-gray-600 hover:text-gray-900 transition-colors">About</Link></li>
-              <li><Link href={`${baseUrl}/contact`} className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Contact</Link></li>
+              <li><Link href={baseUrl} className="text-sm text-gray-600 hover:text-[var(--color-primary)] transition-colors">Home</Link></li>
+              <li><Link href={`${baseUrl}/products`} className="text-sm text-gray-600 hover:text-[var(--color-primary)] transition-colors">Products</Link></li>
+              <li><Link href={`${baseUrl}/about`} className="text-sm text-gray-600 hover:text-[var(--color-primary)] transition-colors">About</Link></li>
+              <li><Link href={`${baseUrl}/contact`} className="text-sm text-gray-600 hover:text-[var(--color-primary)] transition-colors">Contact</Link></li>
             </ul>
           </div>
           
@@ -52,16 +52,16 @@ export default function MinimalZenFooter() {
               &copy; {currentYear} {store.name}
             </p>
             <div className="flex space-x-6 text-xs text-gray-400">
-              <Link href={`${baseUrl}/policies/shipping`} className="hover:text-gray-900 transition-colors">
+              <Link href={`${baseUrl}/policies/shipping`} className="hover:text-[var(--color-primary)] transition-colors">
                 Shipping
               </Link>
-              <Link href={`${baseUrl}/policies/returns`} className="hover:text-gray-900 transition-colors">
+              <Link href={`${baseUrl}/policies/returns`} className="hover:text-[var(--color-primary)] transition-colors">
                 Returns
               </Link>
-              <Link href={`${baseUrl}/policies/privacy`} className="hover:text-gray-900 transition-colors">
+              <Link href={`${baseUrl}/policies/privacy`} className="hover:text-[var(--color-primary)] transition-colors">
                 Privacy
               </Link>
-              <Link href={`${baseUrl}/policies/terms`} className="hover:text-gray-900 transition-colors">
+              <Link href={`${baseUrl}/policies/terms`} className="hover:text-[var(--color-primary)] transition-colors">
                 Terms
               </Link>
             </div>

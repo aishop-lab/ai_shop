@@ -224,7 +224,7 @@ export default function StoreCartPage() {
                     <div className="flex items-center border rounded-lg">
                       <button
                         onClick={() => updateQuantity(item.product.id, item.quantity - 1, variantId)}
-                        className="p-2 hover:bg-gray-100"
+                        className="p-2 hover:bg-[var(--color-primary-light)]"
                         aria-label="Decrease quantity"
                       >
                         <Minus className="w-4 h-4" />
@@ -233,12 +233,17 @@ export default function StoreCartPage() {
                       <button
                         onClick={() => updateQuantity(item.product.id, Math.min(maxQuantity, item.quantity + 1), variantId)}
                         disabled={item.quantity >= maxQuantity}
-                        className="p-2 hover:bg-gray-100 disabled:opacity-50"
+                        className="p-2 hover:bg-[var(--color-primary-light)] disabled:opacity-50"
                         aria-label="Increase quantity"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
                     </div>
+
+                    {/* Line Total (mobile: inline) */}
+                    <span className="sm:hidden font-semibold ml-auto">
+                      {formatPrice(itemPrice * item.quantity)}
+                    </span>
 
                     <button
                       onClick={() => removeFromCart(item.product.id, variantId)}
@@ -250,7 +255,7 @@ export default function StoreCartPage() {
                   </div>
                 </div>
 
-                {/* Line Total */}
+                {/* Line Total (desktop: right column) */}
                 <div className="hidden sm:block text-right">
                   <p className="font-semibold">
                     {formatPrice(itemPrice * item.quantity)}

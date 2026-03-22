@@ -27,7 +27,7 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
             {/* Sidebar Toggle (always visible) */}
             <button
               onClick={onMenuClick}
-              className="p-2 text-gray-700 hover:text-[var(--color-primary)] hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 text-gray-700 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] rounded-lg transition-colors"
               aria-label="Open menu"
             >
               <Menu className="w-6 h-6" />
@@ -61,7 +61,7 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-8">
             <Link
               href={baseUrl}
               className="text-gray-700 hover:text-[var(--color-primary)] transition-colors font-medium"
@@ -97,7 +97,7 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
             {/* Search Button */}
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="p-2 text-gray-700 hover:text-[var(--color-primary)] hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 text-gray-700 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] rounded-lg transition-colors"
               aria-label="Search"
             >
               <Search className="w-5 h-5" />

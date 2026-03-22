@@ -24,7 +24,7 @@ export default function MinimalZenHeader({ onMenuClick }: MinimalZenHeaderProps)
             {/* Sidebar Toggle (always visible) */}
             <button
               onClick={onMenuClick}
-              className="text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-gray-600 hover:text-[var(--color-primary)] transition-colors"
               aria-label="Open menu"
             >
               <Menu className="w-5 h-5" />
@@ -55,26 +55,26 @@ export default function MinimalZenHeader({ onMenuClick }: MinimalZenHeaderProps)
           <nav className="hidden md:flex items-center space-x-12">
             <Link
               href={baseUrl}
-              className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-sm text-gray-600 hover:text-[var(--color-primary)] transition-colors"
               style={{ fontFamily: 'var(--font-body)' }}
             >
               Home
             </Link>
             <Link
               href={`${baseUrl}/products`}
-              className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-sm text-gray-600 hover:text-[var(--color-primary)] transition-colors"
             >
               Products
             </Link>
             <Link
               href={`${baseUrl}/about`}
-              className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-sm text-gray-600 hover:text-[var(--color-primary)] transition-colors"
             >
               About
             </Link>
             <Link
               href={`${baseUrl}/contact`}
-              className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-sm text-gray-600 hover:text-[var(--color-primary)] transition-colors"
             >
               Contact
             </Link>

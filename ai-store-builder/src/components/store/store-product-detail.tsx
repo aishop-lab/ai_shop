@@ -145,9 +145,9 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
     <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8">
-        <Link href={baseUrl} className="hover:text-gray-900">Home</Link>
+        <Link href={baseUrl} className="hover:text-[var(--color-primary)]">Home</Link>
         <span>/</span>
-        <Link href={`${baseUrl}/products`} className="hover:text-gray-900">Products</Link>
+        <Link href={`${baseUrl}/products`} className="hover:text-[var(--color-primary)]">Products</Link>
         <span>/</span>
         <span className="text-gray-900">{product.title}</span>
       </nav>
@@ -331,7 +331,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
                 <div className="flex items-center border rounded-lg">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="p-3 hover:bg-gray-100"
+                    className="p-3 hover:bg-[var(--color-primary-light)]"
                     disabled={needsVariantSelection}
                     aria-label="Decrease quantity"
                   >
@@ -340,7 +340,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
                   <span className="w-12 text-center font-medium">{quantity}</span>
                   <button
                     onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))}
-                    className="p-3 hover:bg-gray-100"
+                    className="p-3 hover:bg-[var(--color-primary-light)]"
                     disabled={needsVariantSelection}
                     aria-label="Increase quantity"
                   >
@@ -376,7 +376,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
                 </button>
                 <WishlistButton productId={product.id} size="lg" />
                 <button
-                  className="p-4 border rounded-lg hover:bg-gray-50"
+                  className="p-4 border rounded-lg hover:bg-[var(--color-primary-light)]"
                   aria-label="Share product"
                   onClick={async () => {
                     const shareUrl = `${window.location.origin}${baseUrl}/products/${product.id}`

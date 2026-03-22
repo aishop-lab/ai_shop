@@ -70,7 +70,7 @@ export default function ClassicElegantHeader({ onMenuClick }: ClassicElegantHead
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-10">
+          <nav className="hidden md:flex items-center space-x-10">
             <Link
               href={baseUrl}
               className="text-gray-700 hover:text-[var(--color-primary)] transition-colors tracking-wide font-medium"

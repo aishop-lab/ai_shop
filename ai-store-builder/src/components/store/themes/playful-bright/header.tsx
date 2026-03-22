@@ -58,7 +58,7 @@ export default function PlayfulBrightHeader({ onMenuClick }: PlayfulBrightHeader
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-1">
+          <nav className="hidden md:flex items-center space-x-1">
             {[
               { href: baseUrl, label: 'Home' },
               { href: `${baseUrl}/products`, label: 'Shop' },

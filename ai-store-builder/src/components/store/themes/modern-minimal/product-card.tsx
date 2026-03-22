@@ -109,7 +109,7 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
                   e.stopPropagation()
                   router.push(`${baseUrl}/products/${product.id}`)
                 }}
-                className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
+                className="p-2 bg-white rounded-full shadow-md hover:bg-[var(--color-primary-light)] transition-colors"
                 aria-label={`Quick view ${product.title}`}
               >
                 <Eye className="w-4 h-4 text-gray-700" />

@@ -74,7 +74,7 @@ export default function CheckoutShippingStep({
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => onChange('firstName', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
+                className={`w-full px-4 py-3 min-h-[44px] border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
                   errors.firstName ? 'border-red-500' : ''
                 }`}
               />
@@ -88,7 +88,7 @@ export default function CheckoutShippingStep({
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => onChange('lastName', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
+                className={`w-full px-4 py-3 min-h-[44px] border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
                   errors.lastName ? 'border-red-500' : ''
                 }`}
               />
@@ -117,7 +117,7 @@ export default function CheckoutShippingStep({
               type="text"
               value={formData.apartment}
               onChange={(e) => onChange('apartment', e.target.value)}
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+              className="w-full px-4 py-3 min-h-[44px] border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             />
           </div>
 
@@ -128,7 +128,7 @@ export default function CheckoutShippingStep({
                 type="text"
                 value={formData.city}
                 onChange={(e) => onChange('city', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
+                className={`w-full px-4 py-3 min-h-[44px] border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
                   errors.city ? 'border-red-500' : ''
                 }`}
               />
@@ -140,7 +140,7 @@ export default function CheckoutShippingStep({
                 type="text"
                 value={formData.state}
                 onChange={(e) => onChange('state', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
+                className={`w-full px-4 py-3 min-h-[44px] border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
                   errors.state ? 'border-red-500' : ''
                 }`}
               />
@@ -155,7 +155,7 @@ export default function CheckoutShippingStep({
                   const value = e.target.value.replace(/[^\w\d\s\-]/g, '').slice(0, 10)
                   onChange('pincode', value)
                 }}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
+                className={`w-full px-4 py-3 min-h-[44px] border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
                   errors.pincode ? 'border-red-500' : ''
                 }`}
                 maxLength={10}
@@ -186,23 +186,25 @@ export default function CheckoutShippingStep({
         </div>
       )}
 
-      <div className="flex gap-3 mt-6">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
-        <button
-          type="button"
-          onClick={onContinue}
-          className="flex-[2] flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold text-white transition-all"
-          style={{ backgroundColor: 'var(--color-primary)' }}
-        >
-          Continue to Payment
-        </button>
+      <div className="mt-6 md:relative sticky bottom-0 left-0 right-0 z-10 bg-white/95 backdrop-blur-sm p-4 -mx-4 md:mx-0 md:p-0 md:bg-transparent md:backdrop-blur-none border-t md:border-t-0 border-gray-200">
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex-1 flex items-center justify-center gap-2 px-6 py-4 md:py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all min-h-[48px]"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={onContinue}
+            className="flex-[2] flex items-center justify-center gap-2 px-6 py-4 md:py-3 rounded-lg font-semibold text-white transition-all min-h-[48px]"
+            style={{ backgroundColor: 'var(--color-primary)' }}
+          >
+            Continue to Payment
+          </button>
+        </div>
       </div>
     </section>
   )

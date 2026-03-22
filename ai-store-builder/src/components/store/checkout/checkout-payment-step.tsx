@@ -190,39 +190,40 @@ export default function CheckoutPaymentStep({
         </div>
       )}
 
-      <div className="flex gap-3 mt-6">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="flex-[2] flex items-center justify-center gap-2 px-6 py-4 rounded-lg font-semibold text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-          style={{ backgroundColor: 'var(--color-primary)' }}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            <>
-              <Lock className="w-5 h-5" />
-              Place Order - {formatPrice(finalTotal)}
-            </>
-          )}
-        </button>
+      <div className="mt-6 md:relative sticky bottom-0 left-0 right-0 z-10 bg-white/95 backdrop-blur-sm p-4 -mx-4 md:mx-0 md:p-0 md:bg-transparent md:backdrop-blur-none border-t md:border-t-0 border-gray-200">
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex-1 flex items-center justify-center gap-2 px-6 py-4 md:py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all min-h-[48px]"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="flex-[2] flex items-center justify-center gap-2 px-6 py-4 rounded-lg font-semibold text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed min-h-[48px]"
+            style={{ backgroundColor: 'var(--color-primary)' }}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Lock className="w-5 h-5" />
+                Place Order - {formatPrice(finalTotal)}
+              </>
+            )}
+          </button>
+        </div>
+        <p className="text-xs text-center text-gray-500 mt-3">
+          By placing this order, you agree to our Terms of Service and Privacy Policy. Your
+          payment information is processed securely.
+        </p>
       </div>
-
-      <p className="text-xs text-center text-gray-500 mt-4">
-        By placing this order, you agree to our Terms of Service and Privacy Policy. Your
-        payment information is processed securely.
-      </p>
     </section>
   )
 }

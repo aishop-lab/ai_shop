@@ -10,7 +10,7 @@ export default function ClassicElegantFooter() {
   const currentYear = new Date().getFullYear()
   
   return (
-    <footer className="bg-gray-100 border-t border-gray-200">
+    <footer className="bg-[var(--color-primary-lighter)] border-t border-gray-200">
       <div className="max-w-[1200px] mx-auto px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
