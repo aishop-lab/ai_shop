@@ -1,4 +1,5 @@
 // src/components/platform/command-center/agent-card.tsx
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { StatusDot } from '@/components/platform/shared/status-dot'
 import { AGENT_DISPLAY_NAMES, AGENT_DESCRIPTIONS, AGENT_COLORS, STATUS_COLORS } from '@/lib/agents/constants'
@@ -7,21 +8,22 @@ import { formatTimeAgo } from '@/lib/agents/mock-data'
 
 interface AgentCardProps {
   agent: AgentState
+  onToggleEnabled?: (agentType: string) => void
 }
 
-export function AgentCard({ agent }: AgentCardProps) {
+export function AgentCard({ agent, onToggleEnabled }: AgentCardProps) {
   const colors = AGENT_COLORS[agent.agent_type]
   const statusInfo = STATUS_COLORS[agent.status]
 
-  return (
-    <div
-      className={cn(
-        'rounded-lg border p-4 transition-colors',
-        'border-[var(--platform-border)] bg-[var(--platform-surface)]',
-        agent.is_enabled && 'hover:border-[var(--platform-border-hover)] cursor-pointer',
-        !agent.is_enabled && 'opacity-50'
-      )}
-    >
+  const cardClasses = cn(
+    'block rounded-lg border p-4 transition-colors',
+    'border-[var(--platform-border)] bg-[var(--platform-surface)]',
+    agent.is_enabled && 'hover:border-[var(--platform-border-hover)] cursor-pointer',
+    !agent.is_enabled && 'opacity-50'
+  )
+
+  const cardBody = (
+    <>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -31,6 +33,30 @@ export function AgentCard({ agent }: AgentCardProps) {
           </span>
         </div>
         <div className="flex items-center gap-1.5">
+          {onToggleEnabled && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={agent.is_enabled}
+              aria-label={`Toggle ${AGENT_DISPLAY_NAMES[agent.agent_type]}`}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onToggleEnabled(agent.agent_type)
+              }}
+              className={cn(
+                'relative mr-1.5 inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--platform-accent)]',
+                agent.is_enabled ? 'bg-[var(--platform-accent)]' : 'bg-[var(--platform-border)]'
+              )}
+            >
+              <span
+                className={cn(
+                  'pointer-events-none inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform',
+                  agent.is_enabled ? 'translate-x-3' : 'translate-x-0'
+                )}
+              />
+            </button>
+          )}
           <StatusDot status={agent.status} size="sm" />
           <span className="text-[10px] text-[var(--platform-text-muted)]">
             {statusInfo.label}
@@ -74,6 +100,15 @@ export function AgentCard({ agent }: AgentCardProps) {
           <p className="text-[10px] text-[var(--platform-text-muted)]">Not configured</p>
         </div>
       )}
-    </div>
+    </>
+  )
+
+  return (
+    <Link
+      href={`/platform/agents/${agent.agent_type}`}
+      className={cardClasses}
+    >
+      {cardBody}
+    </Link>
   )
 }

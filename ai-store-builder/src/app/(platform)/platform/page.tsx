@@ -8,10 +8,11 @@ import { AgentCard } from '@/components/platform/command-center/agent-card'
 import { ActivityFeed } from '@/components/platform/command-center/activity-feed'
 import { ApprovalSummary } from '@/components/platform/command-center/approval-summary'
 import { QuickStats } from '@/components/platform/command-center/quick-stats'
-import { useAgentStates, getEnabledCount, getTotalActionsCount } from '@/lib/hooks/use-agents'
+import { useAgentStates, useUpdateAgentState, getEnabledCount, getTotalActionsCount } from '@/lib/hooks/use-agents'
 import { useActivityFeed } from '@/lib/hooks/use-activity'
 import { useApprovals } from '@/lib/hooks/use-approvals'
 import { AGENT_TYPES } from '@/lib/agents/constants'
+import type { AgentType } from '@/lib/agents/types'
 
 export default function CommandCenterPage() {
   const [storeId, setStoreId] = useState<string | null>(null)
@@ -36,6 +37,15 @@ export default function CommandCenterPage() {
   const { agents, isLoading: agentsLoading } = useAgentStates(storeId)
   const { actions, isLoading: activityLoading } = useActivityFeed(storeId, { limit: 6 })
   const { approvals, pendingCount, isLoading: approvalsLoading } = useApprovals(storeId)
+  const { updateAgent } = useUpdateAgentState()
+
+  // PL-15: Quick enable/disable toggle from home page
+  const handleToggleAgent = async (agentType: string) => {
+    if (!storeId) return
+    const agent = agents.find((a) => a.agent_type === agentType)
+    if (!agent) return
+    await updateAgent(storeId, agentType as AgentType, { is_enabled: !agent.is_enabled })
+  }
 
   const isLoading = agentsLoading || activityLoading || approvalsLoading
 
@@ -70,6 +80,7 @@ export default function CommandCenterPage() {
       </div>
 
       {/* Quick Stats */}
+      {/* TODO: Calculate from actual usage */}
       <QuickStats
         totalActions={getTotalActionsCount(agents)}
         pendingApprovals={pendingCount}
@@ -116,7 +127,7 @@ export default function CommandCenterPage() {
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {agents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
+            <AgentCard key={agent.id} agent={agent} onToggleEnabled={handleToggleAgent} />
           ))}
         </div>
       </div>

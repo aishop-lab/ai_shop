@@ -211,6 +211,35 @@ function MetricSkeleton() {
   )
 }
 
+function ChartSkeleton() {
+  return (
+    <div className="rounded-xl border border-[var(--platform-border)] bg-[var(--platform-surface)] p-5 animate-pulse">
+      <div className="mb-5 space-y-2">
+        <div className="h-3 w-32 rounded bg-[var(--platform-surface-hover)]" />
+        <div className="h-7 w-24 rounded bg-[var(--platform-surface-hover)]" />
+      </div>
+      <div className="h-[180px] rounded-lg bg-zinc-800/50" />
+    </div>
+  )
+}
+
+function TableSkeleton() {
+  return (
+    <div className="rounded-xl border border-[var(--platform-border)] bg-[var(--platform-surface)] animate-pulse overflow-hidden">
+      <div className="border-b border-[var(--platform-border)] px-4 py-3">
+        <div className="h-3 w-24 rounded bg-[var(--platform-surface-hover)]" />
+      </div>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 border-b border-[var(--platform-border)] px-4 py-3 last:border-0">
+          <div className="h-3 w-40 rounded bg-[var(--platform-surface-hover)]" />
+          <div className="ml-auto h-3 w-12 rounded bg-[var(--platform-surface-hover)]" />
+          <div className="h-3 w-16 rounded bg-[var(--platform-surface-hover)]" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Status colors for order chart
 // ---------------------------------------------------------------------------
@@ -453,7 +482,22 @@ export default function AnalyticsPage() {
           : metrics.map((metric) => <AnalyticsMetricCard key={metric.label} metric={metric} />)}
       </div>
 
-      {/* Charts */}
+      {/* Charts — show skeletons while loading */}
+      {loading && !data && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ChartSkeleton />
+          <ChartSkeleton />
+        </div>
+      )}
+
+      {/* Top Products skeleton */}
+      {loading && !data && (
+        <div>
+          <div className="mb-4 h-4 w-24 animate-pulse rounded bg-[var(--platform-surface-hover)]" />
+          <TableSkeleton />
+        </div>
+      )}
+
       {data && (
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Revenue Chart */}
@@ -564,7 +608,7 @@ export default function AnalyticsPage() {
           <h2 className="mb-4 font-mono text-sm font-semibold text-[var(--platform-text-primary)]">
             Top Products
           </h2>
-          <div className="rounded-xl border border-[var(--platform-border)] bg-[var(--platform-surface)] overflow-hidden">
+          <div className="rounded-xl border border-[var(--platform-border)] bg-[var(--platform-surface)] overflow-x-auto overflow-hidden">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--platform-border)]">

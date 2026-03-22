@@ -65,7 +65,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   if (authLoading) return <FullPageLoader />
 
   return (
-    <div className="dark platform-theme flex min-h-screen bg-[var(--platform-bg)]">
+    <div className="dark platform-theme flex min-h-screen overflow-x-hidden bg-[var(--platform-bg)]">
       <PlatformSidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}

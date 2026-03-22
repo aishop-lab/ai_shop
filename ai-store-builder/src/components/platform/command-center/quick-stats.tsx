@@ -9,13 +9,14 @@ interface QuickStatsProps {
   monthlyCost: number
 }
 
-export function QuickStats({ totalActions, pendingApprovals, activeAgents, totalAgents, monthlyCost }: QuickStatsProps) {
+export function QuickStats({ totalActions, pendingApprovals, activeAgents, totalAgents }: QuickStatsProps) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <MetricCard label="Total Actions" value={totalActions} change={{ value: 12, positive: true }} />
       <MetricCard label="Pending Approvals" value={pendingApprovals} />
       <MetricCard label="Active Agents" value={`${activeAgents} / ${totalAgents}`} />
-      <MetricCard label="This Month" value={`$${monthlyCost.toFixed(2)}`} />
+      {/* TODO: Calculate from actual usage */}
+      <MetricCard label="This Month" value="—" />
     </div>
   )
 }

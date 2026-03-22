@@ -6,6 +6,17 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -309,25 +320,50 @@ export default function ConnectionsPage() {
                       <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
                       Connected
                     </span>
-                    <button
-                      type="button"
-                      disabled={isDisconnecting}
-                      onClick={() => handleDisconnect(provider.id)}
-                      className={cn(
-                        'rounded border border-[var(--platform-border)] px-3 py-1.5 text-xs font-medium',
-                        'text-red-400 transition-colors hover:border-red-500/30 hover:bg-red-500/10',
-                        isDisconnecting && 'cursor-not-allowed opacity-50'
-                      )}
-                    >
-                      {isDisconnecting ? (
-                        <span className="flex items-center gap-1.5">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          Disconnecting
-                        </span>
-                      ) : (
-                        'Disconnect'
-                      )}
-                    </button>
+                    {/* PL-16: Confirmation dialog before disconnecting */}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button
+                          type="button"
+                          disabled={isDisconnecting}
+                          className={cn(
+                            'rounded border border-[var(--platform-border)] px-3 py-1.5 text-xs font-medium',
+                            'text-red-400 transition-colors hover:border-red-500/30 hover:bg-red-500/10',
+                            isDisconnecting && 'cursor-not-allowed opacity-50'
+                          )}
+                        >
+                          {isDisconnecting ? (
+                            <span className="flex items-center gap-1.5">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Disconnecting
+                            </span>
+                          ) : (
+                            'Disconnect'
+                          )}
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="border-[var(--platform-border)] bg-[var(--platform-surface)]">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-[var(--platform-text-primary)]">
+                            Disconnect {provider.name}?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription className="text-[var(--platform-text-muted)]">
+                            This will revoke access to your {provider.name} account. Your agents will no longer be able to manage campaigns or access data from this connection.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="border-[var(--platform-border)] bg-[var(--platform-surface)] text-[var(--platform-text-secondary)] hover:bg-[var(--platform-surface-hover)]">
+                            Cancel
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDisconnect(provider.id)}
+                            className="border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                          >
+                            Disconnect
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </>
                 ) : (
                   <>

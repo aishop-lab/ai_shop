@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
-import { Search, ChevronDown, ShoppingBag, X, User, CreditCard, Package, Loader2 } from 'lucide-react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { Search, ChevronDown, ChevronUp, ShoppingBag, X, User, CreditCard, Package, Loader2, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
 import { createClient } from '@/lib/supabase/client'
@@ -74,6 +74,13 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; dotCls: string; badgeC
 
 type StatusFilter = 'all' | OrderStatus
 
+// PL-04: Pagination constants
+const PAGE_SIZE = 20
+
+// PL-05: Sort types
+type SortField = 'created_at' | 'total' | 'status'
+type SortDirection = 'asc' | 'desc'
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -85,6 +92,10 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [storeId, setStoreId] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const [sortField, setSortField] = useState<SortField>('created_at')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const { currency } = useStoreCurrency()
 
   // Fetch the merchant's store ID
@@ -103,30 +114,56 @@ export default function OrdersPage() {
     fetchStoreId()
   }, [])
 
-  // Fetch orders from Supabase
-  useEffect(() => {
+  // Fetch orders from Supabase with pagination and sorting
+  const fetchOrders = useCallback(async () => {
     if (!storeId) return
-    async function fetchOrders() {
-      try {
-        setIsLoading(true)
-        const supabase = createClient()
-        const { data, error } = await supabase
-          .from('orders')
-          .select('id, order_number, customer_name, email, total, status, created_at, payment_method, order_items(id)')
-          .eq('store_id', storeId)
-          .order('created_at', { ascending: false })
-          .limit(50)
+    try {
+      setIsLoading(true)
+      const supabase = createClient()
 
-        if (error) throw error
-        setOrders((data as OrderData[]) ?? [])
-      } catch (err) {
-        console.error('[Orders] Failed to fetch orders:', err)
-      } finally {
-        setIsLoading(false)
-      }
+      // First get total count
+      const { count } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('store_id', storeId)
+
+      setTotalCount(count ?? 0)
+
+      const from = page * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
+
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, order_number, customer_name, email, total, status, created_at, payment_method, order_items(id)')
+        .eq('store_id', storeId)
+        .order(sortField, { ascending: sortDirection === 'asc' })
+        .range(from, to)
+
+      if (error) throw error
+      setOrders((data as OrderData[]) ?? [])
+    } catch (err) {
+      console.error('[Orders] Failed to fetch orders:', err)
+    } finally {
+      setIsLoading(false)
     }
+  }, [storeId, page, sortField, sortDirection])
+
+  useEffect(() => {
     fetchOrders()
-  }, [storeId])
+  }, [fetchOrders])
+
+  // PL-05: Sort handler
+  function handleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortField(field)
+      setSortDirection('desc')
+    }
+    setPage(0)
+  }
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
   // Close panel on Escape
   useEffect(() => {
@@ -224,7 +261,7 @@ export default function OrdersPage() {
       {/* ------------------------------------------------------------------ */}
       {/* Table                                                                */}
       {/* ------------------------------------------------------------------ */}
-      <div className="rounded-xl border border-[var(--platform-border)] overflow-hidden">
+      <div className="rounded-xl border border-[var(--platform-border)] overflow-x-auto overflow-hidden">
         {filtered.length === 0 ? (
           <EmptyState hasFilters={search !== '' || statusFilter !== 'all'} />
         ) : (
@@ -233,11 +270,11 @@ export default function OrdersPage() {
               <tr className="border-b border-[var(--platform-border)] bg-[var(--platform-surface)]">
                 <Th>Order #</Th>
                 <Th>Customer</Th>
-                <Th align="right">Total</Th>
+                <SortableTh field="total" currentField={sortField} direction={sortDirection} onSort={handleSort} align="right">Total</SortableTh>
                 <Th align="right">Items</Th>
-                <Th>Status</Th>
+                <SortableTh field="status" currentField={sortField} direction={sortDirection} onSort={handleSort}>Status</SortableTh>
                 <Th>Payment</Th>
-                <Th>Date</Th>
+                <SortableTh field="created_at" currentField={sortField} direction={sortDirection} onSort={handleSort}>Date</SortableTh>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--platform-border)] bg-[var(--platform-bg)]">
@@ -257,9 +294,46 @@ export default function OrdersPage() {
         )}
       </div>
 
+      {/* PL-04: Pagination controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            disabled={page === 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            className={cn(
+              'flex items-center gap-1 rounded-lg border border-[var(--platform-border)] px-3 py-1.5 font-mono text-xs transition-colors',
+              page === 0
+                ? 'cursor-not-allowed text-[var(--platform-text-muted)] opacity-40'
+                : 'text-[var(--platform-text-secondary)] hover:border-[var(--platform-border-hover)] hover:text-[var(--platform-text-primary)]'
+            )}
+          >
+            <ChevronLeft className="h-3 w-3" />
+            Previous
+          </button>
+          <span className="font-mono text-xs text-[var(--platform-text-muted)]">
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page >= totalPages - 1}
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            className={cn(
+              'flex items-center gap-1 rounded-lg border border-[var(--platform-border)] px-3 py-1.5 font-mono text-xs transition-colors',
+              page >= totalPages - 1
+                ? 'cursor-not-allowed text-[var(--platform-text-muted)] opacity-40'
+                : 'text-[var(--platform-text-secondary)] hover:border-[var(--platform-border-hover)] hover:text-[var(--platform-text-primary)]'
+            )}
+          >
+            Next
+            <ChevronRight className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
       {filtered.length > 0 && (
         <p className="text-center font-mono text-[10px] text-[var(--platform-text-muted)]">
-          {filtered.length} of {orders.length} orders
+          {filtered.length} of {totalCount} orders
         </p>
       )}
 
@@ -305,6 +379,44 @@ function Th({ children, align = 'left' }: { children: React.ReactNode; align?: '
       )}
     >
       {children}
+    </th>
+  )
+}
+
+// PL-05: Sortable table header
+function SortableTh({
+  children,
+  field,
+  currentField,
+  direction,
+  onSort,
+  align = 'left',
+}: {
+  children: React.ReactNode
+  field: SortField
+  currentField: SortField
+  direction: SortDirection
+  onSort: (field: SortField) => void
+  align?: 'left' | 'right'
+}) {
+  const isActive = field === currentField
+  return (
+    <th
+      className={cn(
+        'px-4 py-2.5 font-mono text-[10px] font-medium uppercase tracking-wider cursor-pointer select-none transition-colors',
+        align === 'right' ? 'text-right' : 'text-left',
+        isActive ? 'text-[var(--platform-text-primary)]' : 'text-[var(--platform-text-muted)] hover:text-[var(--platform-text-secondary)]',
+      )}
+      onClick={() => onSort(field)}
+    >
+      <span className={cn('inline-flex items-center gap-1', align === 'right' && 'justify-end')}>
+        {children}
+        {isActive ? (
+          direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+        ) : (
+          <ArrowUpDown className="h-3 w-3 opacity-40" />
+        )}
+      </span>
     </th>
   )
 }

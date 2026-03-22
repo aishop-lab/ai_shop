@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Package,
   Loader2,
+  ExternalLink,
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
@@ -45,6 +46,7 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
+// TODO: Make configurable in store settings
 const LOW_STOCK_THRESHOLD = 10
 
 // ---------------------------------------------------------------------------
@@ -58,9 +60,10 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<ProductData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [storeId, setStoreId] = useState<string | null>(null)
+  const [storeSlug, setStoreSlug] = useState<string | null>(null)
   const { currency } = useStoreCurrency()
 
-  // Fetch the merchant's store ID
+  // Fetch the merchant's store ID and slug
   useEffect(() => {
     async function fetchStoreId() {
       try {
@@ -68,12 +71,32 @@ export default function ProductsPage() {
         if (response.ok) {
           const data = await response.json()
           if (data.storeId) setStoreId(data.storeId)
+          if (data.storeSlug) setStoreSlug(data.storeSlug)
         }
       } catch {
         console.error('[Products] Failed to fetch store ID')
       }
     }
+
+    // Also try to get slug from the store directly
+    async function fetchStoreSlug() {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data } = await supabase
+          .from('stores')
+          .select('slug')
+          .eq('user_id', user.id)
+          .single()
+        if (data?.slug) setStoreSlug(data.slug)
+      } catch {
+        // Non-critical, link just won't show
+      }
+    }
+
     fetchStoreId()
+    fetchStoreSlug()
   }, [])
 
   // Fetch products from Supabase
@@ -207,7 +230,7 @@ export default function ProductsPage() {
       {/* ----------------------------------------------------------------- */}
       {/* Table                                                               */}
       {/* ----------------------------------------------------------------- */}
-      <div className="rounded-xl border border-[var(--platform-border)] overflow-hidden">
+      <div className="rounded-xl border border-[var(--platform-border)] overflow-x-auto overflow-hidden">
         {filtered.length === 0 ? (
           <EmptyState hasFilters={search !== '' || statusFilter !== 'all' || categoryFilter !== 'all'} />
         ) : (
@@ -229,11 +252,16 @@ export default function ProductsPage() {
                 <th className="px-4 py-2.5 text-left font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">
                   Created
                 </th>
+                {storeSlug && (
+                  <th className="px-4 py-2.5 text-center font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">
+                    Store
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--platform-border)] bg-[var(--platform-bg)]">
               {filtered.map((product) => (
-                <ProductRow key={product.id} product={product} currency={currency} />
+                <ProductRow key={product.id} product={product} currency={currency} storeSlug={storeSlug} />
               ))}
             </tbody>
           </table>
@@ -257,9 +285,10 @@ export default function ProductsPage() {
 interface ProductRowProps {
   product: ProductData
   currency: string
+  storeSlug: string | null
 }
 
-function ProductRow({ product, currency }: ProductRowProps) {
+function ProductRow({ product, currency, storeSlug }: ProductRowProps) {
   const isOutOfStock = product.inventory === 0
   const isLowStock = !isOutOfStock && product.inventory < LOW_STOCK_THRESHOLD
   const sortedImages = [...(product.product_images ?? [])].sort((a, b) => a.position - b.position)
@@ -337,6 +366,22 @@ function ProductRow({ product, currency }: ProductRowProps) {
             {formatDate(product.created_at)}
           </span>
         </td>
+
+        {/* PL-08: View on Store */}
+        {storeSlug && (
+          <td className="px-4 py-3 text-center">
+            <a
+              href={`/${storeSlug}/products/${product.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center justify-center rounded-md p-1 text-[var(--platform-text-muted)] transition-colors hover:bg-[var(--platform-surface-hover)] hover:text-[var(--platform-text-primary)]"
+              title="View on store"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </td>
+        )}
       </tr>
     </Link>
   )

@@ -136,6 +136,21 @@ function AgentConfigCard({
           {' — '}
           {currentLevel.description}
         </p>
+
+        {/* PL-17: Inline descriptions for all autonomy levels */}
+        <div className="mt-2 space-y-1 rounded border border-[var(--platform-border)] bg-[var(--platform-bg)] px-3 py-2">
+          <p className="text-[9px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)] mb-1">All levels</p>
+          {([1, 2, 3, 4, 5] as AutonomyLevel[]).map((level) => (
+            <p key={level} className={cn(
+              'text-[10px] leading-relaxed',
+              settings.autonomy === level ? 'text-[var(--platform-text-primary)]' : 'text-[var(--platform-text-muted)]'
+            )}>
+              <span className="font-mono font-medium">{level}.</span>{' '}
+              <span className="font-medium">{AUTONOMY_LEVELS[level].label}:</span>{' '}
+              {AUTONOMY_LEVELS[level].description}
+            </p>
+          ))}
+        </div>
       </div>
 
       {/* Config hints */}

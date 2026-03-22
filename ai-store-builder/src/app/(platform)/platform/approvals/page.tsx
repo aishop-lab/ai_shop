@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Check, X, ChevronDown, ChevronUp, Clock, Loader2 } from 'lucide-react'
+import { Check, X, ChevronDown, ChevronUp, Clock, Loader2, Zap, ArrowRight, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AgentBadge } from '@/components/platform/shared/agent-badge'
 import { KeyboardHint } from '@/components/platform/shared/keyboard-hint'
@@ -11,12 +11,12 @@ import { formatTimeAgo } from '@/lib/agents/mock-data'
 import { AGENT_TYPES } from '@/lib/agents/constants'
 import type { AgentApproval, AgentType, ApprovalPriority } from '@/lib/agents/types'
 
-// --- Priority config ---
-const PRIORITY_CONFIG: Record<ApprovalPriority, { label: string; dotClass: string; order: number }> = {
-  urgent: { label: 'Urgent', dotClass: 'bg-red-500', order: 0 },
-  high:   { label: 'High',   dotClass: 'bg-amber-400', order: 1 },
-  normal: { label: 'Normal', dotClass: 'bg-zinc-400',  order: 2 },
-  low:    { label: 'Low',    dotClass: 'bg-zinc-600',   order: 3 },
+// --- Priority config (PL-11: colorblind-friendly with text labels and icons) ---
+const PRIORITY_CONFIG: Record<ApprovalPriority, { label: string; dotClass: string; textClass: string; order: number; icon: React.ReactNode }> = {
+  urgent: { label: 'Urgent', dotClass: 'bg-red-500', textClass: 'text-red-400', order: 0, icon: <Zap className="h-3 w-3 text-red-400" /> },
+  high:   { label: 'High',   dotClass: 'bg-amber-400', textClass: 'text-amber-400', order: 1, icon: <Zap className="h-3 w-3 text-amber-400" /> },
+  normal: { label: 'Normal', dotClass: 'bg-zinc-400',  textClass: 'text-zinc-400', order: 2, icon: <ArrowRight className="h-3 w-3 text-zinc-400" /> },
+  low:    { label: 'Low',    dotClass: 'bg-zinc-600',   textClass: 'text-zinc-500', order: 3, icon: <ArrowDown className="h-3 w-3 text-zinc-500" /> },
 }
 
 type CardDecision = 'approved' | 'rejected' | null
@@ -28,6 +28,8 @@ export default function ApprovalsPage() {
   const [decisions, setDecisions] = useState<Record<string, CardDecision>>({})
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [storeId, setStoreId] = useState<string | null>(null)
+  // PL-13: Batch selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   // Fetch the merchant's store ID
   useEffect(() => {
@@ -73,12 +75,51 @@ export default function ApprovalsPage() {
 
   async function approve(id: string) {
     setDecisions((prev) => ({ ...prev, [id]: 'approved' }))
+    setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next })
     await approveAction(id)
   }
 
   async function reject(id: string) {
     setDecisions((prev) => ({ ...prev, [id]: 'rejected' }))
+    setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next })
     await rejectAction(id)
+  }
+
+  // PL-13: Batch selection helpers
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const pendingForBatch = filteredApprovals.filter((a) => !decisions[a.id])
+  const allSelected = pendingForBatch.length > 0 && pendingForBatch.every((a) => selectedIds.has(a.id))
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(pendingForBatch.map((a) => a.id)))
+    }
+  }
+
+  async function batchApprove() {
+    const ids = Array.from(selectedIds)
+    for (const id of ids) {
+      await approve(id)
+    }
+    setSelectedIds(new Set())
+  }
+
+  async function batchReject() {
+    const ids = Array.from(selectedIds)
+    for (const id of ids) {
+      await reject(id)
+    }
+    setSelectedIds(new Set())
   }
 
   // Keyboard navigation — clamp index to list bounds
@@ -191,6 +232,49 @@ export default function ApprovalsPage() {
         </div>
       </div>
 
+      {/* PL-13: Batch action bar */}
+      {!isLoading && filteredApprovals.length > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 py-2.5">
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleSelectAll}
+              className="h-3.5 w-3.5 rounded border-[var(--platform-border)] bg-[var(--platform-bg)] accent-[var(--platform-accent)]"
+            />
+            <span className="text-xs text-[var(--platform-text-muted)]">
+              {allSelected ? 'Deselect all' : 'Select all'}
+            </span>
+          </label>
+
+          {selectedIds.size > 0 && (
+            <>
+              <span className="font-mono text-[10px] text-[var(--platform-text-muted)]">
+                {selectedIds.size} selected
+              </span>
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={batchReject}
+                  className="flex items-center gap-1.5 rounded-lg border border-red-500/20 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/10"
+                >
+                  <X className="h-3 w-3" />
+                  Reject Selected
+                </button>
+                <button
+                  type="button"
+                  onClick={batchApprove}
+                  className="flex items-center gap-1.5 rounded-lg border border-green-500/20 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/10"
+                >
+                  <Check className="h-3 w-3" />
+                  Approve Selected
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Approval cards */}
       {isLoading ? (
         <div className="flex h-64 items-center justify-center">
@@ -222,6 +306,8 @@ export default function ApprovalsPage() {
                 isSelected={isSelected}
                 isExpanded={isExpanded}
                 priorityConfig={priority}
+                isChecked={selectedIds.has(approval.id)}
+                onToggleCheck={() => toggleSelect(approval.id)}
                 onToggleExpand={() => toggleExpand(approval.id)}
                 onApprove={() => approve(approval.id)}
                 onReject={() => reject(approval.id)}
@@ -260,7 +346,9 @@ interface ApprovalCardProps {
   decision: CardDecision
   isSelected: boolean
   isExpanded: boolean
-  priorityConfig: { label: string; dotClass: string }
+  priorityConfig: { label: string; dotClass: string; textClass: string; icon: React.ReactNode }
+  isChecked: boolean
+  onToggleCheck: () => void
   onToggleExpand: () => void
   onApprove: () => void
   onReject: () => void
@@ -273,6 +361,8 @@ function ApprovalCard({
   isSelected,
   isExpanded,
   priorityConfig,
+  isChecked,
+  onToggleCheck,
   onToggleExpand,
   onApprove,
   onReject,
@@ -322,14 +412,30 @@ function ApprovalCard({
       )}
 
       <div className="p-4">
-        {/* Top row: priority dot + agent badge + timestamp */}
+        {/* Top row: checkbox + priority + agent badge + timestamp */}
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            {/* Priority dot */}
-            <div
+            {/* PL-13: Batch selection checkbox */}
+            {!isDone && (
+              <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={(e) => {
+                  e.stopPropagation()
+                  onToggleCheck()
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="h-3.5 w-3.5 shrink-0 rounded border-[var(--platform-border)] bg-[var(--platform-bg)] accent-[var(--platform-accent)]"
+              />
+            )}
+            {/* Priority indicator with icon + label for accessibility */}
+            <span
               title={`Priority: ${priorityConfig.label}`}
-              className={cn('h-2 w-2 flex-shrink-0 rounded-full', priorityConfig.dotClass)}
-            />
+              className={cn('inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 font-mono text-[9px] font-medium', priorityConfig.textClass, 'border-current/20')}
+            >
+              {priorityConfig.icon}
+              {priorityConfig.label}
+            </span>
             <AgentBadge agentType={approval.agent_type} size="sm" />
           </div>
           <div className="flex items-center gap-1.5 text-[var(--platform-text-muted)]">
