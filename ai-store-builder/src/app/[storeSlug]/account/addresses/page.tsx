@@ -66,6 +66,7 @@ const addressSchema = z.object({
   addressLine2: z.string().optional(),
   city: z.string().min(2, 'City is required'),
   state: z.string().min(2, 'State/Province is required'),
+  country: z.string().min(1, 'Country is required'),
   pincode: z.string().regex(/^[\w\d\s\-]{3,10}$/, 'Enter a valid postal code'),
   isDefault: z.boolean().optional()
 })
@@ -104,6 +105,7 @@ export default function CustomerAddressesPage() {
       addressLine2: '',
       city: '',
       state: '',
+      country: 'India',
       pincode: '',
       isDefault: false
     }
@@ -146,6 +148,7 @@ export default function CustomerAddressesPage() {
       addressLine2: address.address_line2 || '',
       city: address.city,
       state: address.state,
+      country: address.country || 'India',
       pincode: address.pincode,
       isDefault: address.is_default
     })
@@ -162,6 +165,7 @@ export default function CustomerAddressesPage() {
       addressLine2: '',
       city: '',
       state: '',
+      country: 'India',
       pincode: '',
       isDefault: addresses.length === 0
     })
@@ -415,8 +419,7 @@ export default function CustomerAddressesPage() {
                     <FormControl>
                       <Input
                         type="tel"
-                        placeholder="10-digit mobile number"
-                        maxLength={10}
+                        placeholder="+1 234 567 8900"
                         {...field}
                       />
                     </FormControl>
@@ -473,11 +476,11 @@ export default function CustomerAddressesPage() {
                   name="pincode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Pincode</FormLabel>
+                      <FormLabel>Postal Code</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="6-digit pincode"
-                          maxLength={6}
+                          placeholder="Postal / ZIP code"
+                          maxLength={10}
                           {...field}
                         />
                       </FormControl>
@@ -489,24 +492,44 @@ export default function CustomerAddressesPage() {
 
               <FormField
                 control={form.control}
+                name="country"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Country</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Country" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="state"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>State</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormLabel>State / Province</FormLabel>
+                    {form.watch('country')?.toLowerCase() === 'india' ? (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {INDIAN_STATES.map((state) => (
+                            <SelectItem key={state} value={state}>
+                              {state}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select state" />
-                        </SelectTrigger>
+                        <Input placeholder="State / Province" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        {INDIAN_STATES.map((state) => (
-                          <SelectItem key={state} value={state}>
-                            {state}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

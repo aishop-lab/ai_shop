@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
+import { toast } from 'sonner'
 import type { Store, Product, StorePageData, StoreSettings } from '@/lib/types/store'
 import type { ProductVariant } from '@/lib/types/variant'
 
@@ -138,6 +139,22 @@ export function StoreProvider({ children, initialData }: StoreProviderProps) {
   
   // Add item to cart (variant-aware)
   const addToCart = useCallback((product: Product, quantity: number = 1, variant?: ProductVariant) => {
+    // Check inventory before adding
+    const trackQuantity = variant?.track_quantity ?? product.track_quantity
+    const availableQty = variant ? variant.quantity : product.quantity
+
+    if (trackQuantity && availableQty <= 0) {
+      toast.error(variant ? 'This variant is out of stock' : 'This product is out of stock')
+      return
+    }
+
+    const maxQuantity = trackQuantity ? availableQty : 999
+
+    if (trackQuantity && quantity > maxQuantity) {
+      toast.error(`Only ${maxQuantity} available in stock`)
+      quantity = maxQuantity
+    }
+
     setCart(prevCart => {
       const key = getCartItemKey(product.id, variant?.id)
       const existingIndex = prevCart.findIndex(item =>
@@ -149,10 +166,9 @@ export function StoreProvider({ children, initialData }: StoreProviderProps) {
         const newCart = [...prevCart]
         const newQuantity = newCart[existingIndex].quantity + quantity
 
-        // Get max quantity from variant or product
-        const trackQuantity = variant?.track_quantity ?? product.track_quantity
-        const availableQty = variant ? variant.quantity : product.quantity
-        const maxQuantity = trackQuantity ? availableQty : 999
+        if (trackQuantity && newQuantity > maxQuantity) {
+          toast.error(`Only ${maxQuantity} available in stock`)
+        }
 
         newCart[existingIndex] = {
           ...newCart[existingIndex],
@@ -161,7 +177,7 @@ export function StoreProvider({ children, initialData }: StoreProviderProps) {
         return newCart
       } else {
         // Add new item
-        return [...prevCart, { product, variant, quantity }]
+        return [...prevCart, { product, variant, quantity: Math.min(quantity, maxQuantity) }]
       }
     })
   }, [])

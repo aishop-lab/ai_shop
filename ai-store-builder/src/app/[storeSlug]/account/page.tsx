@@ -18,17 +18,27 @@ import {
   Loader2,
   ShoppingBag,
   ChevronRight,
-  Settings
+  Settings,
+  Pencil,
+  Save,
+  X
 } from 'lucide-react'
 import { useStore } from '@/lib/contexts/store-context'
+import { toast } from 'sonner'
 
 export default function CustomerAccountPage() {
   const params = useParams()
   const router = useRouter()
   const storeSlug = params.storeSlug as string
-  const { customer, isLoading, isAuthenticated, logout } = useCustomer()
+  const { customer, isLoading, isAuthenticated, logout, refreshCustomer } = useCustomer()
   const { formatPrice } = useStore()
   const [activeTab, setActiveTab] = useState('profile')
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [editForm, setEditForm] = useState({
+    fullName: '',
+    phone: ''
+  })
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -51,6 +61,45 @@ export default function CustomerAccountPage() {
   const handleLogout = async () => {
     await logout()
     router.push(`/${storeSlug}`)
+  }
+
+  const handleStartEditing = () => {
+    setEditForm({
+      fullName: customer?.full_name || '',
+      phone: customer?.phone || ''
+    })
+    setIsEditing(true)
+  }
+
+  const handleCancelEditing = () => {
+    setIsEditing(false)
+  }
+
+  const handleSaveProfile = async () => {
+    setIsSaving(true)
+    try {
+      const response = await fetch('/api/customer/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: editForm.fullName,
+          phone: editForm.phone || undefined
+        })
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update profile')
+      }
+
+      await refreshCustomer()
+      setIsEditing(false)
+      toast.success('Profile updated successfully')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update profile')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -192,22 +241,67 @@ export default function CustomerAccountPage() {
       {/* Profile Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Profile Information</CardTitle>
-          <CardDescription>Manage your account details</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>Manage your account details</CardDescription>
+            </div>
+            {!isEditing ? (
+              <Button variant="outline" size="sm" onClick={handleStartEditing}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleCancelEditing} disabled={isSaving}>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleSaveProfile} disabled={isSaving}>
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Save
+                </Button>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Full Name</Label>
-              <Input value={customer.full_name || ''} disabled />
+              {isEditing ? (
+                <Input
+                  value={editForm.fullName}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, fullName: e.target.value }))}
+                  placeholder="Your full name"
+                />
+              ) : (
+                <Input value={customer.full_name || ''} disabled />
+              )}
             </div>
             <div className="space-y-2">
               <Label>Email</Label>
               <Input value={customer.email} disabled />
+              {isEditing && (
+                <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Phone</Label>
-              <Input value={customer.phone || 'Not provided'} disabled />
+              {isEditing ? (
+                <Input
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="+1 234 567 8900"
+                />
+              ) : (
+                <Input value={customer.phone || 'Not provided'} disabled />
+              )}
             </div>
             <div className="space-y-2">
               <Label>Email Verified</Label>

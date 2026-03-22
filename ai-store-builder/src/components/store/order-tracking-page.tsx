@@ -59,6 +59,39 @@ const TRACKING_STEPS = [
   { key: 'delivered', label: 'Delivered', icon: CheckCircle },
 ]
 
+// Fallback tracking URL by courier/provider
+function getTrackingUrl(courierName: string, awbCode: string): string | null {
+  const name = courierName.toLowerCase()
+  if (name.includes('shiprocket')) {
+    return `https://www.shiprocket.in/shipment-tracking/?id=${awbCode}`
+  }
+  if (name.includes('delhivery')) {
+    return `https://www.delhivery.com/track/package/${awbCode}`
+  }
+  if (name.includes('blue dart') || name.includes('bluedart')) {
+    return `https://www.bluedart.com/tracking/${awbCode}`
+  }
+  if (name.includes('shippo') || name.includes('usps')) {
+    return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${awbCode}`
+  }
+  if (name.includes('ups')) {
+    return `https://www.ups.com/track?tracknum=${awbCode}`
+  }
+  if (name.includes('fedex')) {
+    return `https://www.fedex.com/fedextrack/?trknbr=${awbCode}`
+  }
+  if (name.includes('dhl')) {
+    return `https://www.dhl.com/en/express/tracking.html?AWB=${awbCode}`
+  }
+  if (name.includes('dtdc')) {
+    return `https://www.dtdc.in/tracking.asp?strCnno=${awbCode}`
+  }
+  if (name.includes('ecom express') || name.includes('ecomexpress')) {
+    return `https://ecomexpress.in/tracking/?awb_field=${awbCode}`
+  }
+  return null
+}
+
 // Map status to step index
 function getStepIndex(status: string): number {
   const statusMap: Record<string, number> = {
@@ -326,29 +359,34 @@ export default function OrderTrackingPage({ orderNumber }: OrderTrackingPageProp
         )}
 
         {/* Courier Info */}
-        {tracking?.courier_name && (
+        {(tracking?.courier_name || order.courier_name) && (
           <div className="mt-6 pt-6 border-t flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <p className="text-sm text-gray-500">Shipped via</p>
-              <p className="font-medium">{tracking.courier_name}</p>
-              {tracking.awb_code && (
+              <p className="font-medium">{tracking?.courier_name || order.courier_name}</p>
+              {(tracking?.awb_code || order.tracking_number) && (
                 <p className="text-sm text-gray-600">
-                  Tracking: <span className="font-mono">{tracking.awb_code}</span>
+                  Tracking: <span className="font-mono">{tracking?.awb_code || order.tracking_number}</span>
                 </p>
               )}
             </div>
 
-            {tracking.track_url && (
-              <a
-                href={tracking.track_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-              >
-                Track on {tracking.courier_name}
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            )}
+            {(() => {
+              const courierName = tracking?.courier_name || order.courier_name || ''
+              const awbCode = tracking?.awb_code || order.tracking_number || ''
+              const trackUrl = tracking?.track_url || (courierName && awbCode ? getTrackingUrl(courierName, awbCode) : null)
+              return trackUrl ? (
+                <a
+                  href={trackUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                >
+                  Track on {courierName}
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              ) : null
+            })()}
           </div>
         )}
       </div>

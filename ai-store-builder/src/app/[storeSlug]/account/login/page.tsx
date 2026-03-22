@@ -26,7 +26,7 @@ const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
-  phone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid phone number').optional().or(z.literal('')),
+  phone: z.string().regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number').optional().or(z.literal('')),
   marketingConsent: z.boolean().optional()
 })
 
@@ -328,7 +328,7 @@ export default function CustomerLoginPage() {
                       <FormItem>
                         <FormLabel>Phone (Optional)</FormLabel>
                         <FormControl>
-                          <Input type="tel" placeholder="9876543210" autoComplete="tel" {...field} />
+                          <Input type="tel" placeholder="+1 234 567 8900" autoComplete="tel" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

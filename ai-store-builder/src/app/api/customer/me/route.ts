@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 // Update customer profile
 const updateSchema = z.object({
   fullName: z.string().min(2).optional(),
-  phone: z.string().regex(/^[6-9]\d{9}$/).optional(),
+  phone: z.string().regex(/^\+?[1-9]\d{6,14}$/).optional(),
   marketingConsent: z.boolean().optional()
 })
 

@@ -144,12 +144,12 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
   return (
     <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8">
-        <Link href={baseUrl} className="hover:text-[var(--color-primary)]">Home</Link>
-        <span>/</span>
-        <Link href={`${baseUrl}/products`} className="hover:text-[var(--color-primary)]">Products</Link>
-        <span>/</span>
-        <span className="text-gray-900">{product.title}</span>
+      <nav className="flex items-center gap-1.5 text-sm text-gray-500 mb-8" aria-label="Breadcrumb">
+        <Link href={baseUrl} className="hover:text-[var(--color-primary)] transition-colors">Home</Link>
+        <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+        <Link href={`${baseUrl}/products`} className="hover:text-[var(--color-primary)] transition-colors">Products</Link>
+        <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+        <span className="text-gray-900 truncate max-w-[200px] sm:max-w-none">{product.title}</span>
       </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
@@ -323,7 +323,42 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
           )}
 
           {/* Quantity & Add to Cart */}
-          {(!isOutOfStock || needsVariantSelection) && (
+          {isOutOfStock && !needsVariantSelection ? (
+            <div className="space-y-4 mb-8">
+              <div className="flex gap-3">
+                <button
+                  disabled
+                  className="flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-lg font-semibold text-white bg-gray-400 cursor-not-allowed"
+                >
+                  Out of Stock
+                </button>
+                <WishlistButton productId={product.id} size="lg" />
+                <button
+                  className="p-4 border rounded-lg hover:bg-[var(--color-primary-light)]"
+                  aria-label="Share product"
+                  onClick={async () => {
+                    const shareUrl = `${window.location.origin}${baseUrl}/products/${product.id}`
+                    const shareData = { title: product.title, url: shareUrl }
+                    if (navigator.share) {
+                      try {
+                        await navigator.share(shareData)
+                      } catch (err) {
+                        if ((err as Error).name !== 'AbortError') {
+                          await navigator.clipboard.writeText(shareUrl)
+                          toast.success('Link copied to clipboard')
+                        }
+                      }
+                    } else {
+                      await navigator.clipboard.writeText(shareUrl)
+                      toast.success('Link copied to clipboard')
+                    }
+                  }}
+                >
+                  <Share2 className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          ) : (
             <div className="space-y-4 mb-8">
               {/* Quantity */}
               <div className="flex items-center gap-4">
@@ -353,9 +388,9 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
               <div className="flex gap-3">
                 <button
                   onClick={handleAddToCart}
-                  disabled={isAdding || needsVariantSelection || isOutOfStock}
+                  disabled={isAdding || needsVariantSelection}
                   className={`flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-lg font-semibold text-white transition-all ${inCart ? 'bg-green-500' : ''
-                    } ${needsVariantSelection || isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''} ${isAdding ? 'scale-95' : 'hover:scale-105'}`}
+                    } ${needsVariantSelection ? 'opacity-50 cursor-not-allowed' : ''} ${isAdding ? 'scale-95' : 'hover:scale-105'}`}
                   style={!inCart ? { backgroundColor: 'var(--color-primary)' } : {}}
                 >
                   {inCart ? (
@@ -365,8 +400,6 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
                     </>
                   ) : needsVariantSelection ? (
                     'Select Options'
-                  ) : isOutOfStock ? (
-                    'Out of Stock'
                   ) : (
                     <>
                       <ShoppingCart className="w-5 h-5" />

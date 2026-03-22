@@ -105,12 +105,13 @@ export function generateStoreMeta(store: Store): Metadata {
  */
 export function generateProductMeta(product: Product, store: Store): Metadata {
   const title = `${product.title} - ${store.name}`
-  const description = product.description || 
+  const description = product.description ||
     `Buy ${product.title} from ${store.name}. ${product.compare_at_price ? 'Special price!' : ''}`
-  
+
   const productImage = product.images?.[0]?.url
   const url = `${getStoreUrl(store.slug)}/products/${product.id}`
-  
+  const currency = store.blueprint?.location?.currency || 'INR'
+
   const keywords = [
     product.title,
     ...(product.categories || []),
@@ -118,12 +119,12 @@ export function generateProductMeta(product: Product, store: Store): Metadata {
     store.name,
     'buy online'
   ].filter(Boolean)
-  
+
   return {
     title,
     description,
     keywords: keywords.join(', '),
-    
+
     // Open Graph
     openGraph: {
       title: product.title,
@@ -141,7 +142,7 @@ export function generateProductMeta(product: Product, store: Store): Metadata {
       locale: 'en_IN',
       type: 'website' // Use 'website' as 'product' is not in the standard types
     },
-    
+
     // Twitter
     twitter: {
       card: 'summary_large_image',
@@ -149,10 +150,22 @@ export function generateProductMeta(product: Product, store: Store): Metadata {
       description,
       images: productImage ? [productImage] : []
     },
-    
+
     // Canonical URL
     alternates: {
       canonical: url
+    },
+
+    // Product-specific OG tags (og:price:amount, og:price:currency, og:availability)
+    other: {
+      'og:price:amount': product.price.toString(),
+      'og:price:currency': currency,
+      'og:availability': product.quantity > 0 ? 'instock' : 'out of stock',
+      ...(product.compare_at_price ? { 'og:price:standard_amount': product.compare_at_price.toString() } : {}),
+      'product:price:amount': product.price.toString(),
+      'product:price:currency': currency,
+      'product:availability': product.quantity > 0 ? 'in stock' : 'out of stock',
+      ...(product.categories?.[0] ? { 'product:category': product.categories[0] } : {})
     }
   }
 }

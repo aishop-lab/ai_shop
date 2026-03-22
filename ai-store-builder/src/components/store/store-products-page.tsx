@@ -6,7 +6,14 @@ import { ChevronLeft, ChevronRight, SlidersHorizontal, Grid, List } from 'lucide
 import type { Product } from '@/lib/types/store'
 import { useStore } from '@/lib/contexts/store-context'
 import ProductCard from './themes/modern-minimal/product-card'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+interface Collection {
+  id: string
+  title: string
+  slug: string
+  product_count: number
+}
 
 interface StoreProductsPageProps {
   products: Product[]
@@ -33,7 +40,54 @@ export default function StoreProductsPage({
   const router = useRouter()
   const searchParams = useSearchParams()
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [collections, setCollections] = useState<Collection[]>([])
+  const [selectedCollection, setSelectedCollection] = useState<string>('')
+  const [collectionProductIds, setCollectionProductIds] = useState<Set<string> | null>(null)
   const baseUrl = `/${store.slug}`
+
+  // Fetch collections
+  useEffect(() => {
+    async function fetchCollections() {
+      try {
+        const res = await fetch(`/api/store/${store.slug}/collections`)
+        if (res.ok) {
+          const data = await res.json()
+          setCollections(data.collections || [])
+        }
+      } catch (err) {
+        console.error('Failed to fetch collections:', err)
+      }
+    }
+    fetchCollections()
+  }, [store.slug])
+
+  // Fetch collection products when collection is selected
+  useEffect(() => {
+    if (!selectedCollection) {
+      setCollectionProductIds(null)
+      return
+    }
+
+    async function fetchCollectionProducts() {
+      try {
+        const res = await fetch(`/api/store/${store.slug}/collections/${selectedCollection}?limit=200`)
+        if (res.ok) {
+          const data = await res.json()
+          const ids = new Set<string>((data.products || []).map((p: { id: string }) => p.id))
+          setCollectionProductIds(ids)
+        }
+      } catch (err) {
+        console.error('Failed to fetch collection products:', err)
+        setCollectionProductIds(null)
+      }
+    }
+    fetchCollectionProducts()
+  }, [selectedCollection, store.slug])
+
+  // Filter products by collection if selected
+  const displayProducts = collectionProductIds
+    ? products.filter(p => collectionProductIds.has(p.id))
+    : products
   
   const updateFilters = (key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -63,7 +117,7 @@ export default function StoreProductsPage({
           {currentCategory || 'All Products'}
         </h1>
         <p className="text-gray-600">
-          {pagination.total} product{pagination.total !== 1 ? 's' : ''}
+          {collectionProductIds ? displayProducts.length : pagination.total} product{(collectionProductIds ? displayProducts.length : pagination.total) !== 1 ? 's' : ''}
         </p>
       </div>
       
@@ -98,8 +152,22 @@ export default function StoreProductsPage({
           ))}
         </div>
         
-        {/* Sort & View */}
+        {/* Sort, Collection & View */}
         <div className="flex items-center gap-4">
+          {collections.length > 0 && (
+            <select
+              value={selectedCollection}
+              onChange={(e) => setSelectedCollection(e.target.value)}
+              className="px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            >
+              <option value="">All Collections</option>
+              {collections.map((col) => (
+                <option key={col.id} value={col.slug}>
+                  {col.title} ({col.product_count})
+                </option>
+              ))}
+            </select>
+          )}
           <select
             value={`${currentSort}-${currentOrder}`}
             onChange={(e) => {
@@ -135,22 +203,25 @@ export default function StoreProductsPage({
       </div>
       
       {/* Products Grid */}
-      {products.length > 0 ? (
+      {displayProducts.length > 0 ? (
         <div className={`grid gap-6 ${
-          viewMode === 'grid' 
-            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+          viewMode === 'grid'
+            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
             : 'grid-cols-1'
         }`}>
-          {products.map((product) => (
+          {displayProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
       ) : (
         <div className="text-center py-20">
           <p className="text-gray-500 text-lg mb-4">No products found</p>
-          {currentCategory && (
+          {(currentCategory || selectedCollection) && (
             <button
-              onClick={() => updateFilters('category', null)}
+              onClick={() => {
+                updateFilters('category', null)
+                setSelectedCollection('')
+              }}
               className="text-[var(--color-primary)] hover:underline"
             >
               View all products
