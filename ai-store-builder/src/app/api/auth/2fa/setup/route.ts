@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
 import {
   generateOTP,
   hashOTP,
@@ -10,7 +11,17 @@ import {
 } from '@/lib/auth/email-otp'
 import { sendTwoFactorOTPEmail } from '@/lib/email/two-factor'
 
-export async function POST() {
+const SETUP_2FA_RATE_LIMIT = {
+  limit: 5,
+  windowSeconds: 60,
+  prefix: 'auth-2fa-setup'
+}
+
+export async function POST(request: NextRequest) {
+  // Rate limit: 5 requests per minute per IP
+  const rateLimitResult = rateLimit(request, SETUP_2FA_RATE_LIMIT)
+  if (rateLimitResult) return rateLimitResult
+
   try {
     const supabase = await createClient()
 

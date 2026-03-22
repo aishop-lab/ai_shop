@@ -1,10 +1,15 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile, AuthUser, SignUpData } from '@/lib/types/auth'
+
+// SEC-04: Session expiry warning threshold (5 minutes before expiry)
+const SESSION_WARNING_THRESHOLD_MS = 5 * 60 * 1000
+// Check session status every 60 seconds
+const SESSION_CHECK_INTERVAL_MS = 60 * 1000
 
 interface AuthContextType {
   user: AuthUser | null
@@ -25,6 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  // SEC-04: Track whether we've already shown the session expiry warning
+  const sessionWarningShownRef = useRef(false)
 
   const refreshUser = useCallback(async () => {
     try {
@@ -63,6 +70,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener('focus', handleFocus)
     return () => window.removeEventListener('focus', handleFocus)
   }, [refreshUser])
+
+  // SEC-04: Session timeout warning and auto-refresh
+  useEffect(() => {
+    // Only run session checks when user is authenticated
+    if (!user) {
+      sessionWarningShownRef.current = false
+      return
+    }
+
+    const checkSession = async () => {
+      try {
+        const supabase = createClient()
+        const { data: { session }, error } = await supabase.auth.getSession()
+
+        if (error || !session) {
+          // Session is gone - user has been logged out
+          setUser(null)
+          setProfile(null)
+          sessionWarningShownRef.current = false
+          toast.error('Your session has expired. Please sign in again.')
+          router.push('/sign-in')
+          return
+        }
+
+        const expiresAt = session.expires_at
+        if (!expiresAt) return
+
+        const expiresAtMs = expiresAt * 1000 // Convert Unix timestamp to ms
+        const now = Date.now()
+        const timeUntilExpiry = expiresAtMs - now
+
+        if (timeUntilExpiry <= 0) {
+          // Session has already expired
+          setUser(null)
+          setProfile(null)
+          sessionWarningShownRef.current = false
+          toast.error('Your session has expired. Please sign in again.')
+          router.push('/sign-in')
+          return
+        }
+
+        if (timeUntilExpiry <= SESSION_WARNING_THRESHOLD_MS) {
+          // Session is about to expire - try to refresh it
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+
+          if (refreshError || !refreshData.session) {
+            // Refresh failed - warn the user
+            if (!sessionWarningShownRef.current) {
+              sessionWarningShownRef.current = true
+              const minutesLeft = Math.max(1, Math.ceil(timeUntilExpiry / 60000))
+              toast.warning(
+                `Your session will expire in ${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''}. Save your work.`,
+                { duration: 10000 }
+              )
+            }
+          } else {
+            // Session refreshed successfully - reset warning flag
+            sessionWarningShownRef.current = false
+          }
+        }
+      } catch (error) {
+        console.error('Session check failed:', error)
+      }
+    }
+
+    // Run an initial check
+    checkSession()
+
+    // Set up periodic checks
+    const intervalId = setInterval(checkSession, SESSION_CHECK_INTERVAL_MS)
+
+    return () => clearInterval(intervalId)
+  }, [user, router])
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -128,8 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(result.error || 'Failed to create account')
       }
 
-      toast.success('Account created! Please check your email to verify.')
-      router.push('/onboarding')
+      // Success toast and redirect handled by the caller (sign-up page)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create account'
       toast.error(message)

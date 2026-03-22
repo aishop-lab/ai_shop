@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { signInSchema } from '@/lib/validations/auth'
 import { handleAuthError } from '@/lib/utils/errors'
 import { getUserProfile } from '@/lib/auth/utils'
+import { rateLimit } from '@/lib/rate-limit'
 import {
   generateOTP,
   hashOTP,
@@ -12,7 +13,76 @@ import {
 import { sendTwoFactorOTPEmail } from '@/lib/email/two-factor'
 import type { AuthResponse } from '@/lib/types/auth'
 
-export async function POST(request: Request) {
+// Account lockout tracking: prevents brute-force attacks by locking accounts
+// after too many failed login attempts
+const failedAttempts = new Map<string, { count: number; lockedUntil: number }>()
+
+const MAX_FAILED_ATTEMPTS = 5
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000 // 15 minutes
+
+// Cleanup expired lockout entries every 5 minutes
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now()
+    for (const [key, value] of failedAttempts.entries()) {
+      if (value.lockedUntil > 0 && value.lockedUntil < now) {
+        failedAttempts.delete(key)
+      }
+    }
+  }, 5 * 60 * 1000)
+}
+
+function checkAccountLockout(email: string): { locked: boolean; minutesRemaining: number } {
+  const normalizedEmail = email.toLowerCase().trim()
+  const entry = failedAttempts.get(normalizedEmail)
+
+  if (!entry) {
+    return { locked: false, minutesRemaining: 0 }
+  }
+
+  if (entry.lockedUntil > 0 && entry.lockedUntil > Date.now()) {
+    const minutesRemaining = Math.ceil((entry.lockedUntil - Date.now()) / 60000)
+    return { locked: true, minutesRemaining }
+  }
+
+  // Lockout expired, clear entry
+  if (entry.lockedUntil > 0 && entry.lockedUntil <= Date.now()) {
+    failedAttempts.delete(normalizedEmail)
+    return { locked: false, minutesRemaining: 0 }
+  }
+
+  return { locked: false, minutesRemaining: 0 }
+}
+
+function recordFailedAttempt(email: string): void {
+  const normalizedEmail = email.toLowerCase().trim()
+  const entry = failedAttempts.get(normalizedEmail) || { count: 0, lockedUntil: 0 }
+
+  entry.count++
+
+  if (entry.count >= MAX_FAILED_ATTEMPTS) {
+    entry.lockedUntil = Date.now() + LOCKOUT_DURATION_MS
+  }
+
+  failedAttempts.set(normalizedEmail, entry)
+}
+
+function clearFailedAttempts(email: string): void {
+  const normalizedEmail = email.toLowerCase().trim()
+  failedAttempts.delete(normalizedEmail)
+}
+
+const SIGN_IN_RATE_LIMIT = {
+  limit: 5,
+  windowSeconds: 60,
+  prefix: 'auth-signin'
+}
+
+export async function POST(request: NextRequest) {
+  // Rate limit: 5 requests per minute per IP
+  const rateLimitResult = rateLimit(request, SIGN_IN_RATE_LIMIT)
+  if (rateLimitResult) return rateLimitResult
+
   try {
     const body = await request.json()
 
@@ -27,6 +97,18 @@ export async function POST(request: Request) {
     }
 
     const { email, password } = validationResult.data
+
+    // SEC-03: Check account lockout BEFORE attempting Supabase auth
+    const lockout = checkAccountLockout(email)
+    if (lockout.locked) {
+      return NextResponse.json<AuthResponse>(
+        {
+          success: false,
+          error: `Too many failed attempts. Please try again in ${lockout.minutesRemaining} minute${lockout.minutesRemaining !== 1 ? 's' : ''}.`
+        },
+        { status: 429 }
+      )
+    }
 
     const supabase = await createClient()
     const adminClient = await createAdminClient()
@@ -57,6 +139,8 @@ export async function POST(request: Request) {
     })
 
     if (error) {
+      // SEC-03: Record failed login attempt
+      recordFailedAttempt(email)
       const errorResponse = handleAuthError(error)
       return NextResponse.json<AuthResponse>(
         { success: false, error: errorResponse.error },
@@ -65,11 +149,16 @@ export async function POST(request: Request) {
     }
 
     if (!data.user) {
+      // SEC-03: Record failed login attempt
+      recordFailedAttempt(email)
       return NextResponse.json<AuthResponse>(
         { success: false, error: 'Invalid email or password' },
         { status: 401 }
       )
     }
+
+    // SEC-03: Clear failed attempts on successful authentication
+    clearFailedAttempts(email)
 
     // Check if 2FA is enabled
     if (existingProfile.two_factor_enabled) {

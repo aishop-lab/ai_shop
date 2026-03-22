@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
 import {
   verifyOTP,
   isOTPExpired,
@@ -15,7 +16,17 @@ interface VerifyRequest {
   pendingToken?: string
 }
 
-export async function POST(request: Request) {
+const VERIFY_OTP_RATE_LIMIT = {
+  limit: 5,
+  windowSeconds: 60,
+  prefix: 'auth-2fa-verify'
+}
+
+export async function POST(request: NextRequest) {
+  // Rate limit: 5 requests per minute per IP
+  const rateLimitResult = rateLimit(request, VERIFY_OTP_RATE_LIMIT)
+  if (rateLimitResult) return rateLimitResult
+
   try {
     const body: VerifyRequest = await request.json()
     const { token, action = 'enable', pendingToken } = body

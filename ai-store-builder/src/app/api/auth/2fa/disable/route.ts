@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
 import {
   generateOTP,
   hashOTP,
@@ -10,13 +11,23 @@ import {
 } from '@/lib/auth/email-otp'
 import { sendTwoFactorOTPEmail } from '@/lib/email/two-factor'
 
+const DISABLE_2FA_RATE_LIMIT = {
+  limit: 5,
+  windowSeconds: 60,
+  prefix: 'auth-2fa-disable'
+}
+
 /**
  * POST /api/auth/2fa/disable
  *
  * Send an OTP to start the disable flow.
  * The actual disabling happens in /api/auth/2fa/verify with action='disable'
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
+  // Rate limit: 5 requests per minute per IP
+  const rateLimitResult = rateLimit(request, DISABLE_2FA_RATE_LIMIT)
+  if (rateLimitResult) return rateLimitResult
+
   try {
     const supabase = await createClient()
 

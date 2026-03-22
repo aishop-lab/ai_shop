@@ -1,10 +1,26 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { signUpSchema } from '@/lib/validations/auth'
 import { handleAuthError } from '@/lib/utils/errors'
+import { rateLimit } from '@/lib/rate-limit'
 import type { AuthResponse } from '@/lib/types/auth'
 
-export async function POST(request: Request) {
+// TODO (SEC-05): Add email verification check. After sign-up, verify that
+// the user has confirmed their email before allowing full access to the dashboard.
+// This should be implemented as middleware or a check in the auth context that
+// redirects unverified users to a "check your email" page.
+
+const SIGN_UP_RATE_LIMIT = {
+  limit: 5,
+  windowSeconds: 60,
+  prefix: 'auth-signup'
+}
+
+export async function POST(request: NextRequest) {
+  // Rate limit: 5 requests per minute per IP
+  const rateLimitResult = rateLimit(request, SIGN_UP_RATE_LIMIT)
+  if (rateLimitResult) return rateLimitResult
+
   try {
     const body = await request.json()
 
