@@ -594,7 +594,9 @@ export async function getAdminProducts(options: {
   }
 
   if (search) {
-    query = query.ilike('title', `%${search}%`)
+    const { sanitizeSearchQuery } = await import('@/lib/utils/sanitize')
+    const s = sanitizeSearchQuery(search)
+    query = query.ilike('title', `%${s}%`)
   }
 
   query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1)

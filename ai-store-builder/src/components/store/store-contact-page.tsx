@@ -91,14 +91,14 @@ export default function StoreContactPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">Phone</h3>
-                  <p className="text-gray-600">+91 {store.contact_phone}</p>
+                  <p className="text-gray-600">{store.contact_phone}</p>
                 </div>
               </a>
             )}
             
             {store.whatsapp_number && (
               <a
-                href={`https://wa.me/91${store.whatsapp_number}`}
+                href={`https://wa.me/${store.whatsapp_number}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-start gap-4 p-4 rounded-lg hover:bg-gray-50 transition-colors"

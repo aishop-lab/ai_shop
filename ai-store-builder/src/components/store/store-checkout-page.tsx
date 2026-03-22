@@ -256,8 +256,8 @@ export default function StoreCheckoutPage() {
         newErrors.email = 'Please enter a valid email address'
 
       if (!formData.phone) newErrors.phone = 'Phone number is required'
-      else if (!/^[6-9]\d{9}$/.test(formData.phone.replace(/\D/g, '')))
-        newErrors.phone = 'Please enter a valid 10-digit Indian phone number'
+      else if (!/^\+?[\d\s\-()]{7,15}$/.test(formData.phone.replace(/\s/g, '')))
+        newErrors.phone = 'Please enter a valid phone number'
     }
 
     if (step === 'shipping') {
@@ -266,9 +266,9 @@ export default function StoreCheckoutPage() {
       if (!formData.address) newErrors.address = 'Address is required'
       if (!formData.city) newErrors.city = 'City is required'
       if (!formData.state) newErrors.state = 'State is required'
-      if (!formData.pincode) newErrors.pincode = 'Pincode is required'
-      else if (!/^\d{6}$/.test(formData.pincode))
-        newErrors.pincode = 'Please enter a valid 6-digit pincode'
+      if (!formData.pincode) newErrors.pincode = 'Postal code is required'
+      else if (!/^[\w\d\s\-]{3,10}$/.test(formData.pincode))
+        newErrors.pincode = 'Please enter a valid postal code'
     }
 
     setErrors(newErrors)
@@ -286,15 +286,15 @@ export default function StoreCheckoutPage() {
     if (!formData.firstName) newErrors.firstName = 'First name is required'
     if (!formData.lastName) newErrors.lastName = 'Last name is required'
     if (!formData.phone) newErrors.phone = 'Phone number is required'
-    else if (!/^[6-9]\d{9}$/.test(formData.phone.replace(/\D/g, '')))
-      newErrors.phone = 'Please enter a valid 10-digit Indian phone number'
+    else if (!/^\+?[\d\s\-()]{7,15}$/.test(formData.phone.replace(/\s/g, '')))
+      newErrors.phone = 'Please enter a valid phone number'
 
     if (!formData.address) newErrors.address = 'Address is required'
     if (!formData.city) newErrors.city = 'City is required'
     if (!formData.state) newErrors.state = 'State is required'
-    if (!formData.pincode) newErrors.pincode = 'Pincode is required'
-    else if (!/^\d{6}$/.test(formData.pincode))
-      newErrors.pincode = 'Please enter a valid 6-digit pincode'
+    if (!formData.pincode) newErrors.pincode = 'Postal code is required'
+    else if (!/^[\w\d\s\-]{3,10}$/.test(formData.pincode))
+      newErrors.pincode = 'Please enter a valid postal code'
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -358,7 +358,7 @@ export default function StoreCheckoutPage() {
             city: formData.city,
             state: formData.state,
             pincode: formData.pincode,
-            country: 'India',
+            country: store.blueprint?.location?.country || 'India',
           },
           customer_details: {
             name: `${formData.firstName} ${formData.lastName}`,
@@ -546,7 +546,7 @@ export default function StoreCheckoutPage() {
           onStepClick={(stepKey) => setCurrentStep(stepKey as CheckoutStep)}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
           {/* Checkout Form */}
           <div>
             <h1

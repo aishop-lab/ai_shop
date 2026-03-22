@@ -124,6 +124,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
             size="icon"
             className="lg:hidden ml-auto h-8 w-8"
             onClick={onClose}
+            aria-label="Close sidebar"
           >
             <X className="h-5 w-5" />
           </Button>

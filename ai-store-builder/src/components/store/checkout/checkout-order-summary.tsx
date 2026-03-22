@@ -87,7 +87,7 @@ export default function CheckoutOrderSummary({
   return (
     <>
       {/* Order Summary - Desktop (Sticky) */}
-      <div className="hidden lg:block lg:pl-8 lg:border-l">
+      <div className="hidden md:block md:pl-8 md:border-l">
         <div className="sticky top-8">
           <h2 className="text-lg font-semibold mb-6">Order Summary</h2>
 
@@ -151,7 +151,7 @@ export default function CheckoutOrderSummary({
       </div>
 
       {/* Order Summary - Mobile (Collapsible) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-40">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-40">
         <button
           type="button"
           onClick={onToggleMobileSummary}
@@ -223,7 +223,7 @@ export default function CheckoutOrderSummary({
       </div>
 
       {/* Spacer for mobile fixed summary */}
-      <div className="lg:hidden h-16" />
+      <div className="md:hidden h-16" />
     </>
   )
 }

@@ -61,12 +61,12 @@ interface Address {
 const addressSchema = z.object({
   label: z.string().min(1, 'Label is required'),
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
-  phone: z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit phone number'),
+  phone: z.string().regex(/^\+?[\d\s\-()]{7,15}$/, 'Enter a valid phone number'),
   addressLine1: z.string().min(5, 'Address must be at least 5 characters'),
   addressLine2: z.string().optional(),
   city: z.string().min(2, 'City is required'),
-  state: z.string().min(2, 'State is required'),
-  pincode: z.string().regex(/^\d{6}$/, 'Enter a valid 6-digit pincode'),
+  state: z.string().min(2, 'State/Province is required'),
+  pincode: z.string().regex(/^[\w\d\s\-]{3,10}$/, 'Enter a valid postal code'),
   isDefault: z.boolean().optional()
 })
 

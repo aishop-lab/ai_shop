@@ -220,11 +220,11 @@ Generate 5 headline variations and 3 description variations. Each headline must 
     storeId,
     agentType: 'marketing',
     actionType: 'generate_ad_creative',
-    description: `Generated ${platform} ${format} ad creative for "${productTitle}"`,
-    input: { productTitle, platform, format },
-    output: { headlineCount: parsed.headlines.length, descriptionCount: parsed.descriptions.length },
+    actionCategory: 'campaign',
+    summary: `Generated ${platform} ${format} ad creative for "${productTitle}"`,
+    details: { productTitle, platform, format, headlineCount: parsed.headlines.length, descriptionCount: parsed.descriptions.length },
     status: 'completed',
-    executionMode: 'autonomous',
+    executionMode: 'auto',
   })
 
   return parsed
@@ -312,11 +312,11 @@ Generate up to 10 relevant hashtags mixing popular and niche tags. Suggest the b
     storeId,
     agentType: 'marketing',
     actionType: 'generate_social_post',
-    description: `Generated ${platform} ${postType} post${productTitle ? ` for "${productTitle}"` : ''}`,
-    input: { platform, postType, productTitle },
-    output: { captionLength: parsed.caption.length, hashtagCount: parsed.hashtags.length },
+    actionCategory: 'campaign',
+    summary: `Generated ${platform} ${postType} post${productTitle ? ` for "${productTitle}"` : ''}`,
+    details: { platform, postType, productTitle, captionLength: parsed.caption.length, hashtagCount: parsed.hashtags.length },
     status: 'completed',
-    executionMode: 'autonomous',
+    executionMode: 'auto',
   })
 
   return parsed
@@ -402,11 +402,11 @@ ${getCampaignGuidelines(campaignType)}`,
     storeId,
     agentType: 'marketing',
     actionType: 'generate_email_campaign',
-    description: `Generated ${campaignType} email campaign with ${products.length} products`,
-    input: { campaignType, productCount: products.length, discountPercent },
-    output: { subjectLength: parsed.subject.length },
+    actionCategory: 'communication',
+    summary: `Generated ${campaignType} email campaign with ${products.length} products`,
+    details: { campaignType, productCount: products.length, discountPercent, subjectLength: parsed.subject.length },
     status: 'completed',
-    executionMode: 'autonomous',
+    executionMode: 'auto',
   })
 
   return parsed

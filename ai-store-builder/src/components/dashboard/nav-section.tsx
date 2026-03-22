@@ -74,8 +74,9 @@ export function NavSection({
       <Link
         href={href}
         onClick={onNavigate}
+        aria-current={isSectionActive ? 'page' : undefined}
         className={cn(
-          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           isSectionActive
             ? 'bg-primary text-primary-foreground'
             : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -92,8 +93,9 @@ export function NavSection({
     <div>
       <button
         onClick={handleToggle}
+        aria-expanded={isExpanded}
         className={cn(
-          'w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+          'w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           isSectionActive && !isExpanded
             ? 'bg-primary/10 text-primary'
             : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -143,8 +145,9 @@ export function NavSection({
                 key={item.href}
                 href={item.href}
                 onClick={onNavigate}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors',
+                  'flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   isActive
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'

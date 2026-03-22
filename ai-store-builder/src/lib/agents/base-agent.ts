@@ -54,6 +54,11 @@ export abstract class BaseAgent {
   abstract buildSystemPrompt(state: AgentState, trigger: AgentTrigger): string
   abstract getTools(): AgentToolConfig[]
 
+  /** Override in subclasses that need async context (e.g. loading knowledge base from DB) */
+  async buildSystemPromptAsync(state: AgentState, trigger: AgentTrigger): Promise<string> {
+    return this.buildSystemPrompt(state, trigger)
+  }
+
   async execute(trigger: AgentTrigger): Promise<AgentResult> {
     const startTime = Date.now()
     const actions: AgentActionResult[] = []
@@ -93,8 +98,8 @@ export abstract class BaseAgent {
       })
       const model = getModelForTier(modelConfig.tier)
 
-      // 6. Build system prompt
-      const systemPrompt = this.buildSystemPrompt(state, trigger)
+      // 6. Build system prompt (async variant loads richer context like knowledge bases)
+      const systemPrompt = await this.buildSystemPromptAsync(state, trigger)
 
       // 7. Wrap tools with approval checking
       const wrappedTools = this.wrapToolsWithApproval(

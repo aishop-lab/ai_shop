@@ -54,20 +54,19 @@ export default function CheckoutContactStep({
         <div>
           <label className="block text-sm font-medium mb-1">Phone *</label>
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">+91</span>
             <input
               type="tel"
               value={formData.phone}
               onChange={(e) => {
-                // Only allow digits, max 10
-                const value = e.target.value.replace(/\D/g, '').slice(0, 10)
+                // Allow digits, spaces, dashes, plus, parentheses
+                const value = e.target.value.replace(/[^\d\s\-+()]/g, '').slice(0, 16)
                 onChange('phone', value)
               }}
-              className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
                 errors.phone ? 'border-red-500' : ''
               }`}
-              placeholder="9876543210"
-              maxLength={10}
+              placeholder="+91 9876543210"
+              maxLength={16}
             />
           </div>
           {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}

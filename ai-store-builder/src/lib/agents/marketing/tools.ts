@@ -45,10 +45,10 @@ async function executeCreateAdCampaign(
       const { createCampaign } = await import('./meta-ads')
       const campaign = await createCampaign(storeId, {
         name,
-        objective,
+        objective: objective as 'OUTCOME_AWARENESS' | 'OUTCOME_TRAFFIC' | 'OUTCOME_ENGAGEMENT' | 'OUTCOME_SALES',
         dailyBudget,
-        startDate,
-        endDate,
+        startTime: startDate,
+        endTime: endDate,
         targeting,
       })
 
@@ -57,20 +57,19 @@ async function executeCreateAdCampaign(
         data: campaign,
         summary: `Created Meta ad campaign "${name}" with ${dailyBudget}/day budget, objective: ${objective}`,
         relatedEntityType: 'ad_campaign',
-        relatedEntityId: campaign.id,
+        relatedEntityId: campaign.campaignId,
       }
     } else {
-      const { createCampaign } = await import('./google-ads')
-      const campaign = await createCampaign(storeId, {
+      const { createSearchCampaign } = await import('./google-ads')
+      const campaign = await createSearchCampaign(storeId, {
         name,
-        objective,
         dailyBudget,
         startDate,
         endDate,
-        keywords,
-        headlines,
-        descriptions,
-        finalUrl,
+        keywords: (keywords || []).map((k: string) => ({ text: k, matchType: 'BROAD' as const })),
+        headlines: headlines || [],
+        descriptions: descriptions || [],
+        finalUrl: finalUrl || '',
       })
 
       return {
@@ -78,7 +77,7 @@ async function executeCreateAdCampaign(
         data: campaign,
         summary: `Created Google Ads campaign "${name}" with ${dailyBudget}/day budget, objective: ${objective}`,
         relatedEntityType: 'ad_campaign',
-        relatedEntityId: campaign.id,
+        relatedEntityId: campaign.campaignId,
       }
     }
   } catch (error) {
@@ -110,11 +109,13 @@ async function executePauseAdCampaign(
 
   try {
     if (platform === 'meta') {
+      const metaStatus = action === 'pause' ? 'PAUSED' as const : 'ACTIVE' as const
       const { updateCampaignStatus } = await import('./meta-ads')
-      await updateCampaignStatus(storeId, campaignId, action)
+      await updateCampaignStatus(storeId, campaignId, metaStatus)
     } else {
+      const googleStatus = action === 'pause' ? 'PAUSED' as const : 'ENABLED' as const
       const { updateCampaignStatus } = await import('./google-ads')
-      await updateCampaignStatus(storeId, campaignId, action)
+      await updateCampaignStatus(storeId, campaignId, googleStatus)
     }
 
     return {
@@ -153,8 +154,8 @@ async function executeAdjustBudget(
 
   try {
     // Check total spend limits before adjusting
-    const { getBudget } = await import('./budget-manager')
-    const budget = await getBudget(storeId)
+    const { getBudgetStatus } = await import('./budget-manager')
+    const budget = await getBudgetStatus(storeId)
 
     if (budget.monthlyLimit && budget.currentSpend + newDailyBudget > budget.monthlyLimit) {
       return {
@@ -164,17 +165,20 @@ async function executeAdjustBudget(
     }
 
     if (platform === 'meta') {
-      const { updateCampaignBudget } = await import('./meta-ads')
-      await updateCampaignBudget(storeId, campaignId, newDailyBudget)
+      // Meta API doesn't expose a direct budget update — budget is set at ad set level during creation
+      return {
+        success: false,
+        summary: 'Budget adjustment for Meta campaigns is not yet supported. Please update the budget in Meta Ads Manager.',
+      }
     } else {
-      const { updateCampaignBudget } = await import('./google-ads')
-      await updateCampaignBudget(storeId, campaignId, newDailyBudget)
+      const { adjustBudget } = await import('./google-ads')
+      await adjustBudget(storeId, campaignId, newDailyBudget)
     }
 
     return {
       success: true,
       data: { campaignId, newDailyBudget, platform },
-      summary: `Adjusted ${platform === 'meta' ? 'Meta' : 'Google'} campaign ${campaignId} daily budget to ${newDailyBudget}`,
+      summary: `Adjusted Google Ads campaign ${campaignId} daily budget to ${newDailyBudget}`,
       relatedEntityType: 'ad_campaign',
       relatedEntityId: campaignId,
     }
@@ -223,16 +227,16 @@ async function executeGenerateAdCreative(
   } = args as z.infer<typeof generateAdCreativeSchema>
 
   try {
-    const { generateCreative } = await import('./content-generator')
-    const creative = await generateCreative({
+    const { generateAdCreative } = await import('./content-generator')
+    const creative = await generateAdCreative({
       storeId,
       productId,
       productTitle,
       productDescription,
       productPrice,
       currency,
-      platform,
-      format,
+      platform: platform as 'meta' | 'google',
+      format: format as 'single_image' | 'carousel' | 'video' | 'search_text',
       tone,
       targetAudience,
     })
@@ -267,25 +271,31 @@ async function executeGetAdPerformance(
 
   try {
     if (platform === 'meta') {
-      const { getPerformance } = await import('./meta-ads')
-      const metrics = await getPerformance(storeId, { campaignId, period })
+      const { getCampaignInsights } = await import('./meta-ads')
+      if (!campaignId) {
+        return { success: false, summary: 'Campaign ID is required for Meta Ads performance data' }
+      }
+      const metrics = await getCampaignInsights(storeId, campaignId)
 
       return {
         success: true,
         data: metrics,
         summary: `Retrieved Meta Ads performance for ${period}: ${metrics.impressions ?? 0} impressions, ${metrics.clicks ?? 0} clicks, ${metrics.conversions ?? 0} conversions, ROAS ${metrics.roas?.toFixed(2) ?? 'N/A'}`,
-        relatedEntityType: campaignId ? 'ad_campaign' : undefined,
+        relatedEntityType: 'ad_campaign',
         relatedEntityId: campaignId,
       }
     } else {
-      const { getPerformance } = await import('./google-ads')
-      const metrics = await getPerformance(storeId, { campaignId, period })
+      const { getCampaignInsights } = await import('./google-ads')
+      if (!campaignId) {
+        return { success: false, summary: 'Campaign ID is required for Google Ads performance data' }
+      }
+      const metrics = await getCampaignInsights(storeId, campaignId)
 
       return {
         success: true,
         data: metrics,
         summary: `Retrieved Google Ads performance for ${period}: ${metrics.impressions ?? 0} impressions, ${metrics.clicks ?? 0} clicks, ${metrics.conversions ?? 0} conversions, ROAS ${metrics.roas?.toFixed(2) ?? 'N/A'}`,
-        relatedEntityType: campaignId ? 'ad_campaign' : undefined,
+        relatedEntityType: 'ad_campaign',
         relatedEntityId: campaignId,
       }
     }
@@ -323,18 +333,19 @@ async function executeCreateSocialPost(
     let finalContent = content
 
     if (generateContent) {
-      const { generateSocialContent } = await import('./content-generator')
-      finalContent = await generateSocialContent({
+      const { generateSocialPost } = await import('./content-generator')
+      const result = await generateSocialPost({
         storeId,
         platform,
-        baseContent: content,
+        postType: 'product_showcase',
+        productTitle: content,
       })
+      finalContent = result.caption
     }
 
     const { createPost } = await import('./meta-ads')
     const post = await createPost(storeId, {
-      platform,
-      content: finalContent,
+      message: finalContent,
       imageUrl,
       scheduledTime,
     })
@@ -348,7 +359,7 @@ async function executeCreateSocialPost(
       data: { ...post, content: finalContent },
       summary: `Created ${platform} post${scheduleInfo}${generateContent ? ' (AI-enhanced content)' : ''}`,
       relatedEntityType: 'social_post',
-      relatedEntityId: post.id,
+      relatedEntityId: post.postId,
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
@@ -377,22 +388,22 @@ async function executeGetAudienceInsights(
 
   try {
     if (platform === 'meta') {
-      const { getAudienceInsights } = await import('./meta-ads')
-      const insights = await getAudienceInsights(storeId)
+      const { getAudienceSuggestions } = await import('./meta-ads')
+      const suggestions = await getAudienceSuggestions(storeId)
 
       return {
         success: true,
-        data: insights,
-        summary: `Retrieved Meta audience insights: ${insights.totalReach ?? 0} total reach, top demographics and interests available`,
+        data: suggestions,
+        summary: `Retrieved Meta audience suggestions with targeting options available`,
       }
     } else {
-      const { getAudienceInsights } = await import('./google-ads')
-      const insights = await getAudienceInsights(storeId)
+      const { getKeywordSuggestions } = await import('./google-ads')
+      const suggestions = await getKeywordSuggestions(storeId, { productTitle: 'general' })
 
       return {
         success: true,
-        data: insights,
-        summary: `Retrieved Google Ads audience insights: keyword suggestions and affinity segments available`,
+        data: suggestions,
+        summary: `Retrieved Google Ads keyword suggestions for audience targeting`,
       }
     }
   } catch (error) {
@@ -420,8 +431,8 @@ async function executeGetBudgetStatus(
   const { storeId } = args as z.infer<typeof getBudgetStatusSchema>
 
   try {
-    const { getBudget } = await import('./budget-manager')
-    const budget = await getBudget(storeId)
+    const { getBudgetStatus } = await import('./budget-manager')
+    const budget = await getBudgetStatus(storeId)
 
     const utilizationPercent = budget.monthlyLimit
       ? Math.round((budget.currentSpend / budget.monthlyLimit) * 1000) / 10
@@ -430,7 +441,7 @@ async function executeGetBudgetStatus(
     return {
       success: true,
       data: { ...budget, utilizationPercent },
-      summary: `Marketing budget: ${budget.currentSpend} spent of ${budget.monthlyLimit ?? 'unlimited'} limit${utilizationPercent !== null ? ` (${utilizationPercent}% utilized)` : ''}, active campaigns: ${budget.activeCampaigns ?? 0}`,
+      summary: `Marketing budget: ${budget.currentSpend} ${budget.currency} spent of ${budget.monthlyLimit || 'unlimited'} limit${utilizationPercent !== null ? ` (${utilizationPercent}% utilized)` : ''}, warning: ${budget.warningLevel}`,
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
@@ -452,13 +463,13 @@ async function executeGetMarketingROAS(
   const { storeId, period } = args as z.infer<typeof getMarketingROASSchema>
 
   try {
-    const { getROASAnalysis } = await import('./budget-manager')
-    const analysis = await getROASAnalysis(storeId, period)
+    const { getOverallROAS } = await import('./budget-manager')
+    const analysis = await getOverallROAS(storeId, period)
 
     return {
       success: true,
       data: analysis,
-      summary: `ROAS analysis (${period}): overall ROAS ${analysis.overallROAS?.toFixed(2) ?? 'N/A'}, total spend ${analysis.totalSpend ?? 0}, total revenue from ads ${analysis.totalRevenue ?? 0}${analysis.topCampaign ? `, best performer: "${analysis.topCampaign}"` : ''}`,
+      summary: `ROAS analysis (${period}): overall ROAS ${analysis.overallROAS?.toFixed(2) ?? 'N/A'}, total spend ${analysis.totalSpend ?? 0}, total revenue from ads ${analysis.totalRevenue ?? 0}${analysis.topCampaigns?.[0] ? `, best performer: campaign ${analysis.topCampaigns[0].campaignId} (ROAS ${analysis.topCampaigns[0].roas.toFixed(2)})` : ''}`,
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error'

@@ -67,6 +67,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
             size="icon"
             className="lg:hidden ml-auto h-8 w-8"
             onClick={onClose}
+            aria-label="Close sidebar"
           >
             <X className="h-5 w-5" />
           </Button>
@@ -84,8 +85,9 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 key={item.href}
                 href={item.href}
                 onClick={onClose}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   isActive
                     ? 'bg-accent text-accent-foreground'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'

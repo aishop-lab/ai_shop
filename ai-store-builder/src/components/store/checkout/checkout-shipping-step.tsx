@@ -147,18 +147,18 @@ export default function CheckoutShippingStep({
               {errors.state && <p className="text-red-500 text-sm mt-1">{errors.state}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Pincode *</label>
+              <label className="block text-sm font-medium mb-1">Postal Code *</label>
               <input
                 type="text"
                 value={formData.pincode}
                 onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '').slice(0, 6)
+                  const value = e.target.value.replace(/[^\w\d\s\-]/g, '').slice(0, 10)
                   onChange('pincode', value)
                 }}
                 className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${
                   errors.pincode ? 'border-red-500' : ''
                 }`}
-                maxLength={6}
+                maxLength={10}
               />
               {errors.pincode && (
                 <p className="text-red-500 text-sm mt-1">{errors.pincode}</p>

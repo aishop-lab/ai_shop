@@ -243,10 +243,10 @@ export default function OnboardingPage() {
                   placeholder="My Awesome Store"
                   value={formData.storeName}
                   onChange={handleNameChange}
-                  className="border-zinc-800 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-600 focus-visible:ring-zinc-700/50"
+                  className="border-zinc-800 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-zinc-500/30"
                 />
                 {formData.slug && (
-                  <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+                  <p className="flex items-center gap-1.5 text-xs text-zinc-400">
                     <ExternalLink className="h-3 w-3" />
                     <span className="text-zinc-400">{formData.slug}</span>
                     .storeforge.site
@@ -264,8 +264,9 @@ export default function OnboardingPage() {
                       key={cat}
                       type="button"
                       onClick={() => updateField('category', cat)}
+                      aria-pressed={formData.category === cat}
                       className={cn(
-                        'rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors',
+                        'rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400',
                         formData.category === cat
                           ? 'border-zinc-500 bg-zinc-800 text-zinc-100'
                           : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-300'
@@ -348,15 +349,16 @@ export default function OnboardingPage() {
                     key={theme.id}
                     type="button"
                     onClick={() => updateField('theme', theme.id)}
+                    aria-pressed={formData.theme === theme.id}
                     className={cn(
-                      'rounded-xl border p-4 text-left transition-colors',
+                      'rounded-xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400',
                       formData.theme === theme.id
                         ? 'border-zinc-500 bg-zinc-800'
                         : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700'
                     )}
                   >
                     <p className="text-sm font-medium text-zinc-200">{theme.label}</p>
-                    <p className="mt-0.5 text-xs text-zinc-500">{theme.description}</p>
+                    <p className="mt-0.5 text-xs text-zinc-400">{theme.description}</p>
                   </button>
                 ))}
               </div>
@@ -372,8 +374,9 @@ export default function OnboardingPage() {
                     type="button"
                     onClick={() => updateField('primaryColor', color.value)}
                     aria-label={color.name}
+                    aria-pressed={formData.primaryColor === color.value}
                     className={cn(
-                      'h-9 w-9 rounded-full border-2 transition-transform hover:scale-110',
+                      'h-9 w-9 rounded-full border-2 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
                       formData.primaryColor === color.value
                         ? 'border-white scale-110'
                         : 'border-transparent'
@@ -435,7 +438,7 @@ export default function OnboardingPage() {
                     <p className="text-sm font-medium text-zinc-300">
                       Drop product images here
                     </p>
-                    <p className="mt-1 text-xs text-zinc-500">
+                    <p className="mt-1 text-xs text-zinc-400">
                       PNG, JPG, or WEBP up to 10MB
                     </p>
                   </div>
@@ -462,7 +465,7 @@ export default function OnboardingPage() {
                 updateField('productImages', [])
                 handleNext()
               }}
-              className="text-sm text-zinc-500 underline underline-offset-4 transition-colors hover:text-zinc-400"
+              className="text-sm text-zinc-400 underline underline-offset-4 transition-colors hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 rounded"
             >
               Skip — Add products later
             </button>
@@ -520,7 +523,7 @@ export default function OnboardingPage() {
               variant="ghost"
               onClick={handleBack}
               disabled={currentStep === 0}
-              className="text-zinc-400 hover:text-zinc-200 disabled:opacity-0"
+              className="text-zinc-400 hover:text-zinc-200 disabled:invisible"
             >
               <ArrowLeft className="h-4 w-4" />
               Back

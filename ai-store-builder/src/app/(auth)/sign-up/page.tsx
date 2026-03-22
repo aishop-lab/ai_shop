@@ -35,7 +35,7 @@ const signUpSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z
     .string()
-    .regex(/^[6-9]\d{9}$/, 'Invalid phone number (10 digits, starts with 6-9)')
+    .regex(/^\+?[\d\s\-()]{7,15}$/, 'Please enter a valid phone number')
     .optional()
     .or(z.literal('')),
   password: z
@@ -223,7 +223,8 @@ function SignUpContent() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                       >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4" />
@@ -256,7 +257,8 @@ function SignUpContent() {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                        aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                       >
                         {showConfirmPassword ? (
                           <EyeOff className="h-4 w-4" />

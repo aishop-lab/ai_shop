@@ -40,6 +40,12 @@ export default function AgentWorkspacePage() {
   const params = useParams()
   const agentId = params.agentId as string
 
+  const isValidAgent = AGENT_TYPES.includes(agentId as AgentType)
+  const agentType = (isValidAgent ? agentId : 'marketing') as AgentType
+  const colors = AGENT_COLORS[agentType]
+  const displayName = AGENT_DISPLAY_NAMES[agentType]
+  const description = AGENT_DESCRIPTIONS[agentType]
+
   const [activeTab, setActiveTab] = useState<'timeline' | 'chat'>('timeline')
   const [chatInput, setChatInput] = useState('')
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
@@ -54,28 +60,9 @@ export default function AgentWorkspacePage() {
   const chatEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
 
-  // Validate agentId
-  if (!AGENT_TYPES.includes(agentId as AgentType)) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="font-mono text-sm text-[var(--platform-text-muted)]">Agent not found</p>
-          <p className="mt-1 text-xs text-[var(--platform-text-muted)]">
-            Valid agents: {AGENT_TYPES.join(', ')}
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  const agentType = agentId as AgentType
-  const colors = AGENT_COLORS[agentType]
-  const displayName = AGENT_DISPLAY_NAMES[agentType]
-  const description = AGENT_DESCRIPTIONS[agentType]
-
   // Fetch storeId
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
+    if (!isValidAgent) return
     async function fetchStoreId() {
       try {
         const response = await fetch('/api/dashboard/stats')
@@ -88,21 +75,18 @@ export default function AgentWorkspacePage() {
       }
     }
     fetchStoreId()
-  }, [])
+  }, [isValidAgent])
 
   // Real agent state from Supabase with real-time updates
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { agent: agentState, isLoading: isAgentLoading } = useAgentState(storeId, agentType)
 
   // Real activity feed from Supabase with real-time updates
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { actions: realtimeActions, isLoading: isActivityLoading } = useActivityFeed(storeId, {
     agentType,
     limit: 20,
   })
 
   // Fetch paginated actions via API (for "Load more")
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const fetchActions = useCallback(
     async (page: number, append: boolean = false) => {
       if (!agentState?.id) return
@@ -131,7 +115,6 @@ export default function AgentWorkspacePage() {
 
   // Use realtime actions as the primary source; paginated for "load more"
   // When realtime actions load, sync paginated list
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     if (realtimeActions.length > 0 && paginatedActions.length === 0) {
       setPaginatedActions(realtimeActions as unknown as Array<Record<string, unknown>>)
@@ -139,7 +122,6 @@ export default function AgentWorkspacePage() {
   }, [realtimeActions, paginatedActions.length])
 
   // Initial paginated fetch when agent state loads
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     if (agentState?.id) {
       fetchActions(1)
@@ -147,10 +129,23 @@ export default function AgentWorkspacePage() {
   }, [agentState?.id, fetchActions])
 
   // Auto-scroll chat
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages])
+
+  // Validate agentId — rendered after all hooks
+  if (!isValidAgent) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="font-mono text-sm text-[var(--platform-text-muted)]">Agent not found</p>
+          <p className="mt-1 text-xs text-[var(--platform-text-muted)]">
+            Valid agents: {AGENT_TYPES.join(', ')}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   const status = agentState?.status ?? 'idle'
   const statusColors = STATUS_COLORS[status]

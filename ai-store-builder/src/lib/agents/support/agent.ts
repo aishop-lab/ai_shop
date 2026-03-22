@@ -14,7 +14,7 @@ export class SupportAgent extends BaseAgent {
     return this._buildPrompt(state, trigger, null)
   }
 
-  async buildSystemPromptAsync(state: AgentState, trigger: AgentTrigger): Promise<string> {
+  override async buildSystemPromptAsync(state: AgentState, trigger: AgentTrigger): Promise<string> {
     const kb = await buildKnowledgeBase(trigger.storeId)
     const kbText = formatKnowledgeBaseForPrompt(kb)
     return this._buildPrompt(state, trigger, kbText, kb.storeName)

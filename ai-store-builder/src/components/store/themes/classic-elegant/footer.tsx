@@ -37,7 +37,7 @@ export default function ClassicElegantFooter() {
               )}
               {store.whatsapp_number && (
                 <a
-                  href={`https://wa.me/91${store.whatsapp_number}`}
+                  href={`https://wa.me/${store.whatsapp_number}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 border border-gray-300 rounded-full hover:border-green-600 hover:text-green-600 transition-colors"
@@ -75,7 +75,7 @@ export default function ClassicElegantFooter() {
                 <li>
                   <a href={`tel:${store.contact_phone}`} className="flex items-center space-x-3 text-gray-600 hover:text-[var(--color-primary)]">
                     <Phone className="w-4 h-4" />
-                    <span>+91 {store.contact_phone}</span>
+                    <span>{store.contact_phone}</span>
                   </a>
                 </li>
               )}
@@ -83,8 +83,26 @@ export default function ClassicElegantFooter() {
           </div>
         </div>
         
-        <div className="mt-16 pt-8 border-t border-gray-200 text-center text-gray-500 text-sm">
-          <p>&copy; {currentYear} {store.name}. All rights reserved.</p>
+        <div className="mt-16 pt-8 border-t border-gray-200">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <p className="text-gray-500 text-sm">
+              &copy; {currentYear} {store.name}. All rights reserved.
+            </p>
+            <div className="flex space-x-6 text-sm text-gray-500">
+              <Link href={`${baseUrl}/policies/shipping`} className="hover:text-[var(--color-primary)] transition-colors">
+                Shipping
+              </Link>
+              <Link href={`${baseUrl}/policies/returns`} className="hover:text-[var(--color-primary)] transition-colors">
+                Returns
+              </Link>
+              <Link href={`${baseUrl}/policies/privacy`} className="hover:text-[var(--color-primary)] transition-colors">
+                Privacy
+              </Link>
+              <Link href={`${baseUrl}/policies/terms`} className="hover:text-[var(--color-primary)] transition-colors">
+                Terms
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </footer>

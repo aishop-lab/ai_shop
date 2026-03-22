@@ -24,25 +24,25 @@ interface StatusConfig {
 
 const orderStatusConfig: Record<OrderStatus, StatusConfig> = {
   // Database status values
-  unfulfilled: { color: 'bg-yellow-100 text-yellow-800', label: 'New Order' },
-  processing: { color: 'bg-purple-100 text-purple-800', label: 'Processing' },
-  packed: { color: 'bg-blue-100 text-blue-800', label: 'Packed' },
-  shipped: { color: 'bg-indigo-100 text-indigo-800', label: 'Shipped' },
-  out_for_delivery: { color: 'bg-cyan-100 text-cyan-800', label: 'Out for Delivery' },
-  delivered: { color: 'bg-green-100 text-green-800', label: 'Delivered' },
-  returned: { color: 'bg-orange-100 text-orange-800', label: 'Returned' },
-  cancelled: { color: 'bg-red-100 text-red-800', label: 'Cancelled' },
+  unfulfilled: { color: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400', label: 'New Order' },
+  processing: { color: 'bg-purple-500/15 text-purple-700 dark:text-purple-400', label: 'Processing' },
+  packed: { color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400', label: 'Packed' },
+  shipped: { color: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400', label: 'Shipped' },
+  out_for_delivery: { color: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-400', label: 'Out for Delivery' },
+  delivered: { color: 'bg-green-500/15 text-green-700 dark:text-green-400', label: 'Delivered' },
+  returned: { color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400', label: 'Returned' },
+  cancelled: { color: 'bg-red-500/15 text-red-700 dark:text-red-400', label: 'Cancelled' },
   // Legacy status values
-  pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
-  confirmed: { color: 'bg-blue-100 text-blue-800', label: 'Confirmed' },
-  refunded: { color: 'bg-gray-100 text-gray-800', label: 'Refunded' }
+  pending: { color: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400', label: 'Pending' },
+  confirmed: { color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400', label: 'Confirmed' },
+  refunded: { color: 'bg-gray-500/15 text-gray-700 dark:text-gray-400', label: 'Refunded' }
 }
 
 const paymentStatusConfig: Record<PaymentStatus, StatusConfig> = {
-  pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Payment Pending' },
-  paid: { color: 'bg-green-100 text-green-800', label: 'Paid' },
-  failed: { color: 'bg-red-100 text-red-800', label: 'Payment Failed' },
-  refunded: { color: 'bg-gray-100 text-gray-800', label: 'Refunded' }
+  pending: { color: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400', label: 'Payment Pending' },
+  paid: { color: 'bg-green-500/15 text-green-700 dark:text-green-400', label: 'Paid' },
+  failed: { color: 'bg-red-500/15 text-red-700 dark:text-red-400', label: 'Payment Failed' },
+  refunded: { color: 'bg-gray-500/15 text-gray-700 dark:text-gray-400', label: 'Refunded' }
 }
 
 interface OrderStatusBadgeProps {

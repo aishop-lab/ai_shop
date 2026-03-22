@@ -159,18 +159,18 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
         className={[
           'fixed bottom-6 right-6 z-40',
           'w-14 h-14 rounded-full',
-          'bg-gradient-to-br from-blue-500 to-purple-600',
-          'shadow-lg shadow-blue-500/30',
+          'bg-[var(--color-primary)]',
+          'shadow-lg shadow-[var(--color-primary)]/30',
           'flex items-center justify-center',
           'transition-all duration-300 hover:scale-110',
-          'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+          'focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2',
           isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100',
         ].join(' ')}
       >
         <MessageCircle className="h-6 w-6 text-white" />
 
         {/* Pulse ring to draw attention */}
-        <span className="absolute inset-0 rounded-full bg-blue-400 opacity-30 animate-ping" />
+        <span className="absolute inset-0 rounded-full bg-[var(--color-primary)] opacity-30 animate-ping" />
       </button>
 
       {/* Chat panel */}
@@ -192,7 +192,7 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
         ].join(' ')}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-t-2xl">
+        <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-primary)] rounded-t-2xl">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <MessageCircle className="h-4 w-4 text-white" />
@@ -215,8 +215,8 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
         <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
           {messages.length === 0 && !isLoading && (
             <div className="text-center py-8">
-              <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3">
-                <MessageCircle className="h-6 w-6 text-blue-400" />
+              <div className="w-12 h-12 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center mx-auto mb-3">
+                <MessageCircle className="h-6 w-6 text-[var(--color-primary)]" />
               </div>
               <p className="text-gray-500 text-sm font-medium">How can we help you?</p>
               <p className="text-gray-400 text-xs mt-1">Ask us anything — we&apos;re here to help.</p>
@@ -235,7 +235,7 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
                 className={[
                   'px-3 py-2 rounded-2xl text-sm leading-relaxed',
                   msg.role === 'customer'
-                    ? 'bg-blue-500 text-white rounded-br-sm'
+                    ? 'bg-[var(--color-primary)] text-white rounded-br-sm'
                     : 'bg-gray-100 text-gray-800 rounded-bl-sm',
                 ].join(' ')}
               >
@@ -275,7 +275,7 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
               'flex-1 px-3 py-2 text-sm',
               'bg-gray-50 rounded-xl',
               'border border-gray-200',
-              'focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300',
+              'focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]',
               'placeholder:text-gray-400',
               'disabled:opacity-50',
               'transition-colors',
@@ -287,9 +287,9 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
             aria-label="Send message"
             className={[
               'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0',
-              'bg-blue-500 hover:bg-blue-600',
+              'bg-[var(--color-primary)] hover:opacity-90',
               'transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-1',
+              'focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:ring-offset-1',
               'disabled:opacity-40 disabled:cursor-not-allowed',
             ].join(' ')}
           >

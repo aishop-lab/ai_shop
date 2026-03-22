@@ -299,7 +299,7 @@ function getSocialLinks(store: Store): string[] {
     links.push(store.facebook_url)
   }
   if (store.whatsapp_number) {
-    links.push(`https://wa.me/91${store.whatsapp_number}`)
+    links.push(`https://wa.me/${store.whatsapp_number}`)
   }
   
   return links

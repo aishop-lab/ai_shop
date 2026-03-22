@@ -33,7 +33,7 @@ export default function StoreError({
             onClick={reset}
             size="lg"
             className="gap-2 w-full sm:w-auto"
-            style={{ backgroundColor: 'var(--store-primary, #2563eb)' }}
+            style={{ backgroundColor: 'var(--color-primary, #2563eb)' }}
           >
             <RefreshCw className="h-5 w-5" />
             Try Again

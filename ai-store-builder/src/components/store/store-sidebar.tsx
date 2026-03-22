@@ -180,7 +180,7 @@ export default function StoreSidebar() {
               </li>
               <li>
                 <Link
-                  href={`${baseUrl}/cart`}
+                  href={`${baseUrl}/account/wishlist`}
                   onClick={close}
                   className="flex items-center space-x-3 px-2 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-[var(--color-primary)] transition-colors"
                 >
@@ -227,7 +227,7 @@ export default function StoreSidebar() {
                   className="flex items-center space-x-3 px-2 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-[var(--color-primary)] transition-colors"
                 >
                   <HelpCircle className="w-5 h-5" />
-                  <span style={{ fontFamily: 'var(--font-body)' }}>FAQ</span>
+                  <span style={{ fontFamily: 'var(--font-body)' }}>About Us</span>
                 </Link>
               </li>
             </ul>

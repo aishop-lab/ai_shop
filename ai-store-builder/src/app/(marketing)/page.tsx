@@ -127,7 +127,7 @@ const pricingTiers = [
       'API access',
     ],
     cta: 'Contact Sales',
-    href: '/contact',
+    href: '/sign-up?plan=business',
     popular: false,
   },
 ]
@@ -301,19 +301,19 @@ export default function LandingPage() {
           <div className="space-y-3">
             <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <p className="text-zinc-500 text-sm mb-1">Hiring an agency</p>
+                <p className="text-zinc-400 text-sm mb-1">Hiring an agency</p>
                 <p className="text-zinc-300 font-medium">Marketing, support, analytics staff</p>
               </div>
-              <span className="text-zinc-500 font-semibold text-lg whitespace-nowrap line-through decoration-zinc-700">
+              <span className="text-zinc-400 font-semibold text-lg whitespace-nowrap line-through decoration-zinc-600">
                 &#8377;50,000 &ndash; &#8377;2,00,000/mo
               </span>
             </div>
             <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <p className="text-zinc-500 text-sm mb-1">Shopify + 6-12 apps</p>
+                <p className="text-zinc-400 text-sm mb-1">Shopify + 6-12 apps</p>
                 <p className="text-zinc-300 font-medium">Abandoned cart, SEO, analytics, support plugins</p>
               </div>
-              <span className="text-zinc-500 font-semibold text-lg whitespace-nowrap line-through decoration-zinc-700">
+              <span className="text-zinc-400 font-semibold text-lg whitespace-nowrap line-through decoration-zinc-600">
                 &#8377;15,000 &ndash; &#8377;50,000/mo
               </span>
             </div>
@@ -362,7 +362,7 @@ export default function LandingPage() {
                   <h3 className="text-lg font-semibold text-white mb-3">{tier.name}</h3>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl sm:text-4xl font-bold text-white">&#8377;{tier.price}</span>
-                    <span className="text-zinc-500 text-sm">{tier.period}</span>
+                    <span className="text-zinc-400 text-sm">{tier.period}</span>
                   </div>
                 </div>
                 <ul className="space-y-3 mb-8">
@@ -421,16 +421,14 @@ export default function LandingPage() {
               </div>
               <span className="font-semibold text-zinc-300">StoreForge</span>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-zinc-500">
-              <Link href="#" className="hover:text-zinc-300 transition-colors">Product</Link>
-              <Link href="#" className="hover:text-zinc-300 transition-colors">Pricing</Link>
-              <Link href="#" className="hover:text-zinc-300 transition-colors">Blog</Link>
-              <Link href="#" className="hover:text-zinc-300 transition-colors">Support</Link>
-              <Link href="/privacy" className="hover:text-zinc-300 transition-colors">Privacy</Link>
-              <Link href="/terms" className="hover:text-zinc-300 transition-colors">Terms</Link>
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-zinc-400">
+              <Link href="/sign-up" className="hover:text-zinc-200 transition-colors">Get Started</Link>
+              <Link href="/sign-in" className="hover:text-zinc-200 transition-colors">Sign In</Link>
+              <span className="text-zinc-500 cursor-default" title="Coming soon">Privacy</span>
+              <span className="text-zinc-500 cursor-default" title="Coming soon">Terms</span>
             </div>
-            <p className="text-sm text-zinc-600">
-              &copy; 2026 StoreForge. Built in India.
+            <p className="text-sm text-zinc-400">
+              &copy; {new Date().getFullYear()} StoreForge. Built in India.
             </p>
           </div>
         </div>

@@ -37,7 +37,7 @@ export default function PlayfulBrightFooter() {
               )}
               {store.whatsapp_number && (
                 <a
-                  href={`https://wa.me/91${store.whatsapp_number}`}
+                  href={`https://wa.me/${store.whatsapp_number}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 bg-white/20 rounded-xl hover:bg-green-500 transition-all"
@@ -75,7 +75,7 @@ export default function PlayfulBrightFooter() {
                 <li>
                   <a href={`tel:${store.contact_phone}`} className="flex items-center space-x-2 opacity-80 hover:opacity-100">
                     <Phone className="w-4 h-4" />
-                    <span>+91 {store.contact_phone}</span>
+                    <span>{store.contact_phone}</span>
                   </a>
                 </li>
               )}
@@ -83,10 +83,26 @@ export default function PlayfulBrightFooter() {
           </div>
         </div>
         
-        <div className="mt-12 pt-8 border-t border-current/20 text-center opacity-60 text-sm">
-          <p className="flex items-center justify-center">
-            Made with <Heart className="w-4 h-4 mx-1 text-red-400 fill-current" /> by {store.name} &copy; {currentYear}
-          </p>
+        <div className="mt-12 pt-8 border-t border-current/20">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <p className="flex items-center opacity-60 text-sm">
+              Made with <Heart className="w-4 h-4 mx-1 text-red-400 fill-current" /> by {store.name} &copy; {currentYear}
+            </p>
+            <div className="flex space-x-6 text-sm opacity-60">
+              <Link href={`${baseUrl}/policies/shipping`} className="hover:opacity-100 transition-opacity">
+                Shipping
+              </Link>
+              <Link href={`${baseUrl}/policies/returns`} className="hover:opacity-100 transition-opacity">
+                Returns
+              </Link>
+              <Link href={`${baseUrl}/policies/privacy`} className="hover:opacity-100 transition-opacity">
+                Privacy
+              </Link>
+              <Link href={`${baseUrl}/policies/terms`} className="hover:opacity-100 transition-opacity">
+                Terms
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </footer>

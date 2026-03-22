@@ -42,6 +42,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             size="icon"
             className="h-9 w-9"
             onClick={() => setSidebarOpen(true)}
+            aria-label="Open admin sidebar"
           >
             <Menu className="h-5 w-5" />
           </Button>

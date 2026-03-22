@@ -149,7 +149,7 @@ export default function ProductsPage() {
           </p>
         </div>
         <Link
-          href="/platform/products/new"
+          href="/dashboard/products/new"
           className={cn(
             'flex items-center gap-1.5 rounded-lg px-3 py-1.5',
             'bg-[var(--platform-accent)] text-white text-xs font-medium',
@@ -267,7 +267,7 @@ function ProductRow({ product }: ProductRowProps) {
   const primaryImage = sortedImages[0]?.thumbnail_url || sortedImages[0]?.original_url || null
 
   return (
-    <Link href={`/platform/products/${product.id}`} className="contents">
+    <Link href={`/dashboard/products/${product.id}`} className="contents">
       <tr
         className={cn(
           'cursor-pointer transition-colors',

@@ -402,7 +402,7 @@ export default function StoreThankYouPage() {
           <>
             {' '}or{' '}
             <a
-              href={`https://wa.me/91${store.whatsapp_number}`}
+              href={`https://wa.me/${store.whatsapp_number}`}
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium hover:underline"

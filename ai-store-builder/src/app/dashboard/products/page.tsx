@@ -282,6 +282,8 @@ export default function ProductsPage() {
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
             size="icon"
             onClick={() => setViewMode('grid')}
+            aria-label="Grid view"
+            aria-pressed={viewMode === 'grid'}
           >
             <LayoutGrid className="w-4 h-4" />
           </Button>
@@ -289,6 +291,8 @@ export default function ProductsPage() {
             variant={viewMode === 'list' ? 'secondary' : 'ghost'}
             size="icon"
             onClick={() => setViewMode('list')}
+            aria-label="List view"
+            aria-pressed={viewMode === 'list'}
           >
             <List className="w-4 h-4" />
           </Button>
@@ -435,9 +439,9 @@ function ProductListItem({
 
       {/* Status */}
       <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${
-        product.status === 'published' 
-          ? 'bg-emerald-500/15 text-emerald-300'
-          : 'bg-yellow-500/15 text-yellow-300'
+        product.status === 'published'
+          ? 'bg-emerald-500/15 text-emerald-400'
+          : 'bg-yellow-500/15 text-yellow-400'
       }`}>
         {product.status}
       </span>

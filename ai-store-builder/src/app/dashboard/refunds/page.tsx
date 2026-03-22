@@ -139,21 +139,21 @@ function RefundsPageContent() {
     switch (status) {
       case 'processed':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-500/15 text-green-700 dark:text-green-400">
             <CheckCircle className="h-3 w-3" />
             Processed
           </span>
         )
       case 'pending':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/15 text-yellow-700 dark:text-yellow-400">
             <Clock className="h-3 w-3" />
             Pending
           </span>
         )
       case 'failed':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-500/15 text-red-700 dark:text-red-400">
             <XCircle className="h-3 w-3" />
             Failed
           </span>
@@ -343,7 +343,7 @@ function RefundsPageContent() {
                       </td>
                       <td className="px-4 py-3">
                         <Link href={`/dashboard/orders/${refund.order_id}`}>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" aria-label="View order">
                             <ExternalLink className="h-4 w-4" />
                           </Button>
                         </Link>

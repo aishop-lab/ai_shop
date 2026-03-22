@@ -171,7 +171,7 @@ export default function StoreAboutPage() {
               className="flex items-center gap-2 text-gray-700 hover:text-[var(--color-primary)]"
             >
               <Phone className="w-5 h-5" />
-              <span>+91 {store.contact_phone}</span>
+              <span>{store.contact_phone}</span>
             </a>
           )}
           {store.instagram_handle && (
@@ -187,7 +187,7 @@ export default function StoreAboutPage() {
           )}
           {store.whatsapp_number && (
             <a
-              href={`https://wa.me/91${store.whatsapp_number}`}
+              href={`https://wa.me/${store.whatsapp_number}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-gray-700 hover:text-green-600"

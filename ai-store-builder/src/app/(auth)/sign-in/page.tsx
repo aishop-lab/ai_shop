@@ -129,12 +129,17 @@ export default function SignInPage() {
                 <FormItem>
                   <div className="flex items-center justify-between">
                     <FormLabel>Password</FormLabel>
-                    <Link
-                      href="/forgot-password"
-                      className="text-sm text-muted-foreground hover:text-primary"
+                    <a
+                      href="javascript:void(0)"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        // TODO: Implement password reset flow
+                        alert('Password reset is coming soon. Please contact support if you need help.')
+                      }}
+                      className="text-sm text-muted-foreground hover:text-primary cursor-pointer"
                     >
                       Forgot password?
-                    </Link>
+                    </a>
                   </div>
                   <FormControl>
                     <div className="relative">
@@ -147,7 +152,8 @@ export default function SignInPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                       >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4" />

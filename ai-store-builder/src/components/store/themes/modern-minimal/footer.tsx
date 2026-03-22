@@ -43,7 +43,7 @@ export default function ModernMinimalFooter() {
               )}
               {store.whatsapp_number && (
                 <a
-                  href={`https://wa.me/91${store.whatsapp_number}`}
+                  href={`https://wa.me/${store.whatsapp_number}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 bg-gray-800 rounded-lg hover:bg-green-600 transition-colors"
@@ -109,14 +109,14 @@ export default function ModernMinimalFooter() {
                     className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
                   >
                     <Phone className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-sm">+91 {store.contact_phone}</span>
+                    <span className="text-sm">{store.contact_phone}</span>
                   </a>
                 </li>
               )}
               {store.whatsapp_number && (
                 <li>
                   <a
-                    href={`https://wa.me/91${store.whatsapp_number}`}
+                    href={`https://wa.me/${store.whatsapp_number}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"

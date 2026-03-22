@@ -38,12 +38,16 @@ export function AIBotPanel() {
         <div
           className="fixed inset-0 bg-black/20 z-40 lg:hidden"
           onClick={() => setIsOpen(false)}
+          aria-hidden="true"
         />
       )}
 
       {/* Panel */}
       <div
         ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="AI Assistant"
         className={cn(
           'fixed top-0 right-0 h-full w-full sm:w-[400px] bg-background border-l shadow-xl z-50',
           'flex flex-col',

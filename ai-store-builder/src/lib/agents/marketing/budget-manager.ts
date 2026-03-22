@@ -683,20 +683,21 @@ export async function syncSpendFromPlatforms(storeId: string): Promise<{
     for (const campaign of googleCampaigns) {
       try {
         const insights = await getGoogleInsights(storeId, campaign.id)
-        if (insights && typeof insights.spend === 'number' && insights.spend > 0) {
+        if (insights && typeof insights.cost === 'number' && insights.cost > 0) {
           const today = new Date().toISOString().split('T')[0]
+          const spendAmount = insights.cost / 1_000_000 // cost is in micros
 
           await recordSpend({
             storeId,
             platform: 'google',
             campaignId: campaign.id,
-            amount: insights.spend,
+            amount: spendAmount,
             currency,
             date: today,
             type: 'ad_spend',
           })
 
-          googleSpend += insights.spend
+          googleSpend += spendAmount
           syncedRecords++
         }
       } catch (campaignErr) {

@@ -67,7 +67,7 @@ export function StoreStatusCard({ store }: StoreStatusCardProps) {
             </Button>
           </Link>
           <Link href="/dashboard/settings">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Store settings">
               <Settings className="h-4 w-4" />
             </Button>
           </Link>

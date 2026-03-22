@@ -53,7 +53,7 @@ export default function CustomerWishlistPage() {
   const router = useRouter()
   const storeSlug = params.storeSlug as string
   const { isLoading: customerLoading, isAuthenticated } = useCustomer()
-  const { store } = useStore()
+  const { store, addToCart, formatPrice } = useStore()
 
   const [wishlist, setWishlist] = useState<WishlistItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -109,40 +109,35 @@ export default function CustomerWishlistPage() {
   }
 
   const handleAddToCart = (product: WishlistProduct) => {
-    // Get existing cart from localStorage
-    const cartKey = `cart_${store?.id}`
-    const existingCart = localStorage.getItem(cartKey)
-    const cart = existingCart ? JSON.parse(existingCart) : []
-
-    // Check if product already in cart
-    const existingIndex = cart.findIndex((item: { productId: string }) => item.productId === product.id)
-
-    if (existingIndex >= 0) {
-      cart[existingIndex].quantity += 1
-    } else {
-      cart.push({
-        productId: product.id,
-        title: product.title,
-        price: product.price,
-        quantity: 1,
-        image: product.product_images?.[0]?.url
-      })
+    // Map wishlist product shape to the Product type expected by addToCart
+    const productForCart = {
+      id: product.id,
+      store_id: store.id,
+      title: product.title,
+      slug: product.slug,
+      description: '',
+      price: product.price,
+      compare_at_price: product.compare_at_price,
+      quantity: product.quantity,
+      track_quantity: true,
+      featured: false,
+      status: product.status as 'active' | 'draft' | 'published',
+      images: (product.product_images || []).map((img, i) => ({
+        id: `${product.id}-${i}`,
+        product_id: product.id,
+        url: img.url,
+        alt_text: img.alt_text,
+        position: i,
+      })),
+      requires_shipping: true,
+      created_at: '',
+      updated_at: '',
     }
-
-    localStorage.setItem(cartKey, JSON.stringify(cart))
+    addToCart(productForCart as import('@/lib/types/store').Product)
     toast.success('Added to cart')
-
-    // Dispatch event for cart update
-    window.dispatchEvent(new CustomEvent('cart-updated'))
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0
-    }).format(amount)
-  }
+  const formatCurrency = (amount: number) => formatPrice(amount)
 
   if (customerLoading || isLoading) {
     return (

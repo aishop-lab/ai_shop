@@ -41,15 +41,31 @@ export default function MinimalZenFooter() {
             <h4 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-4">Contact</h4>
             <ul className="space-y-3 text-sm text-gray-500">
               {store.contact_email && <li>{store.contact_email}</li>}
-              {store.contact_phone && <li>+91 {store.contact_phone}</li>}
+              {store.contact_phone && <li>{store.contact_phone}</li>}
             </ul>
           </div>
         </div>
         
-        <div className="mt-16 pt-8 border-t border-gray-100 text-center">
-          <p className="text-xs text-gray-400">
-            &copy; {currentYear} {store.name}
-          </p>
+        <div className="mt-16 pt-8 border-t border-gray-100">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <p className="text-xs text-gray-400">
+              &copy; {currentYear} {store.name}
+            </p>
+            <div className="flex space-x-6 text-xs text-gray-400">
+              <Link href={`${baseUrl}/policies/shipping`} className="hover:text-gray-900 transition-colors">
+                Shipping
+              </Link>
+              <Link href={`${baseUrl}/policies/returns`} className="hover:text-gray-900 transition-colors">
+                Returns
+              </Link>
+              <Link href={`${baseUrl}/policies/privacy`} className="hover:text-gray-900 transition-colors">
+                Privacy
+              </Link>
+              <Link href={`${baseUrl}/policies/terms`} className="hover:text-gray-900 transition-colors">
+                Terms
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </footer>

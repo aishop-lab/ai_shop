@@ -55,10 +55,11 @@ export function AIBotTrigger({ variant = 'floating', className }: AIBotTriggerPr
         'shadow-lg shadow-purple-500/25',
         'flex items-center justify-center',
         'transition-all duration-300 hover:scale-110',
-        'focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2',
         isOpen && 'scale-0 opacity-0',
         className
       )}
+      aria-label="Open AI Assistant (⌘K)"
       title="Open AI Assistant (⌘K)"
     >
       <Bot className="h-6 w-6 text-white" />

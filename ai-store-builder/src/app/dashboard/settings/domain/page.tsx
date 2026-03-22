@@ -252,9 +252,9 @@ export default function DomainSettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <Globe className="h-5 w-5 text-green-600" />
-              <span className="font-mono text-green-800">{subdomain}</span>
+            <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+              <Globe className="h-5 w-5 text-emerald-400" />
+              <span className="font-mono text-emerald-300">{subdomain}</span>
               <a
                 href={`https://${subdomain}`}
                 target="_blank"
@@ -286,18 +286,18 @@ export default function DomainSettingsPage() {
                 {/* Domain Status */}
                 <div className={`flex items-center gap-2 p-3 rounded-lg border ${
                   domainInfo.verified
-                    ? 'bg-green-50 border-green-200'
-                    : 'bg-yellow-50 border-yellow-200'
+                    ? 'bg-emerald-500/10 border-emerald-500/20'
+                    : 'bg-yellow-500/10 border-yellow-500/20'
                 }`}>
                   {domainInfo.verified ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400" />
                   ) : (
-                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                    <AlertTriangle className="h-5 w-5 text-yellow-400" />
                   )}
-                  <span className={`font-mono ${domainInfo.verified ? 'text-green-800' : 'text-yellow-800'}`}>
+                  <span className={`font-mono ${domainInfo.verified ? 'text-emerald-300' : 'text-yellow-300'}`}>
                     {domainInfo.domain}
                   </span>
-                  <span className={`ml-2 text-sm ${domainInfo.verified ? 'text-green-600' : 'text-yellow-600'}`}>
+                  <span className={`ml-2 text-sm ${domainInfo.verified ? 'text-emerald-400' : 'text-yellow-400'}`}>
                     {domainInfo.verified ? 'Verified' : 'Pending verification'}
                   </span>
                   {domainInfo.verified && (
@@ -320,7 +320,7 @@ export default function DomainSettingsPage() {
                     {/* Progress indicator */}
                     {(instructions?.txtRecord || instructions?.dnsRecord) && (
                       <div className="flex items-center gap-2 text-sm">
-                        <div className={`flex items-center gap-1 ${verificationStep === 'txt' ? 'text-yellow-600' : verificationStep === 'dns' || verificationStep === 'vercel' || !verificationStep ? 'text-green-600' : 'text-muted-foreground'}`}>
+                        <div className={`flex items-center gap-1 ${verificationStep === 'txt' ? 'text-yellow-400' : verificationStep === 'dns' || verificationStep === 'vercel' || !verificationStep ? 'text-emerald-400' : 'text-muted-foreground'}`}>
                           {verificationStep === 'txt' ? (
                             <XCircle className="h-4 w-4" />
                           ) : (
@@ -329,18 +329,18 @@ export default function DomainSettingsPage() {
                           <span>Ownership</span>
                         </div>
                         <div className="h-px w-4 bg-muted" />
-                        <div className={`flex items-center gap-1 ${verificationStep === 'dns' ? 'text-yellow-600' : verificationStep === 'vercel' || !verificationStep ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
+                        <div className={`flex items-center gap-1 ${verificationStep === 'dns' ? 'text-yellow-400' : verificationStep === 'vercel' || !verificationStep ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
                           {verificationStep === 'dns' ? (
                             <XCircle className="h-4 w-4" />
                           ) : verificationStep === 'vercel' ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                           ) : (
                             <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
                           )}
                           <span>DNS</span>
                         </div>
                         <div className="h-px w-4 bg-muted" />
-                        <div className={`flex items-center gap-1 ${verificationStep === 'vercel' ? 'text-yellow-600' : 'text-muted-foreground'}`}>
+                        <div className={`flex items-center gap-1 ${verificationStep === 'vercel' ? 'text-yellow-400' : 'text-muted-foreground'}`}>
                           {verificationStep === 'vercel' ? (
                             <XCircle className="h-4 w-4" />
                           ) : (
@@ -353,20 +353,20 @@ export default function DomainSettingsPage() {
 
                     {/* Step 1: TXT Record for Verification */}
                     {instructions?.txtRecord && (
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
-                        <p className="text-sm font-medium text-blue-800">Step 1: Verify Domain Ownership</p>
-                        <p className="text-sm text-blue-600">
+                      <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg space-y-3">
+                        <p className="text-sm font-medium text-blue-300">Step 1: Verify Domain Ownership</p>
+                        <p className="text-sm text-blue-400">
                           Add a TXT record to prove you own this domain:
                         </p>
 
                         <div className="grid gap-2">
-                          <div className="flex items-center justify-between p-2 bg-white rounded border border-blue-200">
+                          <div className="flex items-center justify-between p-2 bg-background rounded border">
                             <div>
                               <span className="text-xs text-muted-foreground">Type</span>
                               <p className="font-mono text-sm">{instructions.txtRecord.type}</p>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between p-2 bg-white rounded border border-blue-200">
+                          <div className="flex items-center justify-between p-2 bg-background rounded border">
                             <div className="flex-1">
                               <span className="text-xs text-muted-foreground">Name/Host</span>
                               <p className="font-mono text-sm">{instructions.txtRecord.name}</p>
@@ -379,7 +379,7 @@ export default function DomainSettingsPage() {
                               <Copy className="h-4 w-4" />
                             </Button>
                           </div>
-                          <div className="flex items-center justify-between p-2 bg-white rounded border border-blue-200">
+                          <div className="flex items-center justify-between p-2 bg-background rounded border">
                             <div className="flex-1 min-w-0">
                               <span className="text-xs text-muted-foreground">Value</span>
                               <p className="font-mono text-sm truncate">{instructions.txtRecord.value}</p>
