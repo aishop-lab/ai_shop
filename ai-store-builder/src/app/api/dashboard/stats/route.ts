@@ -17,7 +17,7 @@ export async function GET() {
     // Get user's store with blueprint for category info (use limit(1) instead of single() for robustness)
     const { data: stores, error: storeError } = await supabase
       .from('stores')
-      .select('id, name, slug, status, logo_url, blueprint')
+      .select('id, name, slug, status, logo_url, blueprint, marketing_pixels')
       .eq('owner_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)

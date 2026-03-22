@@ -28,9 +28,31 @@ import {
   Bell,
   Import
 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { RebuildStoreDialog } from '@/components/dashboard/rebuild-store-dialog'
 import { ColorAccessibilityChecker } from '@/components/ui/color-accessibility-checker'
 import { LogoEditor } from '@/components/dashboard/logo-editor'
+
+// Preset colors matching onboarding page
+const PRESET_COLORS = [
+  { name: 'Indigo', value: '#6366f1' },
+  { name: 'Emerald', value: '#10b981' },
+  { name: 'Rose', value: '#f43f5e' },
+  { name: 'Amber', value: '#f59e0b' },
+  { name: 'Cyan', value: '#06b6d4' },
+  { name: 'Purple', value: '#a855f7' },
+  { name: 'Orange', value: '#f97316' },
+  { name: 'Blue', value: '#3b82f6' },
+] as const
 
 // Supported currencies for international stores
 const CURRENCIES = [
@@ -93,6 +115,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [store, setStore] = useState<StoreSettings | null>(null)
+  const [currencyDialogOpen, setCurrencyDialogOpen] = useState(false)
+  const [pendingCurrency, setPendingCurrency] = useState<string | null>(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -202,6 +226,22 @@ export default function SettingsPage() {
     }
   }
 
+  // DB-08: Currency change confirmation
+  const handleCurrencyChange = (newCurrency: string) => {
+    if (newCurrency !== formData.currency) {
+      setPendingCurrency(newCurrency)
+      setCurrencyDialogOpen(true)
+    }
+  }
+
+  const confirmCurrencyChange = () => {
+    if (pendingCurrency) {
+      setFormData({ ...formData, currency: pendingCurrency })
+    }
+    setCurrencyDialogOpen(false)
+    setPendingCurrency(null)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -240,22 +280,12 @@ export default function SettingsPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Link href={`/${store.slug}`} target="_blank">
-            <Button variant="outline">
-              View Store
-              <ExternalLink className="h-3 w-3 ml-1" />
-            </Button>
-          </Link>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Save Changes
+        <Link href={`/${store.slug}`} target="_blank">
+          <Button variant="outline">
+            View Store
+            <ExternalLink className="h-3 w-3 ml-1" />
           </Button>
-        </div>
+        </Link>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -279,6 +309,7 @@ export default function SettingsPage() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="My Store"
               />
+              <p className="text-xs text-muted-foreground">Your store&apos;s display name</p>
             </div>
 
             <div className="space-y-2">
@@ -289,6 +320,7 @@ export default function SettingsPage() {
                 onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
                 placeholder="Your store tagline"
               />
+              <p className="text-xs text-muted-foreground">A short phrase shown on your store homepage</p>
             </div>
 
             <div className="space-y-2">
@@ -300,6 +332,7 @@ export default function SettingsPage() {
                 placeholder="Describe your store..."
                 rows={3}
               />
+              <p className="text-xs text-muted-foreground">Used for SEO and your store&apos;s about section</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -312,6 +345,7 @@ export default function SettingsPage() {
                   onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
                   placeholder="contact@store.com"
                 />
+                <p className="text-xs text-muted-foreground">Customer inquiries will be sent here</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="contact_phone">Contact Phone</Label>
@@ -321,6 +355,7 @@ export default function SettingsPage() {
                   onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
                   placeholder="+91 98765 43210"
                 />
+                <p className="text-xs text-muted-foreground">Shown on your store for customer support</p>
               </div>
             </div>
 
@@ -333,6 +368,7 @@ export default function SettingsPage() {
                   onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
                   placeholder="+91 98765 43210"
                 />
+                <p className="text-xs text-muted-foreground">Adds a WhatsApp chat button to your store</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="instagram">Instagram</Label>
@@ -342,6 +378,7 @@ export default function SettingsPage() {
                   onChange={(e) => setFormData({ ...formData, instagram_handle: e.target.value })}
                   placeholder="@yourstore"
                 />
+                <p className="text-xs text-muted-foreground">Links to your Instagram profile</p>
               </div>
             </div>
 
@@ -349,7 +386,7 @@ export default function SettingsPage() {
               <Label htmlFor="currency">Display Currency</Label>
               <Select
                 value={formData.currency}
-                onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                onValueChange={handleCurrencyChange}
               >
                 <SelectTrigger id="currency">
                   <SelectValue placeholder="Select currency" />
@@ -363,7 +400,7 @@ export default function SettingsPage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Currency displayed for product prices
+                Currency displayed for product prices. Affects how prices appear on your store.
               </p>
             </div>
           </CardContent>
@@ -381,11 +418,29 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="primary_color">Primary Color</Label>
-              <div className="flex gap-2">
+            <div className="space-y-3">
+              <Label>Primary Color</Label>
+              <div className="flex flex-wrap gap-2">
+                {PRESET_COLORS.map((color) => (
+                  <button
+                    key={color.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, primary_color: color.value })}
+                    aria-label={color.name}
+                    aria-pressed={formData.primary_color === color.value}
+                    className={`h-9 w-9 rounded-full border-2 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                      formData.primary_color === color.value
+                        ? 'border-foreground scale-110'
+                        : 'border-transparent'
+                    }`}
+                    style={{ backgroundColor: color.value }}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+              <div className="flex gap-2 items-center">
                 <div
-                  className="w-10 h-10 rounded-lg border cursor-pointer"
+                  className="w-9 h-9 rounded-full border-2 border-border cursor-pointer shrink-0"
                   style={{ backgroundColor: formData.primary_color }}
                   onClick={() => document.getElementById('color-picker')?.click()}
                 />
@@ -394,7 +449,7 @@ export default function SettingsPage() {
                   type="color"
                   value={formData.primary_color}
                   onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
-                  className="w-20 h-10 p-1"
+                  className="w-14 h-9 p-0.5"
                 />
                 <Input
                   value={formData.primary_color}
@@ -403,7 +458,8 @@ export default function SettingsPage() {
                   className="flex-1"
                 />
               </div>
-              <ColorAccessibilityChecker primaryColor={formData.primary_color} className="mt-3" />
+              <p className="text-xs text-muted-foreground">Pick a preset or enter a custom hex color</p>
+              <ColorAccessibilityChecker primaryColor={formData.primary_color} className="mt-1" />
             </div>
 
             <div className="space-y-2">
@@ -426,9 +482,15 @@ export default function SettingsPage() {
               />
             </div>
 
-            <div className="pt-4 border-t">
-              <p className="text-sm text-muted-foreground">
-                Store URL: <code className="bg-muted px-2 py-1 rounded">/{store.slug}</code>
+            <div className="pt-4 border-t space-y-2">
+              <Label className="text-muted-foreground">Store URL (cannot be changed)</Label>
+              <Input
+                value={`${store.slug}.storeforge.site`}
+                readOnly
+                className="bg-muted text-muted-foreground cursor-not-allowed"
+              />
+              <p className="text-xs text-muted-foreground">
+                Your store is accessible at this URL. Use Custom Domain settings to add your own domain.
               </p>
             </div>
           </CardContent>
@@ -455,6 +517,7 @@ export default function SettingsPage() {
                   value={formData.free_shipping_threshold}
                   onChange={(e) => setFormData({ ...formData, free_shipping_threshold: parseInt(e.target.value) || 0 })}
                 />
+                <p className="text-xs text-muted-foreground">Orders above this amount qualify for free shipping. Set to 0 to disable.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="flat_rate">Flat Rate Shipping (₹)</Label>
@@ -464,6 +527,7 @@ export default function SettingsPage() {
                   value={formData.flat_rate_national}
                   onChange={(e) => setFormData({ ...formData, flat_rate_national: parseInt(e.target.value) || 0 })}
                 />
+                <p className="text-xs text-muted-foreground">Standard shipping cost for orders below the free shipping threshold</p>
               </div>
             </div>
 
@@ -743,6 +807,41 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Spacer for sticky save bar */}
+      <div className="h-20" />
+
+      {/* Sticky Save Bar */}
+      <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur-sm py-4 border-t -mx-6 px-6">
+        <div className="flex items-center justify-end gap-3">
+          <Button onClick={handleSave} disabled={saving} size="lg">
+            {saving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Save Changes
+          </Button>
+        </div>
+      </div>
+
+      {/* Currency Change Confirmation Dialog */}
+      <AlertDialog open={currencyDialogOpen} onOpenChange={setCurrencyDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Display Currency</AlertDialogTitle>
+            <AlertDialogDescription>
+              Changing currency will affect how all product prices are displayed on your store. This does not convert existing prices -- you may need to update product prices manually. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingCurrency(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCurrencyChange}>
+              Change Currency
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

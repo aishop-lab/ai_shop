@@ -138,12 +138,24 @@ export default function OrdersPage() {
         <TabsList className="flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="unfulfilled">New</TabsTrigger>
-          <TabsTrigger value="processing">Processing</TabsTrigger>
+          <TabsTrigger value="processing">
+            <span className="hidden md:inline">Processing</span>
+            <span className="md:hidden">Process.</span>
+          </TabsTrigger>
           <TabsTrigger value="packed">Packed</TabsTrigger>
           <TabsTrigger value="shipped">Shipped</TabsTrigger>
-          <TabsTrigger value="out_for_delivery">Out for Delivery</TabsTrigger>
-          <TabsTrigger value="delivered">Delivered</TabsTrigger>
-          <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+          <TabsTrigger value="out_for_delivery">
+            <span className="hidden md:inline">Out for Delivery</span>
+            <span className="md:hidden">Out</span>
+          </TabsTrigger>
+          <TabsTrigger value="delivered">
+            <span className="hidden md:inline">Delivered</span>
+            <span className="md:hidden">Done</span>
+          </TabsTrigger>
+          <TabsTrigger value="cancelled">
+            <span className="hidden md:inline">Cancelled</span>
+            <span className="md:hidden">Cancel.</span>
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -229,25 +241,51 @@ export default function OrdersPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-4 border-t">
+            <div className="flex items-center justify-center gap-1 px-4 py-4 border-t">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
               >
-                Previous
+                &lt;
               </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {page} of {totalPages}
-              </span>
+              {(() => {
+                const pages: (number | string)[] = []
+                if (totalPages <= 7) {
+                  for (let i = 1; i <= totalPages; i++) pages.push(i)
+                } else {
+                  pages.push(1)
+                  if (page > 3) pages.push('...')
+                  const start = Math.max(2, page - 1)
+                  const end = Math.min(totalPages - 1, page + 1)
+                  for (let i = start; i <= end; i++) pages.push(i)
+                  if (page < totalPages - 2) pages.push('...')
+                  pages.push(totalPages)
+                }
+                return pages.map((p, i) =>
+                  typeof p === 'string' ? (
+                    <span key={`ellipsis-${i}`} className="px-2 text-sm text-muted-foreground">...</span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={page === p ? 'default' : 'outline'}
+                      size="sm"
+                      className="min-w-[36px]"
+                      onClick={() => setPage(p)}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )
+              })()}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
               >
-                Next
+                &gt;
               </Button>
             </div>
           )}

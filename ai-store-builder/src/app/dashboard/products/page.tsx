@@ -32,6 +32,16 @@ import {
 } from '@/components/ui/dropdown-menu'
 import ProductCard from '@/components/products/product-card'
 import BulkUploadModal from '@/components/products/bulk-upload-modal'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useToast } from '@/lib/hooks/use-toast'
 import { formatCurrency } from '@/lib/utils'
 import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
@@ -57,7 +67,7 @@ export default function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('created_at')
   const [sortOrder, setSortOrder] = useState<string>('desc')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [viewMode, setViewModeState] = useState<'grid' | 'list'>('grid')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
@@ -65,7 +75,22 @@ export default function ProductsPage() {
   const [storeId, setStoreId] = useState<string>('')
   const [storeSlug, setStoreSlug] = useState<string>('')
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<string | null>(null)
   const { currency } = useStoreCurrency()
+
+  // Restore view mode from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('product-view-mode')
+    if (saved === 'grid' || saved === 'list') {
+      setViewModeState(saved)
+    }
+  }, [])
+
+  const setViewMode = (mode: 'grid' | 'list') => {
+    setViewModeState(mode)
+    localStorage.setItem('product-view-mode', mode)
+  }
 
   // Fetch user's store
   useEffect(() => {
@@ -144,11 +169,16 @@ export default function ProductsPage() {
     return () => clearTimeout(timer)
   }, [searchQuery]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleDelete = async (productId: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return
+  const handleDeleteRequest = (productId: string) => {
+    setProductToDelete(productId)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return
 
     try {
-      const response = await fetch(`/api/products/${productId}`, {
+      const response = await fetch(`/api/products/${productToDelete}`, {
         method: 'DELETE'
       })
 
@@ -167,6 +197,9 @@ export default function ProductsPage() {
         description: 'Failed to delete product',
         variant: 'destructive'
       })
+    } finally {
+      setDeleteDialogOpen(false)
+      setProductToDelete(null)
     }
   }
 
@@ -339,7 +372,7 @@ export default function ProductsPage() {
               key={product.id}
               product={product}
               storeSlug={storeSlug}
-              onDelete={handleDelete}
+              onDelete={handleDeleteRequest}
               onDuplicate={handleDuplicate}
             />
           ))}
@@ -352,7 +385,7 @@ export default function ProductsPage() {
               product={product}
               storeSlug={storeSlug}
               currency={currency}
-              onDelete={handleDelete}
+              onDelete={handleDeleteRequest}
             />
           ))}
         </div>
@@ -388,6 +421,27 @@ export default function ProductsPage() {
         storeId={storeId}
         onSuccess={fetchProducts}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this product? This will archive the product and it will no longer be visible in your store.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setProductToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

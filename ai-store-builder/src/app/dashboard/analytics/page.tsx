@@ -76,8 +76,59 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="h-8 w-32 bg-muted animate-pulse rounded" />
+            <div className="h-4 w-48 bg-muted animate-pulse rounded mt-2" />
+          </div>
+          <div className="h-10 w-64 bg-muted animate-pulse rounded" />
+        </div>
+
+        {/* Stats cards skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+                <div className="h-4 w-4 bg-muted animate-pulse rounded" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 w-20 bg-muted animate-pulse rounded" />
+                <div className="h-3 w-28 bg-muted animate-pulse rounded mt-2" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Chart skeleton */}
+        <Card>
+          <CardHeader>
+            <div className="h-5 w-32 bg-muted animate-pulse rounded" />
+            <div className="h-4 w-48 bg-muted animate-pulse rounded mt-1" />
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] bg-muted animate-pulse rounded" />
+          </CardContent>
+        </Card>
+
+        {/* Two column skeleton */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {[...Array(2)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <div className="h-5 w-40 bg-muted animate-pulse rounded" />
+                <div className="h-4 w-52 bg-muted animate-pulse rounded mt-1" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {[...Array(5)].map((_, j) => (
+                  <div key={j} className="h-10 bg-muted animate-pulse rounded" />
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     )
   }

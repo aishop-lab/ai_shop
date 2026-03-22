@@ -29,6 +29,11 @@ interface StoreBlueprint {
   }
 }
 
+interface MarketingPixels {
+  google_analytics_id?: string | null
+  facebook_pixel_id?: string | null
+}
+
 interface DashboardStats {
   productCount: number
   publishedCount: number
@@ -40,6 +45,7 @@ interface DashboardStats {
     status: string
     logo_url: string | null
     blueprint?: StoreBlueprint
+    marketing_pixels?: MarketingPixels | null
   } | null
 }
 
@@ -208,15 +214,13 @@ export default function DashboardPage() {
           {/* AI Suggestions Widget + Traffic Widget */}
           {hasStore && (
             <div className="grid gap-6 lg:grid-cols-2">
-              {storeCategory.length > 0 && (
-                <AISuggestionsWidget
-                  storeCategory={storeCategory}
-                  productCount={stats?.productCount || 0}
-                />
-              )}
+              <AISuggestionsWidget
+                storeCategory={storeCategory}
+                productCount={stats?.productCount || 0}
+              />
               <TrafficWidget
                 storeSlug={stats?.store?.slug}
-                ga4Connected={false}
+                ga4Connected={!!stats?.store?.marketing_pixels?.google_analytics_id}
               />
             </div>
           )}
@@ -264,13 +268,13 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-sm font-medium ${
+                          className={`text-base font-medium ${
                             step.completed ? 'line-through text-muted-foreground' : ''
                           }`}
                         >
                           {step.title}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="text-sm text-muted-foreground truncate">
                           {step.description}
                         </p>
                       </div>
