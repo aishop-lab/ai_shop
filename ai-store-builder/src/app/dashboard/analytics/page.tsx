@@ -17,16 +17,9 @@ import RevenueChart from '@/components/dashboard/revenue-chart'
 import TopProductsTable from '@/components/dashboard/top-products-table'
 import RecentOrdersTable from '@/components/dashboard/recent-orders-table'
 import LowStockAlert from '@/components/dashboard/low-stock-alert'
+import { formatCurrency } from '@/lib/utils'
+import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
 import type { DashboardAnalytics, AnalyticsPeriod } from '@/lib/types/dashboard'
-
-function formatCurrency(amount: number, currency: string = 'INR'): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount)
-}
 
 export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null)
@@ -34,6 +27,7 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null)
   const [period, setPeriod] = useState<AnalyticsPeriod>('7d')
   const [storeId, setStoreId] = useState<string | null>(null)
+  const { currency } = useStoreCurrency()
 
   // First, fetch store ID
   useEffect(() => {
@@ -130,7 +124,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(analytics?.overview.revenue || 0)}
+              {formatCurrency(analytics?.overview.revenue || 0, currency)}
             </div>
             <p className="text-xs text-muted-foreground">
               From {analytics?.overview.paidOrders || 0} paid orders
@@ -169,7 +163,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(analytics?.overview.averageOrderValue || 0)}
+              {formatCurrency(analytics?.overview.averageOrderValue || 0, currency)}
             </div>
             <p className="text-xs text-muted-foreground">Per order</p>
           </CardContent>

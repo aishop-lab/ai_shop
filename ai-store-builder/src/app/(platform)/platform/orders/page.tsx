@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { Search, ChevronDown, ShoppingBag, X, User, CreditCard, Package, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
+import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
 import { createClient } from '@/lib/supabase/client'
 
 // ---------------------------------------------------------------------------
@@ -27,10 +28,6 @@ interface OrderData {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatPrice(value: number): string {
-  return `₹${value.toLocaleString('en-IN')}`
-}
 
 function formatDate(iso: string): string {
   const d = new Date(iso)
@@ -88,6 +85,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [storeId, setStoreId] = useState<string | null>(null)
+  const { currency } = useStoreCurrency()
 
   // Fetch the merchant's store ID
   useEffect(() => {
@@ -247,6 +245,7 @@ export default function OrdersPage() {
                 <OrderRow
                   key={order.id}
                   order={order}
+                  currency={currency}
                   isSelected={selectedOrder?.id === order.id}
                   onClick={() =>
                     setSelectedOrder((prev) => (prev?.id === order.id ? null : order))
@@ -287,7 +286,7 @@ export default function OrdersPage() {
           selectedOrder ? 'translate-x-0' : 'translate-x-full',
         )}
       >
-        {selectedOrder && <OrderDetail order={selectedOrder} onClose={() => setSelectedOrder(null)} />}
+        {selectedOrder && <OrderDetail order={selectedOrder} currency={currency} onClose={() => setSelectedOrder(null)} />}
       </aside>
     </div>
   )
@@ -316,11 +315,12 @@ function Th({ children, align = 'left' }: { children: React.ReactNode; align?: '
 
 interface OrderRowProps {
   order: OrderData
+  currency: string
   isSelected: boolean
   onClick: () => void
 }
 
-function OrderRow({ order, isSelected, onClick }: OrderRowProps) {
+function OrderRow({ order, currency, isSelected, onClick }: OrderRowProps) {
   const sc = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.confirmed
 
   return (
@@ -346,7 +346,7 @@ function OrderRow({ order, isSelected, onClick }: OrderRowProps) {
 
       {/* Total */}
       <td className="px-4 py-3 text-right">
-        <span className="font-mono text-[var(--platform-text-primary)]">{formatPrice(order.total)}</span>
+        <span className="font-mono text-[var(--platform-text-primary)]">{formatCurrency(order.total, currency)}</span>
       </td>
 
       {/* Items */}
@@ -409,10 +409,11 @@ function PaymentBadge({ method }: { method: PaymentMethod }) {
 
 interface OrderDetailProps {
   order: OrderData
+  currency: string
   onClose: () => void
 }
 
-function OrderDetail({ order, onClose }: OrderDetailProps) {
+function OrderDetail({ order, currency, onClose }: OrderDetailProps) {
   const sc = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.confirmed
 
   return (
@@ -451,7 +452,7 @@ function OrderDetail({ order, onClose }: OrderDetailProps) {
         {/* Items section */}
         <Section icon={<Package className="h-3.5 w-3.5" />} title="Items">
           <InfoRow label="Item count" value={String(order.order_items?.length ?? 0)} mono />
-          <InfoRow label="Order total" value={formatPrice(order.total)} mono />
+          <InfoRow label="Order total" value={formatCurrency(order.total, currency)} mono />
         </Section>
 
         {/* Payment + Status section */}

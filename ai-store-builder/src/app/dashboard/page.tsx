@@ -16,6 +16,8 @@ import {
   Loader2,
   BarChart3
 } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
+import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
 import { WelcomeBanner } from '@/components/dashboard/welcome-banner'
 import { StoreStatusCard } from '@/components/dashboard/store-status-card'
 import { AISuggestionsWidget } from '@/components/dashboard/ai-suggestions-widget'
@@ -47,6 +49,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const { currency } = useStoreCurrency()
   const isFirstVisit = searchParams.get('welcome') === 'true'
 
   useEffect(() => {
@@ -193,7 +196,7 @@ export default function DashboardPage() {
                       <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">₹0</div>
+                      <div className="text-2xl font-bold">{formatCurrency(0, currency)}</div>
                       <p className="text-xs text-muted-foreground">Start selling to see revenue</p>
                     </CardContent>
                   </Card>

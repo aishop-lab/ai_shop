@@ -33,6 +33,8 @@ import {
 import ProductCard from '@/components/products/product-card'
 import BulkUploadModal from '@/components/products/bulk-upload-modal'
 import { useToast } from '@/lib/hooks/use-toast'
+import { formatCurrency } from '@/lib/utils'
+import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
 import type { Product } from '@/lib/types/store'
 
 interface ProductsResponse {
@@ -63,6 +65,7 @@ export default function ProductsPage() {
   const [storeId, setStoreId] = useState<string>('')
   const [storeSlug, setStoreSlug] = useState<string>('')
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false)
+  const { currency } = useStoreCurrency()
 
   // Fetch user's store
   useEffect(() => {
@@ -348,6 +351,7 @@ export default function ProductsPage() {
               key={product.id}
               product={product}
               storeSlug={storeSlug}
+              currency={currency}
               onDelete={handleDelete}
             />
           ))}
@@ -389,24 +393,18 @@ export default function ProductsPage() {
 }
 
 // List view item component
-function ProductListItem({ 
-  product, 
+function ProductListItem({
+  product,
   storeSlug,
-  onDelete 
-}: { 
+  currency,
+  onDelete
+}: {
   product: Product
   storeSlug?: string
-  onDelete: (id: string) => void 
+  currency: string
+  onDelete: (id: string) => void
 }) {
   const primaryImage = product.images?.[0]?.thumbnail_url || product.images?.[0]?.url
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0
-    }).format(price)
-  }
 
   return (
     <div className="flex items-center gap-4 p-4 border rounded-lg hover:shadow-md transition-shadow">
@@ -431,7 +429,7 @@ function ProductListItem({
           <h3 className="font-medium truncate hover:text-primary transition-colors">{product.title}</h3>
         </Link>
         <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-          <span>{formatPrice(product.price)}</span>
+          <span>{formatCurrency(product.price, currency)}</span>
           {product.sku && <span>SKU: {product.sku}</span>}
           {product.track_quantity && <span>Qty: {product.quantity}</span>}
         </div>

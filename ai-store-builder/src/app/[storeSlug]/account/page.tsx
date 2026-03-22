@@ -20,12 +20,14 @@ import {
   ChevronRight,
   Settings
 } from 'lucide-react'
+import { useStore } from '@/lib/contexts/store-context'
 
 export default function CustomerAccountPage() {
   const params = useParams()
   const router = useRouter()
   const storeSlug = params.storeSlug as string
   const { customer, isLoading, isAuthenticated, logout } = useCustomer()
+  const { formatPrice } = useStore()
   const [activeTab, setActiveTab] = useState('profile')
 
   useEffect(() => {
@@ -49,14 +51,6 @@ export default function CustomerAccountPage() {
   const handleLogout = async () => {
     await logout()
     router.push(`/${storeSlug}`)
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0
-    }).format(amount)
   }
 
   return (
@@ -97,7 +91,7 @@ export default function CustomerAccountPage() {
                 <ShoppingBag className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatCurrency(customer.total_spent)}</p>
+                <p className="text-2xl font-bold">{formatPrice(customer.total_spent)}</p>
                 <p className="text-sm text-muted-foreground">Total Spent</p>
               </div>
             </div>

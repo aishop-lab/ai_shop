@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/orders/order-status-badge'
 import { formatCurrency } from '@/lib/utils'
+import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
 import { useAuth } from '@/lib/contexts/auth-context'
 import { format } from 'date-fns'
 import type { Order } from '@/lib/types/order'
@@ -21,6 +22,7 @@ interface OrdersResponse {
 
 export default function OrdersPage() {
   const { profile } = useAuth()
+  const { currency } = useStoreCurrency()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -206,7 +208,7 @@ export default function OrdersPage() {
                       {format(new Date(order.created_at), 'MMM dd, yyyy')}
                     </td>
                     <td className="px-4 py-4 font-semibold text-sm">
-                      {formatCurrency(order.total_amount, 'INR')}
+                      {formatCurrency(order.total_amount, currency)}
                     </td>
                     <td className="px-4 py-4 hidden sm:table-cell">
                       <PaymentStatusBadge status={order.payment_status} />

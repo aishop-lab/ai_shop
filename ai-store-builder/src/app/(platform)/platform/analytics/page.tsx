@@ -26,7 +26,8 @@ import {
   FileText,
   Loader2,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
+import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
 import { AgentBadge } from '@/components/platform/shared/agent-badge'
 import type { AgentType } from '@/lib/agents/types'
 
@@ -66,14 +67,13 @@ interface AnalyticsData {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatRevenue(value: number): string {
-  if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`
-  if (value >= 1000) return `₹${(value / 1000).toFixed(0)}K`
-  return `₹${value}`
-}
-
-function formatIndianCurrency(value: number): string {
-  return `₹${value.toLocaleString('en-IN')}`
+function formatCompactCurrency(value: number, currency: string): string {
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency,
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value)
 }
 
 // ---------------------------------------------------------------------------
@@ -84,9 +84,10 @@ interface RevenueTooltipProps {
   active?: boolean
   payload?: { value: number }[]
   label?: string
+  currency?: string
 }
 
-function RevenueTooltip({ active, payload, label }: RevenueTooltipProps) {
+function RevenueTooltip({ active, payload, label, currency = 'INR' }: RevenueTooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div
@@ -97,7 +98,7 @@ function RevenueTooltip({ active, payload, label }: RevenueTooltipProps) {
     >
       <p className="font-mono text-[10px] text-[var(--platform-text-muted)]">{label}</p>
       <p className="font-mono text-sm font-semibold text-[var(--platform-text-primary)]">
-        {formatRevenue(payload[0].value)}
+        {formatCompactCurrency(payload[0].value, currency)}
       </p>
     </div>
   )
@@ -234,6 +235,7 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null)
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('7d')
   const [generatingReport, setGeneratingReport] = useState(false)
+  const { currency } = useStoreCurrency()
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -290,7 +292,7 @@ export default function AnalyticsPage() {
     ? [
         {
           label: 'Revenue',
-          value: formatIndianCurrency(Math.round(data.revenue.total)),
+          value: formatCurrency(Math.round(data.revenue.total), currency),
           change: data.comparison.changes.revenue,
           positiveIsUp: true,
           icon: <TrendingUp className="h-4 w-4" />,
@@ -304,7 +306,7 @@ export default function AnalyticsPage() {
         },
         {
           label: 'Avg Order Value',
-          value: formatIndianCurrency(Math.round(data.revenue.avgOrderValue)),
+          value: formatCurrency(Math.round(data.revenue.avgOrderValue), currency),
           change: data.comparison.changes.aov,
           positiveIsUp: true,
           icon: <ShoppingCart className="h-4 w-4" />,
@@ -461,7 +463,7 @@ export default function AnalyticsPage() {
                 Revenue — Last {period === '7d' ? '7 Days' : period === '30d' ? '30 Days' : '90 Days'}
               </p>
               <p className="mt-1 font-mono text-2xl font-semibold text-[var(--platform-text-primary)]">
-                {formatIndianCurrency(Math.round(data.revenue.total))}
+                {formatCurrency(Math.round(data.revenue.total), currency)}
               </p>
             </div>
             {revenueChartData.length > 0 ? (
@@ -485,10 +487,10 @@ export default function AnalyticsPage() {
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: '#555', fontSize: 10, fontFamily: 'monospace' }}
-                    tickFormatter={formatRevenue}
+                    tickFormatter={(value: number) => formatCompactCurrency(value, currency)}
                     width={40}
                   />
-                  <Tooltip content={<RevenueTooltip />} cursor={{ stroke: 'var(--platform-border)', strokeWidth: 1 }} />
+                  <Tooltip content={<RevenueTooltip currency={currency} />} cursor={{ stroke: 'var(--platform-border)', strokeWidth: 1 }} />
                   <Area
                     type="monotone"
                     dataKey="revenue"
@@ -576,7 +578,7 @@ export default function AnalyticsPage() {
                   <tr key={product.id} className={cn(i < data.topProducts.length - 1 && 'border-b border-[var(--platform-border)]')}>
                     <td className="px-4 py-3 font-mono text-sm text-[var(--platform-text-primary)]">{product.name}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm text-[var(--platform-text-secondary)]">{product.units}</td>
-                    <td className="px-4 py-3 text-right font-mono text-sm text-[var(--platform-text-primary)]">{formatIndianCurrency(Math.round(product.revenue))}</td>
+                    <td className="px-4 py-3 text-right font-mono text-sm text-[var(--platform-text-primary)]">{formatCurrency(Math.round(product.revenue), currency)}</td>
                   </tr>
                 ))}
               </tbody>

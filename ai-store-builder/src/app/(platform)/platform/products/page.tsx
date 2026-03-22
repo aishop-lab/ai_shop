@@ -11,7 +11,8 @@ import {
   Package,
   Loader2,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
+import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
 import { createClient } from '@/lib/supabase/client'
 
 // ---------------------------------------------------------------------------
@@ -39,10 +40,6 @@ interface ProductData {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatPrice(value: number): string {
-  return `₹${value.toLocaleString('en-IN')}`
-}
-
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
@@ -61,6 +58,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<ProductData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [storeId, setStoreId] = useState<string | null>(null)
+  const { currency } = useStoreCurrency()
 
   // Fetch the merchant's store ID
   useEffect(() => {
@@ -235,7 +233,7 @@ export default function ProductsPage() {
             </thead>
             <tbody className="divide-y divide-[var(--platform-border)] bg-[var(--platform-bg)]">
               {filtered.map((product) => (
-                <ProductRow key={product.id} product={product} />
+                <ProductRow key={product.id} product={product} currency={currency} />
               ))}
             </tbody>
           </table>
@@ -258,9 +256,10 @@ export default function ProductsPage() {
 
 interface ProductRowProps {
   product: ProductData
+  currency: string
 }
 
-function ProductRow({ product }: ProductRowProps) {
+function ProductRow({ product, currency }: ProductRowProps) {
   const isOutOfStock = product.inventory === 0
   const isLowStock = !isOutOfStock && product.inventory < LOW_STOCK_THRESHOLD
   const sortedImages = [...(product.product_images ?? [])].sort((a, b) => a.position - b.position)
@@ -305,7 +304,7 @@ function ProductRow({ product }: ProductRowProps) {
         {/* Price */}
         <td className="px-4 py-3 text-right">
           <span className="font-mono text-[var(--platform-text-primary)]">
-            {formatPrice(product.price)}
+            {formatCurrency(product.price, currency)}
           </span>
         </td>
 

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Package, Loader2, ExternalLink } from 'lucide-react'
+import { useStore } from '@/lib/contexts/store-context'
 
 interface OrderItem {
   id: string
@@ -56,6 +57,7 @@ export default function CustomerOrdersPage() {
   const storeSlug = params.storeSlug as string
   const { customer, isLoading: customerLoading, isAuthenticated } = useCustomer()
 
+  const { formatPrice } = useStore()
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -88,14 +90,6 @@ export default function CustomerOrdersPage() {
 
     fetchOrders()
   }, [isAuthenticated, page])
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0
-    }).format(amount)
-  }
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-IN', {
@@ -162,7 +156,7 @@ export default function CustomerOrdersPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold">{formatCurrency(order.total_amount)}</p>
+                    <p className="text-lg font-bold">{formatPrice(order.total_amount)}</p>
                     <p className="text-sm text-muted-foreground">
                       {order.order_items.length} item{order.order_items.length > 1 ? 's' : ''}
                     </p>
@@ -184,7 +178,7 @@ export default function CustomerOrdersPage() {
                         <div>
                           <p className="text-sm font-medium line-clamp-1">{item.product_title}</p>
                           <p className="text-xs text-muted-foreground">
-                            Qty: {item.quantity} × {formatCurrency(item.unit_price)}
+                            Qty: {item.quantity} × {formatPrice(item.unit_price)}
                           </p>
                         </div>
                       </div>
