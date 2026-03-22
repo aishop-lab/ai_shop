@@ -275,8 +275,8 @@ export default function StoreCheckoutPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  // Validate entire form
-  const validateForm = () => {
+  // Validate entire form - returns the errors object for immediate use
+  const validateForm = (): Record<string, string> => {
     const newErrors: Record<string, string> = {}
 
     if (!formData.email) newErrors.email = 'Email is required'
@@ -297,7 +297,7 @@ export default function StoreCheckoutPage() {
       newErrors.pincode = 'Please enter a valid postal code'
 
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    return newErrors
   }
 
   // Navigate to next step
@@ -319,11 +319,12 @@ export default function StoreCheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!validateForm()) {
+    const formErrors = validateForm()
+    if (Object.keys(formErrors).length > 0) {
       // Find which step has errors and go there
-      if (errors.email || errors.phone) {
+      if (formErrors.email || formErrors.phone) {
         setCurrentStep('contact')
-      } else if (errors.firstName || errors.lastName || errors.address || errors.city || errors.state || errors.pincode) {
+      } else if (formErrors.firstName || formErrors.lastName || formErrors.address || formErrors.city || formErrors.state || formErrors.pincode) {
         setCurrentStep('shipping')
       }
       return

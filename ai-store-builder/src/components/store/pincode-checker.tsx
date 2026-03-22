@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 interface PincodeCheckerProps {
   storeId: string
   className?: string
+  formatPrice?: (price: number) => string
 }
 
 interface DeliveryResult {
@@ -21,7 +22,7 @@ interface DeliveryResult {
   message?: string
 }
 
-export function PincodeChecker({ storeId, className }: PincodeCheckerProps) {
+export function PincodeChecker({ storeId, className, formatPrice }: PincodeCheckerProps) {
   const [pincode, setPincode] = useState('')
   const [result, setResult] = useState<DeliveryResult | null>(null)
   const [loading, setLoading] = useState(false)
@@ -40,8 +41,8 @@ export function PincodeChecker({ storeId, className }: PincodeCheckerProps) {
   const checkPincode = async (code?: string) => {
     const pincodeToCheck = code || pincode
 
-    if (pincodeToCheck.length !== 6) {
-      setError('Please enter a valid 6-digit pincode')
+    if (pincodeToCheck.length < 3 || pincodeToCheck.length > 10) {
+      setError('Please enter a valid postal code')
       return
     }
 
@@ -82,7 +83,7 @@ export function PincodeChecker({ storeId, className }: PincodeCheckerProps) {
   }
 
   const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6)
+    const value = e.target.value.replace(/[^a-zA-Z0-9\s-]/g, '').slice(0, 10)
     setPincode(value)
     // Clear previous result when pincode changes
     if (result) {
@@ -107,17 +108,17 @@ export function PincodeChecker({ storeId, className }: PincodeCheckerProps) {
       <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
           type="text"
-          inputMode="numeric"
-          placeholder="Enter pincode"
+          inputMode="text"
+          placeholder="Enter postal code"
           value={pincode}
           onChange={handlePincodeChange}
-          maxLength={6}
+          maxLength={10}
           className="flex-1"
         />
         <Button
           type="submit"
           variant="outline"
-          disabled={pincode.length !== 6 || loading}
+          disabled={pincode.length < 3 || loading}
         >
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -171,7 +172,7 @@ export function PincodeChecker({ storeId, className }: PincodeCheckerProps) {
                   )}
                   {result.free_shipping_threshold && (
                     <p className="text-green-600 dark:text-green-400">
-                      Free shipping on orders above ₹{result.free_shipping_threshold}
+                      Free shipping on orders above {formatPrice ? formatPrice(result.free_shipping_threshold) : `${result.free_shipping_threshold}`}
                     </p>
                   )}
                   {result.cod_available && (

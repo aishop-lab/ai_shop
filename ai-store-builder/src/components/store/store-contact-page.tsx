@@ -41,9 +41,6 @@ export default function StoreContactPage() {
 
       setIsSubmitted(true)
       setFormData({ name: '', email: '', subject: '', message: '' })
-
-      // Reset success message after 5 seconds
-      setTimeout(() => setIsSubmitted(false), 5000)
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'Something went wrong. Please try again.'
@@ -152,16 +149,6 @@ export default function StoreContactPage() {
               </a>
             )}
           </div>
-          
-          {/* Business Hours */}
-          <div className="mt-10 p-6 rounded-lg bg-gray-50">
-            <h3 className="font-semibold mb-4">Business Hours</h3>
-            <div className="space-y-2 text-gray-600">
-              <p>Monday - Friday: 9:00 AM - 6:00 PM</p>
-              <p>Saturday: 10:00 AM - 4:00 PM</p>
-              <p>Sunday: Closed</p>
-            </div>
-          </div>
         </div>
         
         {/* Contact Form */}
@@ -179,7 +166,15 @@ export default function StoreContactPage() {
                 <Check className="w-8 h-8 text-green-600" />
               </div>
               <h3 className="text-xl font-semibold text-green-800 mb-2">Message Sent!</h3>
-              <p className="text-green-600">Thank you for reaching out. We&apos;ll get back to you soon.</p>
+              <p className="text-green-600 mb-6">Thank you for reaching out. We&apos;ll get back to you soon.</p>
+              <button
+                onClick={() => setIsSubmitted(false)}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white transition-all hover:opacity-90"
+                style={{ backgroundColor: 'var(--color-primary)' }}
+              >
+                <Send className="w-4 h-4" />
+                Send Another Message
+              </button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">

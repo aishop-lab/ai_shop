@@ -172,8 +172,11 @@ export default function StoreProductsPage({
             value={`${currentSort}-${currentOrder}`}
             onChange={(e) => {
               const [sort, order] = e.target.value.split('-')
-              updateFilters('sort', sort)
-              setTimeout(() => updateFilters('order', order), 0)
+              const params = new URLSearchParams(searchParams.toString())
+              params.set('sort', sort)
+              params.set('order', order)
+              params.delete('page')
+              router.push(`${baseUrl}/products?${params.toString()}`)
             }}
             className="px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
           >

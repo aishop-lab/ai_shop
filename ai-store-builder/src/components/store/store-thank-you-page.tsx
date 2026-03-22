@@ -257,7 +257,7 @@ export default function StoreThankYouPage() {
                   {order.payment_method === 'cod' ? 'Cash on Delivery' : 'Payment Confirmed'}
                 </p>
                 <p className="text-sm text-blue-700">
-                  Your order will be delivered in 3-7 business days
+                  You&apos;ll receive shipping updates via email
                 </p>
               </div>
             </div>

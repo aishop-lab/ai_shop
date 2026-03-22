@@ -3,10 +3,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { ShoppingCart, Eye, Star } from 'lucide-react'
+import { ShoppingCart, Eye, Star, ArrowRight } from 'lucide-react'
 import type { Product } from '@/lib/types/store'
 import { useStore } from '@/lib/contexts/store-context'
 import WishlistButton from '@/components/store/wishlist-button'
+import { toast } from 'sonner'
 import { useState } from 'react'
 
 interface ProductCardProps {
@@ -25,12 +26,20 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
   const secondaryImage = product.images?.[1]?.url
   const inCart = isInCart(product.id)
 
+  const hasVariants = product.has_variants
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
+    if (hasVariants) {
+      router.push(`${baseUrl}/products/${product.id}`)
+      return
+    }
+
     setIsAdding(true)
     addToCart(product, 1)
+    toast.success('Added to cart')
 
     setTimeout(() => setIsAdding(false), 500)
   }
@@ -166,21 +175,35 @@ export default function ProductCard({ product, showQuickView = true }: ProductCa
           </div>
 
           {!isOutOfStock && (
-            <button
-              onClick={handleAddToCart}
-              disabled={isAdding}
-              className={`p-2 rounded-full transition-all ${inCart
-                ? 'bg-green-500 text-white'
-                : 'hover:scale-110'
-                }`}
-              style={{
-                backgroundColor: inCart ? undefined : 'var(--color-primary)',
-                color: inCart ? undefined : 'var(--color-primary-contrast)'
-              }}
-              aria-label={inCart ? 'Added to cart' : 'Add to cart'}
-            >
-              <ShoppingCart className={`w-4 h-4 ${isAdding ? 'animate-bounce' : ''}`} />
-            </button>
+            hasVariants ? (
+              <button
+                onClick={handleAddToCart}
+                className="px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-105"
+                style={{
+                  backgroundColor: 'var(--color-primary)',
+                  color: 'var(--color-primary-contrast)'
+                }}
+                aria-label="Select options"
+              >
+                Select Options
+              </button>
+            ) : (
+              <button
+                onClick={handleAddToCart}
+                disabled={isAdding}
+                className={`p-2 rounded-full transition-all ${inCart
+                  ? 'bg-green-500 text-white'
+                  : 'hover:scale-110'
+                  }`}
+                style={{
+                  backgroundColor: inCart ? undefined : 'var(--color-primary)',
+                  color: inCart ? undefined : 'var(--color-primary-contrast)'
+                }}
+                aria-label={inCart ? 'Added to cart' : 'Add to cart'}
+              >
+                <ShoppingCart className={`w-4 h-4 ${isAdding ? 'animate-bounce' : ''}`} />
+              </button>
+            )
           )}
         </div>
       </div>

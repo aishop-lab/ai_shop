@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Menu, Search } from 'lucide-react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useStore } from '@/lib/contexts/store-context'
 import MiniCart from '@/components/store/mini-cart'
 import AccountDropdown from '@/components/store/account-dropdown'
@@ -12,8 +14,21 @@ interface ClassicElegantHeaderProps {
 }
 
 export default function ClassicElegantHeader({ onMenuClick }: ClassicElegantHeaderProps) {
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const router = useRouter()
   const { store } = useStore()
   const baseUrl = `/${store.slug}`
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmed = searchQuery.trim()
+    if (trimmed) {
+      router.push(`${baseUrl}/search?q=${encodeURIComponent(trimmed)}`)
+      setSearchOpen(false)
+      setSearchQuery('')
+    }
+  }
 
   return (
     <header className="border-b border-gray-200 sticky top-0 bg-white z-40">
@@ -100,7 +115,11 @@ export default function ClassicElegantHeader({ onMenuClick }: ClassicElegantHead
 
           {/* Right Actions */}
           <div className="flex items-center space-x-3">
-            <button className="p-2 text-gray-700 hover:text-[var(--color-primary)] transition-colors" aria-label="Search products">
+            <button
+              onClick={() => setSearchOpen(!searchOpen)}
+              className="p-2 text-gray-700 hover:text-[var(--color-primary)] transition-colors"
+              aria-label="Search products"
+            >
               <Search className="w-5 h-5" />
             </button>
 
@@ -109,6 +128,24 @@ export default function ClassicElegantHeader({ onMenuClick }: ClassicElegantHead
             <MiniCart />
           </div>
         </div>
+
+        {/* Search Bar (expandable) */}
+        {searchOpen && (
+          <div className="py-4 border-t">
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <input
+                type="search"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+                className="w-full px-4 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                style={{ fontFamily: 'var(--font-body)' }}
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            </form>
+          </div>
+        )}
       </div>
     </header>
   )

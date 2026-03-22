@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
 import { useCustomer } from '@/lib/contexts/customer-context'
 import { Button } from '@/components/ui/button'
@@ -49,6 +50,40 @@ const statusColors: Record<string, string> = {
   delivered: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
   refunded: 'bg-gray-100 text-gray-800'
+}
+
+// Generate tracking URL based on courier provider
+function getTrackingUrl(courierName: string, trackingNumber: string): string {
+  const name = courierName.toLowerCase()
+  if (name.includes('shiprocket')) {
+    return `https://www.shiprocket.in/shipment-tracking/?id=${trackingNumber}`
+  }
+  if (name.includes('delhivery')) {
+    return `https://www.delhivery.com/track/package/${trackingNumber}`
+  }
+  if (name.includes('blue dart') || name.includes('bluedart')) {
+    return `https://www.bluedart.com/tracking/${trackingNumber}`
+  }
+  if (name.includes('shippo') || name.includes('usps')) {
+    return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`
+  }
+  if (name.includes('ups')) {
+    return `https://www.ups.com/track?tracknum=${trackingNumber}`
+  }
+  if (name.includes('fedex')) {
+    return `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`
+  }
+  if (name.includes('dhl')) {
+    return `https://www.dhl.com/en/express/tracking.html?AWB=${trackingNumber}`
+  }
+  if (name.includes('dtdc')) {
+    return `https://www.dtdc.in/tracking.asp?strCnno=${trackingNumber}`
+  }
+  if (name.includes('ecom express') || name.includes('ecomexpress')) {
+    return `https://ecomexpress.in/tracking/?awb_field=${trackingNumber}`
+  }
+  // Fallback: generic Google search
+  return `https://www.google.com/search?q=${encodeURIComponent(courierName)}+tracking+${trackingNumber}`
 }
 
 export default function CustomerOrdersPage() {
@@ -169,9 +204,11 @@ export default function CustomerOrdersPage() {
                     {order.order_items.slice(0, 3).map((item) => (
                       <div key={item.id} className="flex items-center gap-3">
                         {item.product?.product_images?.[0] && (
-                          <img
+                          <Image
                             src={item.product.product_images[0].url}
                             alt={item.product_title}
+                            width={48}
+                            height={48}
                             className="w-12 h-12 object-cover rounded"
                           />
                         )}
@@ -203,7 +240,7 @@ export default function CustomerOrdersPage() {
                         )}
                       </div>
                       <a
-                        href={`https://shiprocket.co/tracking/${order.tracking_number}`}
+                        href={getTrackingUrl(order.courier_name || 'shiprocket', order.tracking_number!)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-primary hover:underline flex items-center gap-1"

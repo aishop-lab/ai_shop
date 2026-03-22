@@ -212,7 +212,7 @@ export default function StoreSidebar() {
               </li>
               <li>
                 <Link
-                  href={`${baseUrl}/about`}
+                  href={`${baseUrl}/policies/shipping`}
                   onClick={close}
                   className="flex items-center space-x-3 px-2 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-[var(--color-primary)] transition-colors"
                 >

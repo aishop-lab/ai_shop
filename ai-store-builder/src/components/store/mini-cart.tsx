@@ -248,23 +248,14 @@ export default function MiniCart() {
                 </div>
 
                 {/* Actions */}
-                <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    href={`${baseUrl}/cart`}
-                    onClick={() => setIsOpen(false)}
-                    className="px-4 py-2 text-center text-sm font-medium border rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    View Cart
-                  </Link>
-                  <Link
-                    href={`${baseUrl}/checkout`}
-                    onClick={() => setIsOpen(false)}
-                    className="px-4 py-2 text-center text-sm font-medium text-white rounded-lg transition-colors hover:opacity-90"
-                    style={{ backgroundColor: 'var(--color-primary)' }}
-                  >
-                    Checkout
-                  </Link>
-                </div>
+                <Link
+                  href={`${baseUrl}/cart`}
+                  onClick={() => setIsOpen(false)}
+                  className="block w-full px-4 py-2 text-center text-sm font-medium text-white rounded-lg transition-colors hover:opacity-90"
+                  style={{ backgroundColor: 'var(--color-primary)' }}
+                >
+                  View Cart & Checkout
+                </Link>
               </div>
             </>
           )}

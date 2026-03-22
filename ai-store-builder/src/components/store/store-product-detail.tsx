@@ -288,7 +288,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
 
           {/* Description */}
           <p
-            className="text-gray-600 mb-8 leading-relaxed"
+            className="text-gray-600 mb-8 leading-relaxed whitespace-pre-line"
             style={{ fontFamily: 'var(--font-body)' }}
           >
             {product.description}
