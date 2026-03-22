@@ -20,7 +20,7 @@
     },
     {
       "path": "/api/cron/marketing-sync",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 14 * * *"
     },
     {
       "path": "/api/cron/marketing-optimize",
