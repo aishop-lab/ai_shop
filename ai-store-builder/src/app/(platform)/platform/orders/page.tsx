@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Search, ChevronDown, ChevronUp, ShoppingBag, X, User, CreditCard, Package, Loader2, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
+import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
 import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
 import { createClient } from '@/lib/supabase/client'
 
@@ -189,6 +190,7 @@ export default function OrdersPage() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-6xl space-y-6">
+        <PlatformBreadcrumb items={[{ label: 'Command Center', href: '/platform' }, { label: 'Orders' }]} />
         <div>
           <h1 className="font-mono text-lg font-semibold text-[var(--platform-text-primary)]">
             Orders
@@ -206,6 +208,7 @@ export default function OrdersPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
+      <PlatformBreadcrumb items={[{ label: 'Command Center', href: '/platform' }, { label: 'Orders' }]} />
       {/* ------------------------------------------------------------------ */}
       {/* Header                                                               */}
       {/* ------------------------------------------------------------------ */}
@@ -232,6 +235,7 @@ export default function OrdersPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by order # or customer…"
+            aria-label="Search orders"
             className={cn(
               'w-full rounded-lg border border-[var(--platform-border)]',
               'bg-[var(--platform-surface)] pl-8 pr-3 py-1.5',
@@ -247,6 +251,7 @@ export default function OrdersPage() {
         <FilterSelect
           value={statusFilter}
           onChange={(v) => setStatusFilter(v as StatusFilter)}
+          aria-label="Filter by order status"
           options={[
             { value: 'all', label: 'All status' },
             { value: 'confirmed', label: 'Confirmed' },
@@ -644,14 +649,16 @@ interface FilterSelectProps {
   value: string
   onChange: (value: string) => void
   options: { value: string; label: string }[]
+  'aria-label'?: string
 }
 
-function FilterSelect({ value, onChange, options }: FilterSelectProps) {
+function FilterSelect({ value, onChange, options, 'aria-label': ariaLabel }: FilterSelectProps) {
   return (
     <div className="relative">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-label={ariaLabel}
         className={cn(
           'appearance-none rounded-lg border border-[var(--platform-border)]',
           'bg-[var(--platform-surface)] px-3 py-1.5 pr-7',

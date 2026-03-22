@@ -13,6 +13,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
+import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
 import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
 import { createClient } from '@/lib/supabase/client'
 
@@ -140,6 +141,7 @@ export default function ProductsPage() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-6xl space-y-6">
+        <PlatformBreadcrumb items={[{ label: 'Command Center', href: '/platform' }, { label: 'Products' }]} />
         <div>
           <h1 className="font-mono text-lg font-semibold text-[var(--platform-text-primary)]">
             Products
@@ -157,6 +159,7 @@ export default function ProductsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
+      <PlatformBreadcrumb items={[{ label: 'Command Center', href: '/platform' }, { label: 'Products' }]} />
       {/* ----------------------------------------------------------------- */}
       {/* Header                                                              */}
       {/* ----------------------------------------------------------------- */}
@@ -194,6 +197,7 @@ export default function ProductsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search products…"
+            aria-label="Search products"
             className={cn(
               'w-full rounded-lg border border-[var(--platform-border)]',
               'bg-[var(--platform-surface)] pl-8 pr-3 py-1.5',
@@ -209,6 +213,7 @@ export default function ProductsPage() {
         <FilterSelect
           value={statusFilter}
           onChange={(v) => setStatusFilter(v as typeof statusFilter)}
+          aria-label="Filter by product status"
           options={[
             { value: 'all', label: 'All status' },
             { value: 'active', label: 'Active' },
@@ -220,6 +225,7 @@ export default function ProductsPage() {
         <FilterSelect
           value={categoryFilter}
           onChange={setCategoryFilter}
+          aria-label="Filter by category"
           options={[
             { value: 'all', label: 'All categories' },
             ...uniqueCategories.map((c) => ({ value: c, label: c })),
@@ -416,14 +422,16 @@ interface FilterSelectProps {
   value: string
   onChange: (value: string) => void
   options: { value: string; label: string }[]
+  'aria-label'?: string
 }
 
-function FilterSelect({ value, onChange, options }: FilterSelectProps) {
+function FilterSelect({ value, onChange, options, 'aria-label': ariaLabel }: FilterSelectProps) {
   return (
     <div className="relative">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-label={ariaLabel}
         className={cn(
           'appearance-none rounded-lg border border-[var(--platform-border)]',
           'bg-[var(--platform-surface)] px-3 py-1.5 pr-7',

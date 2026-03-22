@@ -549,6 +549,7 @@ export default function AgentWorkspacePage() {
                         ? `Ask ${displayName.replace(' Agent', '')}...`
                         : 'Enable agent to chat'
                     }
+                    aria-label={`Chat with ${displayName}`}
                     disabled={!enabled || isStreaming}
                     className="flex-1 bg-transparent text-xs text-[var(--platform-text-primary)] placeholder:text-[var(--platform-text-muted)] outline-none disabled:opacity-50"
                     onKeyDown={(e) => {

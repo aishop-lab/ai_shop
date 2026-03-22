@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Check, X, ChevronDown, ChevronUp, Clock, Loader2, Zap, ArrowRight, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
 import { AgentBadge } from '@/components/platform/shared/agent-badge'
 import { KeyboardHint } from '@/components/platform/shared/keyboard-hint'
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard'
@@ -16,7 +17,7 @@ const PRIORITY_CONFIG: Record<ApprovalPriority, { label: string; dotClass: strin
   urgent: { label: 'Urgent', dotClass: 'bg-red-500', textClass: 'text-red-400', order: 0, icon: <Zap className="h-3 w-3 text-red-400" /> },
   high:   { label: 'High',   dotClass: 'bg-amber-400', textClass: 'text-amber-400', order: 1, icon: <Zap className="h-3 w-3 text-amber-400" /> },
   normal: { label: 'Normal', dotClass: 'bg-zinc-400',  textClass: 'text-zinc-400', order: 2, icon: <ArrowRight className="h-3 w-3 text-zinc-400" /> },
-  low:    { label: 'Low',    dotClass: 'bg-zinc-600',   textClass: 'text-zinc-500', order: 3, icon: <ArrowDown className="h-3 w-3 text-zinc-500" /> },
+  low:    { label: 'Low',    dotClass: 'bg-zinc-600',   textClass: 'text-zinc-400', order: 3, icon: <ArrowDown className="h-3 w-3 text-zinc-400" /> },
 }
 
 type CardDecision = 'approved' | 'rejected' | null
@@ -156,6 +157,7 @@ export default function ApprovalsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      <PlatformBreadcrumb items={[{ label: 'Command Center', href: '/platform' }, { label: 'Approvals' }]} />
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -184,6 +186,7 @@ export default function ApprovalsPage() {
                 setAgentFilter(e.target.value as AgentType | 'all')
                 setSelectedIndex(0)
               }}
+              aria-label="Filter by agent"
               className={cn(
                 'appearance-none rounded-lg border border-[var(--platform-border)]',
                 'bg-[var(--platform-surface)] px-3 py-1.5 pr-7',
@@ -211,6 +214,7 @@ export default function ApprovalsPage() {
                 setPriorityFilter(e.target.value as ApprovalPriority | 'all')
                 setSelectedIndex(0)
               }}
+              aria-label="Filter by priority"
               className={cn(
                 'appearance-none rounded-lg border border-[var(--platform-border)]',
                 'bg-[var(--platform-surface)] px-3 py-1.5 pr-7',

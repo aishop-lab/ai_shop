@@ -34,28 +34,32 @@ export function AgentCard({ agent, onToggleEnabled }: AgentCardProps) {
         </div>
         <div className="flex items-center gap-1.5">
           {onToggleEnabled && (
-            <button
-              type="button"
-              role="switch"
-              aria-checked={agent.is_enabled}
-              aria-label={`Toggle ${AGENT_DISPLAY_NAMES[agent.agent_type]}`}
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                onToggleEnabled(agent.agent_type)
-              }}
-              className={cn(
-                'relative mr-1.5 inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--platform-accent)]',
-                agent.is_enabled ? 'bg-[var(--platform-accent)]' : 'bg-[var(--platform-border)]'
-              )}
+            <span
+              className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] -my-2 mr-0.5"
             >
-              <span
+              <button
+                type="button"
+                role="switch"
+                aria-checked={agent.is_enabled}
+                aria-label={`Toggle ${AGENT_DISPLAY_NAMES[agent.agent_type]}`}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onToggleEnabled(agent.agent_type)
+                }}
                 className={cn(
-                  'pointer-events-none inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform',
-                  agent.is_enabled ? 'translate-x-3' : 'translate-x-0'
+                  'relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--platform-accent)]',
+                  agent.is_enabled ? 'bg-[var(--platform-accent)]' : 'bg-[var(--platform-border)]'
                 )}
-              />
-            </button>
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform',
+                    agent.is_enabled ? 'translate-x-3' : 'translate-x-0'
+                  )}
+                />
+              </button>
+            </span>
           )}
           <StatusDot status={agent.status} size="sm" />
           <span className="text-[10px] text-[var(--platform-text-muted)]">

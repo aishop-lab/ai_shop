@@ -31,7 +31,7 @@ export function MobileNav({ pendingApprovals = 0 }: MobileNavProps) {
               key={href}
               href={href}
               className={cn(
-                'relative flex flex-col items-center gap-0.5 px-3 py-1 text-[10px]',
+                'relative flex flex-col items-center gap-0.5 px-3 py-2 min-h-[44px] min-w-[44px] text-[10px]',
                 isActive ? 'text-[var(--platform-accent)]' : 'text-[var(--platform-text-muted)]'
               )}
             >

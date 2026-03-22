@@ -22,11 +22,14 @@ const badgeStyles = {
 
 export function SidebarNavItem({ href, icon: Icon, label, badge, badgeVariant = 'default', disabled }: SidebarNavItemProps) {
   const pathname = usePathname()
-  const isActive = pathname === href || pathname.startsWith(href + '/')
+  // Exact match for root-level pages, prefix match for nested pages
+  const isActive = href === '/platform'
+    ? pathname === '/platform'
+    : pathname === href || pathname.startsWith(href + '/')
 
   if (disabled) {
     return (
-      <div className="flex items-center gap-3 rounded-md px-3 py-2 text-xs text-[var(--platform-text-muted)] opacity-50 cursor-not-allowed">
+      <div className="flex items-center gap-3 rounded-md px-3 py-2.5 min-h-[44px] text-xs text-[var(--platform-text-muted)] opacity-50 cursor-not-allowed">
         <Icon className="h-4 w-4 shrink-0" />
         <span className="truncate">{label}</span>
       </div>
@@ -37,10 +40,10 @@ export function SidebarNavItem({ href, icon: Icon, label, badge, badgeVariant = 
     <Link
       href={href}
       className={cn(
-        'group flex items-center gap-3 rounded-md px-3 py-2 text-xs transition-colors',
+        'group flex items-center gap-3 rounded-md px-3 py-2.5 min-h-[44px] text-xs transition-colors',
         isActive
-          ? 'bg-[var(--platform-surface-active)] text-[var(--platform-text-primary)]'
-          : 'text-[var(--platform-text-secondary)] hover:bg-[var(--platform-surface-hover)] hover:text-[var(--platform-text-primary)]'
+          ? 'bg-[var(--platform-surface-active)] text-[var(--platform-text-primary)] border-l-2 border-l-[var(--platform-accent)]'
+          : 'text-[var(--platform-text-secondary)] hover:bg-[var(--platform-surface-hover)] hover:text-[var(--platform-text-primary)] border-l-2 border-l-transparent'
       )}
     >
       <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-[var(--platform-accent)]' : '')} />

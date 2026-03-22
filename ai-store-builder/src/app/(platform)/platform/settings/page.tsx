@@ -4,6 +4,7 @@
 import Link from 'next/link'
 import { ArrowRight, Bot, Link2, Store, Bell, CreditCard, Truck } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
 
 interface SettingCard {
   title: string
@@ -59,6 +60,7 @@ const SETTING_CARDS: SettingCard[] = [
 export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-8">
+      <PlatformBreadcrumb items={[{ label: 'Command Center', href: '/platform' }, { label: 'Settings' }]} />
       {/* Header */}
       <div>
         <h1 className="font-mono text-lg font-semibold text-[var(--platform-text-primary)]">

@@ -182,7 +182,7 @@ export function AgentSetupChecklist({ storeId, isOpen, onClose }: AgentSetupChec
           <h2 className="font-mono text-sm font-semibold text-zinc-100">
             Set Up Your Agents
           </h2>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-zinc-400">
             {completedCount} of {TOTAL_ITEMS} steps complete
           </p>
         </div>
@@ -190,7 +190,7 @@ export function AgentSetupChecklist({ storeId, isOpen, onClose }: AgentSetupChec
           type="button"
           onClick={onClose}
           aria-label="Close checklist"
-          className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
         >
           <X className="h-4 w-4" />
         </button>
@@ -255,14 +255,14 @@ export function AgentSetupChecklist({ storeId, isOpen, onClose }: AgentSetupChec
                     {agentState.enabled ? (
                       <Check className={cn('h-3 w-3', colors.text)} />
                     ) : (
-                      <AgentIcon className="h-3 w-3 text-zinc-500" />
+                      <AgentIcon className="h-3 w-3 text-zinc-400" />
                     )}
                   </div>
                   <div>
                     <p className="text-sm font-medium text-zinc-200">
                       {AGENT_DISPLAY_NAMES[agentType].replace(' Agent', '')}
                     </p>
-                    <p className="mt-0.5 text-xs text-zinc-500">
+                    <p className="mt-0.5 text-xs text-zinc-400">
                       {AGENT_DESCRIPTIONS[agentType]}
                     </p>
                   </div>
@@ -292,7 +292,7 @@ export function AgentSetupChecklist({ storeId, isOpen, onClose }: AgentSetupChec
               {/* Autonomy level selector (shown when enabled) */}
               {agentState.enabled && (
                 <div className="ml-8 space-y-1.5">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
                     Autonomy Level
                   </p>
                   <div className="flex gap-1">
@@ -306,14 +306,14 @@ export function AgentSetupChecklist({ storeId, isOpen, onClose }: AgentSetupChec
                           'flex h-7 w-7 items-center justify-center rounded border font-mono text-xs font-medium transition-colors',
                           agentState.autonomy === level
                             ? `${colors.border} ${colors.bg} ${colors.text}`
-                            : 'border-zinc-700 text-zinc-500 hover:border-zinc-600 hover:text-zinc-400'
+                            : 'border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-400'
                         )}
                       >
                         {level}
                       </button>
                     ))}
                   </div>
-                  <p className="text-[11px] text-zinc-500">
+                  <p className="text-[11px] text-zinc-400">
                     <span className="font-medium text-zinc-400">
                       {AUTONOMY_LEVELS[agentState.autonomy].label}
                     </span>
@@ -353,7 +353,7 @@ export function AgentSetupChecklist({ storeId, isOpen, onClose }: AgentSetupChec
         <button
           type="button"
           onClick={handleDismiss}
-          className="w-full text-center text-xs text-zinc-500 transition-colors hover:text-zinc-400"
+          className="w-full text-center text-xs text-zinc-400 transition-colors hover:text-zinc-400"
         >
           I&apos;ll do this later
         </button>
@@ -406,7 +406,7 @@ function ChecklistItem({
               </span>
             )}
           </p>
-          <p className="mt-0.5 text-xs text-zinc-500">{description}</p>
+          <p className="mt-0.5 text-xs text-zinc-400">{description}</p>
         </div>
       </div>
       {!completed && action}

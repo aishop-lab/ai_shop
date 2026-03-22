@@ -379,7 +379,7 @@ export default function OnboardingPage() {
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-950">
-        <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
       </div>
     )
   }
@@ -391,7 +391,7 @@ export default function OnboardingPage() {
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950/90 backdrop-blur-sm">
           <Loader2 className="h-10 w-10 animate-spin text-zinc-300" />
           <p className="mt-4 text-lg font-medium text-zinc-200">Creating your store...</p>
-          <p className="mt-1 text-sm text-zinc-500">This may take a few seconds</p>
+          <p className="mt-1 text-sm text-zinc-400">This may take a few seconds</p>
         </div>
       )}
 
@@ -421,7 +421,7 @@ export default function OnboardingPage() {
                       <Icon
                         className={cn(
                           'h-4 w-4',
-                          isActive ? 'text-zinc-100' : 'text-zinc-500'
+                          isActive ? 'text-zinc-100' : 'text-zinc-400'
                         )}
                       />
                     )}
@@ -433,7 +433,7 @@ export default function OnboardingPage() {
                         ? 'text-zinc-100'
                         : isCompleted
                           ? 'text-emerald-400'
-                          : 'text-zinc-500'
+                          : 'text-zinc-400'
                     )}
                   >
                     {step.label}
@@ -534,7 +534,7 @@ export default function OnboardingPage() {
                   ))}
                 </div>
                 {aiDetecting && (
-                  <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+                  <p className="flex items-center gap-1.5 text-xs text-zinc-400">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     Detecting category...
                   </p>
@@ -576,7 +576,7 @@ export default function OnboardingPage() {
                       className="h-full w-full rounded-xl object-cover"
                     />
                   ) : (
-                    <Upload className="h-6 w-6 text-zinc-500" />
+                    <Upload className="h-6 w-6 text-zinc-400" />
                   )}
                   <input
                     id="logo-upload"
@@ -802,7 +802,7 @@ export default function OnboardingPage() {
                 href={`https://${formData.slug || 'yourstore'}.storeforge.site`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-400"
+                className="inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-300"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
                 Visit Store

@@ -239,7 +239,7 @@ export function VariantsTable({
                                   ?.url ||
                                 ''
                               }
-                              alt=""
+                              alt={`Variant image for ${getVariantTitle(variant)}`}
                               className="w-full h-full object-cover rounded"
                             />
                           ) : (
@@ -264,7 +264,7 @@ export function VariantsTable({
                           >
                             <img
                               src={img.thumbnail_url || img.url}
-                              alt=""
+                              alt={`Product image ${img.position + 1}`}
                               className="w-8 h-8 object-cover rounded mr-2"
                             />
                             Image {img.position + 1}

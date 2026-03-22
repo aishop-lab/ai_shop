@@ -66,7 +66,8 @@ export function PlatformSidebar({ isOpen, onClose, agents = [], pendingApprovals
           </span>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-[var(--platform-text-muted)] hover:text-[var(--platform-text-secondary)] lg:hidden"
+            className="flex h-[44px] w-[44px] items-center justify-center rounded-md text-[var(--platform-text-muted)] hover:text-[var(--platform-text-secondary)] lg:hidden"
+            aria-label="Close sidebar"
           >
             <X className="h-4 w-4" />
           </button>

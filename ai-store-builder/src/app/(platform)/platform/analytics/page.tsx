@@ -27,6 +27,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
+import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
 import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
 import { AgentBadge } from '@/components/platform/shared/agent-badge'
 import type { AgentType } from '@/lib/agents/types'
@@ -218,7 +219,7 @@ function ChartSkeleton() {
         <div className="h-3 w-32 rounded bg-[var(--platform-surface-hover)]" />
         <div className="h-7 w-24 rounded bg-[var(--platform-surface-hover)]" />
       </div>
-      <div className="h-[180px] rounded-lg bg-zinc-800/50" />
+      <div className="h-[180px] rounded-lg bg-[var(--platform-surface-hover)]" />
     </div>
   )
 }
@@ -244,6 +245,7 @@ function TableSkeleton() {
 // Status colors for order chart
 // ---------------------------------------------------------------------------
 
+// Recharts Cell/Bar fill requires resolved hex values (CSS variables won't work)
 const ORDER_STATUS_COLORS: Record<string, string> = {
   delivered: '#4ade80',
   shipped: '#a78bfa',
@@ -413,6 +415,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
+      <PlatformBreadcrumb items={[{ label: 'Command Center', href: '/platform' }, { label: 'Analytics' }]} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -524,13 +527,13 @@ export default function AnalyticsPage() {
                     dataKey="day"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: '#555', fontSize: 10, fontFamily: 'monospace' }}
+                    tick={{ fill: 'var(--platform-text-muted, #71717a)', fontSize: 10, fontFamily: 'monospace' }}
                     dy={8}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: '#555', fontSize: 10, fontFamily: 'monospace' }}
+                    tick={{ fill: 'var(--platform-text-muted, #71717a)', fontSize: 10, fontFamily: 'monospace' }}
                     tickFormatter={(value: number) => formatCompactCurrency(value, currency)}
                     width={40}
                   />
@@ -575,14 +578,14 @@ export default function AnalyticsPage() {
                     type="number"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: '#555', fontSize: 10, fontFamily: 'monospace' }}
+                    tick={{ fill: 'var(--platform-text-muted, #71717a)', fontSize: 10, fontFamily: 'monospace' }}
                   />
                   <YAxis
                     type="category"
                     dataKey="status"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: '#555', fontSize: 10, fontFamily: 'monospace' }}
+                    tick={{ fill: 'var(--platform-text-muted, #71717a)', fontSize: 10, fontFamily: 'monospace' }}
                     width={72}
                   />
                   <Tooltip content={<OrderTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
