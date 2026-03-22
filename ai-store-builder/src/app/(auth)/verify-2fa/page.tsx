@@ -82,7 +82,7 @@ function Verify2FAContent() {
 
       // Redirect based on onboarding status
       if (data.profile?.onboarding_completed) {
-        router.push('/dashboard')
+        router.push('/platform')
       } else {
         router.push('/onboarding')
       }

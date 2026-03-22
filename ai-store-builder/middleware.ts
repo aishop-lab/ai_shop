@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const protectedRoutes = ['/dashboard', '/onboarding', '/admin']
+const protectedRoutes = ['/dashboard', '/platform', '/onboarding', '/admin']
 const authRoutes = ['/sign-in', '/sign-up']
 
 // Production domain for subdomain routing
@@ -181,13 +181,18 @@ export async function middleware(request: NextRequest) {
     if (user && pathname.startsWith('/admin')) {
       const adminEmail = process.env.ADMIN_EMAIL || 'aishop@middlefieldbrands.com'
       if (user.email !== adminEmail) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+        return NextResponse.redirect(new URL('/platform', request.url))
       }
     }
 
-    // Redirect to dashboard if accessing auth routes while logged in
+    // Redirect old /dashboard root to /platform (keep sub-pages accessible)
+    if (user && pathname === '/dashboard') {
+      return NextResponse.redirect(new URL('/platform', request.url))
+    }
+
+    // Redirect to platform if accessing auth routes while logged in
     if (user && authRoutes.some(r => pathname.startsWith(r))) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      return NextResponse.redirect(new URL('/platform', request.url))
     }
   } catch {
     // Continue on error

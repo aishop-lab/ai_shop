@@ -272,7 +272,7 @@ export async function POST(request: Request) {
       store_id: store_id,
       subdomain: subdomain,
       store_url: storeUrl,
-      redirect_url: '/dashboard'
+      redirect_url: '/platform'
     })
   } catch (error) {
     console.error('Onboarding complete error:', error)

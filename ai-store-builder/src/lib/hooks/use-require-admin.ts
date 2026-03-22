@@ -19,8 +19,8 @@ export function useRequireAdmin(redirectTo = '/sign-in') {
     }
 
     if (!isAdmin) {
-      // Redirect non-admins to dashboard
-      router.push('/dashboard')
+      // Redirect non-admins to platform
+      router.push('/platform')
     }
   }, [isAuthenticated, isLoading, isAdmin, redirectTo, router])
 

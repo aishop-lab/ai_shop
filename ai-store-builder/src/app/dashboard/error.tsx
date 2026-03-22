@@ -41,7 +41,7 @@ export default function DashboardError({
             Try Again
           </Button>
           <Button
-            onClick={() => window.location.href = '/dashboard'}
+            onClick={() => window.location.href = '/platform'}
             variant="outline"
             size="lg"
             className="gap-2 w-full sm:w-auto"

@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Redirect based on onboarding status
       if (data.profile?.onboarding_completed) {
-        router.push('/dashboard')
+        router.push('/platform')
       } else {
         router.push('/onboarding')
       }

@@ -209,7 +209,7 @@ export function DashboardErrorFallback({
             </Button>
           )}
           <Button
-            onClick={() => window.location.href = '/dashboard'}
+            onClick={() => window.location.href = '/platform'}
             variant="outline"
             className="gap-2"
           >
