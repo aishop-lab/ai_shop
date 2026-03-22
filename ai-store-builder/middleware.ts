@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const protectedRoutes = ['/dashboard', '/platform', '/onboarding', '/admin']
-const authRoutes = ['/sign-in', '/sign-up']
+const authRoutes = ['/sign-in', '/sign-up', '/reset-password', '/update-password']
 
 // Production domain for subdomain routing
 const PRODUCTION_DOMAIN = 'storeforge.site'
@@ -191,7 +191,9 @@ export async function middleware(request: NextRequest) {
     }
 
     // Redirect to platform if accessing auth routes while logged in
-    if (user && authRoutes.some(r => pathname.startsWith(r))) {
+    // Exception: /update-password must remain accessible for authenticated users
+    // (recovery flow creates a session before the user sets a new password)
+    if (user && !pathname.startsWith('/update-password') && authRoutes.some(r => pathname.startsWith(r))) {
       return NextResponse.redirect(new URL('/platform', request.url))
     }
   } catch {

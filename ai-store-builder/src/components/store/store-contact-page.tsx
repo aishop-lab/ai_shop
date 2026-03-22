@@ -14,21 +14,43 @@ export default function StoreContactPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    
-    // Simulate form submission
-    // In production, this would send to an API endpoint
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    setIsSubmitting(false)
-    setIsSubmitted(true)
-    setFormData({ name: '', email: '', subject: '', message: '' })
-    
-    // Reset success message after 5 seconds
-    setTimeout(() => setIsSubmitted(false), 5000)
+    setErrorMessage(null)
+
+    try {
+      const response = await fetch(`/api/store/${store.slug}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          subject: formData.subject.trim(),
+          message: formData.message.trim(),
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send message')
+      }
+
+      setIsSubmitted(true)
+      setFormData({ name: '', email: '', subject: '', message: '' })
+
+      // Reset success message after 5 seconds
+      setTimeout(() => setIsSubmitted(false), 5000)
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
   
   return (
@@ -161,6 +183,11 @@ export default function StoreContactPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
+              {errorMessage && (
+                <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+                  <p className="text-red-700 text-sm">{errorMessage}</p>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium mb-2">Name</label>

@@ -1,11 +1,14 @@
 // src/app/(platform)/onboarding/page.tsx
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { useRequireAuth } from '@/lib/hooks/use-require-auth'
+import { useAuth } from '@/lib/contexts/auth-context'
+import { toast } from 'sonner'
 import {
   Store,
   Palette,
@@ -18,6 +21,7 @@ import {
   ArrowRight,
   ImagePlus,
   ExternalLink,
+  Loader2,
 } from 'lucide-react'
 
 const STEPS = [
@@ -59,9 +63,10 @@ const PRESET_COLORS = [
 type Theme = (typeof THEMES)[number]['id']
 type Category = (typeof CATEGORIES)[number]
 
-interface FormData {
+interface OnboardingFormData {
   storeName: string
   slug: string
+  description: string
   category: Category | ''
   logoFile: File | null
   logoPreview: string | null
@@ -81,11 +86,16 @@ function generateSlug(name: string): string {
     .replace(/^-|-$/g, '')
 }
 
+const LOCALSTORAGE_KEY = 'onboarding-draft'
+
 export default function OnboardingPage() {
+  const { isLoading: authLoading } = useRequireAuth()
+  const { user } = useAuth()
   const [currentStep, setCurrentStep] = useState(0)
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<OnboardingFormData>({
     storeName: '',
     slug: '',
+    description: '',
     category: '',
     logoFile: null,
     logoPreview: null,
@@ -95,7 +105,22 @@ export default function OnboardingPage() {
     skipProduct: false,
   })
 
-  const updateField = useCallback(<K extends keyof FormData>(key: K, value: FormData[K]) => {
+  // OB-05: AI category detection state
+  const [aiDetecting, setAiDetecting] = useState(false)
+  const [aiSuggestedCategory, setAiSuggestedCategory] = useState<Category | null>(null)
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // OB-02: Store creation state
+  const [isCreating, setIsCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+
+  // OB-03: Logo generation state
+  const [generatingLogo, setGeneratingLogo] = useState(false)
+
+  // Track if initial load from localStorage is done
+  const [hydrated, setHydrated] = useState(false)
+
+  const updateField = useCallback(<K extends keyof OnboardingFormData>(key: K, value: OnboardingFormData[K]) => {
     setFormData((prev) => ({ ...prev, [key]: value }))
   }, [])
 
@@ -132,10 +157,115 @@ export default function OnboardingPage() {
     [formData.productImages, updateField]
   )
 
+  // OB-05: AI category auto-detection
+  useEffect(() => {
+    if (formData.description.trim().length < 15) {
+      return
+    }
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    debounceTimerRef.current = setTimeout(async () => {
+      setAiDetecting(true)
+      try {
+        const res = await fetch('/api/onboarding/analyze-brand', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            brand_description: formData.description,
+            business_name: formData.storeName || undefined,
+          }),
+        })
+        const json = await res.json()
+        if (json.success && json.data) {
+          const { category: detected } = json.data
+          if (detected.confidence >= 0.7) {
+            // Map the AI business_type to our CATEGORIES
+            const matchedCategory = CATEGORIES.find(
+              (cat) => cat.toLowerCase() === detected.business_type.toLowerCase()
+            )
+            if (matchedCategory) {
+              setAiSuggestedCategory(matchedCategory)
+              // Only auto-set if user hasn't manually picked a different one
+              setFormData((prev) => {
+                if (prev.category === '' || prev.category === aiSuggestedCategory) {
+                  return { ...prev, category: matchedCategory }
+                }
+                return prev
+              })
+            }
+          }
+        }
+      } catch {
+        // Silently fail - AI detection is a nice-to-have
+      } finally {
+        setAiDetecting(false)
+      }
+    }, 1500)
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.description, formData.storeName])
+
+  // OB-01: Restore from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LOCALSTORAGE_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        setFormData((prev) => ({
+          ...prev,
+          storeName: parsed.storeName || '',
+          slug: parsed.slug || '',
+          description: parsed.description || '',
+          category: parsed.category || '',
+          theme: parsed.theme || 'modern',
+          primaryColor: parsed.primaryColor || '#6366f1',
+          skipProduct: parsed.skipProduct || false,
+          logoPreview: parsed.logoPreview || null,
+        }))
+        if (typeof parsed.currentStep === 'number' && parsed.currentStep < 3) {
+          setCurrentStep(parsed.currentStep)
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+    setHydrated(true)
+  }, [])
+
+  // OB-01: Save to localStorage on every formData/step change (after hydration)
+  useEffect(() => {
+    if (!hydrated) return
+    try {
+      const toSave = {
+        storeName: formData.storeName,
+        slug: formData.slug,
+        description: formData.description,
+        category: formData.category,
+        theme: formData.theme,
+        primaryColor: formData.primaryColor,
+        skipProduct: formData.skipProduct,
+        logoPreview: formData.logoPreview,
+        currentStep,
+      }
+      localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(toSave))
+    } catch {
+      // Ignore quota errors
+    }
+  }, [formData, currentStep, hydrated])
+
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 0:
-        return formData.storeName.trim().length >= 2 && formData.category !== ''
+        return formData.storeName.trim().length >= 2 && formData.description.trim().length >= 10 && formData.category !== ''
       case 1:
         return true // theme and color have defaults
       case 2:
@@ -147,8 +277,95 @@ export default function OnboardingPage() {
     }
   }
 
-  const handleNext = () => {
-    if (currentStep < STEPS.length - 1 && canProceed()) {
+  const handleNext = async () => {
+    if (!canProceed()) return
+
+    // OB-02: Wire step 2 ("Launch Store") to API
+    if (currentStep === 2) {
+      setIsCreating(true)
+      setCreateError(null)
+
+      try {
+        // 1. Upload logo if user selected a file
+        let logoUrl: string | null = null
+        if (formData.logoFile) {
+          const logoFormData = new FormData()
+          logoFormData.append('file', formData.logoFile)
+          const logoRes = await fetch('/api/onboarding/upload-logo', {
+            method: 'POST',
+            credentials: 'include',
+            body: logoFormData,
+          })
+          const logoJson = await logoRes.json()
+          if (logoJson.success) {
+            logoUrl = logoJson.url
+          }
+          // Non-critical - continue even if logo upload fails
+        } else if (formData.logoPreview && formData.logoPreview.startsWith('http')) {
+          // AI-generated logo already has a URL
+          logoUrl = formData.logoPreview
+        }
+
+        // 2. Call generate-blueprint to create the store
+        const blueprintBody = {
+          business_name: formData.storeName.trim(),
+          slug: formData.slug,
+          description: formData.description.trim(),
+          business_type: formData.category || 'General',
+          business_category: formData.category ? [formData.category] : [],
+          target_geography: 'india' as const,
+          brand_vibe: formData.theme,
+          primary_color: formData.primaryColor,
+          logo_url: logoUrl,
+          contact_email: user?.email || 'merchant@example.com',
+          contact_phone: '9999999999', // Default placeholder - merchant updates in settings
+        }
+
+        const bpRes = await fetch('/api/onboarding/generate-blueprint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(blueprintBody),
+        })
+        const bpJson = await bpRes.json()
+
+        if (!bpJson.success) {
+          throw new Error(bpJson.error || 'Failed to create store')
+        }
+
+        const storeId = bpJson.store_id
+
+        // 3. Call complete to finalize the store
+        const completeRes = await fetch('/api/onboarding/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ store_id: storeId }),
+        })
+        const completeJson = await completeRes.json()
+
+        if (!completeJson.success) {
+          throw new Error(completeJson.error || 'Failed to activate store')
+        }
+
+        // 4. Clear localStorage and advance to success step
+        try {
+          localStorage.removeItem(LOCALSTORAGE_KEY)
+        } catch {
+          // Ignore
+        }
+        setCurrentStep(3)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Something went wrong'
+        setCreateError(message)
+        toast.error(message)
+      } finally {
+        setIsCreating(false)
+      }
+      return
+    }
+
+    if (currentStep < STEPS.length - 1) {
       setCurrentStep((prev) => prev + 1)
     }
   }
@@ -159,8 +376,25 @@ export default function OnboardingPage() {
     }
   }
 
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-950">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100">
+      {/* Store creation overlay */}
+      {isCreating && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950/90 backdrop-blur-sm">
+          <Loader2 className="h-10 w-10 animate-spin text-zinc-300" />
+          <p className="mt-4 text-lg font-medium text-zinc-200">Creating your store...</p>
+          <p className="mt-1 text-sm text-zinc-500">This may take a few seconds</p>
+        </div>
+      )}
+
       {/* Progress bar */}
       <div className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-6 py-4">
@@ -223,7 +457,7 @@ export default function OnboardingPage() {
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-10">
         {/* Step 1: Store Basics */}
         {currentStep === 0 && (
-          <div className="space-y-8">
+          <form onSubmit={(e) => { e.preventDefault(); if (canProceed()) handleNext(); }} className="space-y-8">
             <div>
               <h1 className="font-mono text-2xl font-bold tracking-tight">
                 Create your store
@@ -255,6 +489,20 @@ export default function OnboardingPage() {
               </div>
 
               <div className="space-y-2">
+                <label htmlFor="description" className="text-sm font-medium text-zinc-300">
+                  Describe your business
+                </label>
+                <textarea
+                  id="description"
+                  placeholder="What do you sell? Who are your customers? What makes you unique?"
+                  value={formData.description}
+                  onChange={(e) => updateField('description', e.target.value)}
+                  rows={3}
+                  className="flex w-full resize-none rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:outline-none focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500/30"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <label htmlFor="category" className="text-sm font-medium text-zinc-300">
                   Category
                 </label>
@@ -263,27 +511,42 @@ export default function OnboardingPage() {
                     <button
                       key={cat}
                       type="button"
-                      onClick={() => updateField('category', cat)}
+                      onClick={() => {
+                        updateField('category', cat)
+                        // If user manually picks, clear the AI suggestion visual only if different
+                      }}
                       aria-pressed={formData.category === cat}
                       className={cn(
-                        'rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400',
+                        'relative rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400',
                         formData.category === cat
                           ? 'border-zinc-500 bg-zinc-800 text-zinc-100'
                           : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-300'
                       )}
                     >
                       {cat}
+                      {aiSuggestedCategory === cat && formData.category === cat && (
+                        <span className="absolute -top-2 -right-2 flex items-center gap-0.5 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">
+                          <Sparkles className="h-2.5 w-2.5" />
+                          AI
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
+                {aiDetecting && (
+                  <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Detecting category...
+                  </p>
+                )}
               </div>
             </div>
-          </div>
+          </form>
         )}
 
         {/* Step 2: Brand & Theme */}
         {currentStep === 1 && (
-          <div className="space-y-8">
+          <form onSubmit={(e) => { e.preventDefault(); if (canProceed()) handleNext(); }} className="space-y-8">
             <div>
               <h1 className="font-mono text-2xl font-bold tracking-tight">
                 Brand & theme
@@ -331,10 +594,43 @@ export default function OnboardingPage() {
                     type="button"
                     variant="outline"
                     size="sm"
+                    disabled={generatingLogo}
                     className="border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
+                    onClick={async () => {
+                      setGeneratingLogo(true)
+                      try {
+                        const res = await fetch('/api/onboarding/generate-logo', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          credentials: 'include',
+                          body: JSON.stringify({
+                            business_name: formData.storeName || 'My Store',
+                            business_category: formData.category || undefined,
+                            description: formData.description || undefined,
+                            style_preference: formData.theme,
+                          }),
+                        })
+                        const json = await res.json()
+                        if (json.success && json.url) {
+                          updateField('logoPreview', json.url)
+                          updateField('logoFile', null) // URL-based, no file needed
+                          toast.success('Logo generated successfully!')
+                        } else {
+                          toast.error(json.error || 'Failed to generate logo')
+                        }
+                      } catch {
+                        toast.error('Failed to generate logo. Please try again.')
+                      } finally {
+                        setGeneratingLogo(false)
+                      }
+                    }}
                   >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Generate with AI
+                    {generatingLogo ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    {generatingLogo ? 'Generating...' : 'Generate with AI'}
                   </Button>
                 </div>
               </div>
@@ -386,12 +682,12 @@ export default function OnboardingPage() {
                 ))}
               </div>
             </div>
-          </div>
+          </form>
         )}
 
         {/* Step 3: First Product */}
         {currentStep === 2 && (
-          <div className="space-y-8">
+          <form onSubmit={(e) => { e.preventDefault(); if (canProceed()) handleNext(); }} className="space-y-8">
             <div>
               <h1 className="font-mono text-2xl font-bold tracking-tight">
                 Add your first product
@@ -469,7 +765,7 @@ export default function OnboardingPage() {
             >
               Skip — Add products later
             </button>
-          </div>
+          </form>
         )}
 
         {/* Step 4: Store Live! */}
@@ -515,9 +811,12 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Navigation buttons */}
-        {currentStep < 3 && (
-          <div className="mt-auto flex items-center justify-between pt-10">
+      </div>
+
+      {/* Navigation buttons - sticky bottom */}
+      {currentStep < 3 && (
+        <div className="sticky bottom-0 z-10 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-2xl items-center justify-between px-6 py-4">
             <Button
               type="button"
               variant="ghost"
@@ -528,18 +827,32 @@ export default function OnboardingPage() {
               <ArrowLeft className="h-4 w-4" />
               Back
             </Button>
+
+            {createError && (
+              <p className="text-sm text-red-400">{createError}</p>
+            )}
+
             <Button
               type="button"
               onClick={handleNext}
-              disabled={!canProceed()}
+              disabled={!canProceed() || isCreating}
               className="bg-white text-zinc-900 hover:bg-zinc-200 disabled:opacity-40"
             >
-              {currentStep === 2 ? 'Launch Store' : 'Continue'}
-              <ArrowRight className="h-4 w-4" />
+              {isCreating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  {currentStep === 2 ? 'Launch Store' : 'Continue'}
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -96,10 +96,32 @@ function Verify2FAContent() {
   const handleResend = async () => {
     setIsResending(true)
     try {
-      // For resend during login, we need to trigger sign-in again
-      // which will send a new OTP. This is handled by redirecting back.
-      toast.info('Please sign in again to receive a new code')
-      router.push('/sign-in')
+      const response = await fetch('/api/auth/2fa/resend-login-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pendingToken })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (response.status === 429 && data.cooldownRemaining) {
+          setCountdown(data.cooldownRemaining)
+          toast.error(data.error)
+        } else if (response.status === 401) {
+          // Token expired - redirect to sign-in
+          toast.error('Session expired. Please sign in again.')
+          router.push('/sign-in')
+        } else {
+          toast.error(data.error || 'Failed to resend code')
+        }
+        return
+      }
+
+      toast.success('New verification code sent!')
+      setCountdown(data.cooldownSeconds || 60)
+      setExpiryCountdown(data.expiresInMinutes ? data.expiresInMinutes * 60 : 600)
+      setCode('')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to resend code')
     } finally {

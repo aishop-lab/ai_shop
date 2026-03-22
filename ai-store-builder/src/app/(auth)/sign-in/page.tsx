@@ -129,17 +129,12 @@ export default function SignInPage() {
                 <FormItem>
                   <div className="flex items-center justify-between">
                     <FormLabel>Password</FormLabel>
-                    <a
-                      href="javascript:void(0)"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        // TODO: Implement password reset flow
-                        alert('Password reset is coming soon. Please contact support if you need help.')
-                      }}
-                      className="text-sm text-muted-foreground hover:text-primary cursor-pointer"
+                    <Link
+                      href="/reset-password"
+                      className="text-sm text-muted-foreground hover:text-primary"
                     >
                       Forgot password?
-                    </a>
+                    </Link>
                   </div>
                   <FormControl>
                     <div className="relative">
