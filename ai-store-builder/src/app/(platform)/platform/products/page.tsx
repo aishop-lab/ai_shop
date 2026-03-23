@@ -102,7 +102,10 @@ export default function ProductsPage() {
 
   // Fetch products from Supabase
   useEffect(() => {
-    if (!storeId) return
+    if (!storeId) {
+      setIsLoading(false)
+      return
+    }
     async function fetchProducts() {
       try {
         setIsLoading(true)

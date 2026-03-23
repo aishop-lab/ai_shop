@@ -9,7 +9,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       <Link href="/" className="relative mb-8 flex items-center gap-2 hover:opacity-80 transition-opacity">
         <Bot className="h-8 w-8 text-primary" />
-        <span className="text-2xl font-bold font-mono">AI Store</span>
+        <span className="text-2xl font-bold font-mono text-zinc-100">AI Store</span>
       </Link>
 
       <div className="relative w-full max-w-[450px]">

@@ -73,7 +73,7 @@ export type PeriodComparison = {
 // Valid order statuses that count toward revenue
 // ---------------------------------------------------------------------------
 
-const REVENUE_STATUSES = ['confirmed', 'processing', 'shipped', 'delivered']
+const REVENUE_STATUSES = ['confirmed', 'processing', 'shipped', 'delivered', 'out_for_delivery']
 
 // ---------------------------------------------------------------------------
 // getDateRange — utility to compute ISO date ranges
@@ -115,11 +115,11 @@ export async function queryRevenue(
 
   const { data: orders, error } = await supabase
     .from('orders')
-    .select('total, created_at, status')
+    .select('total, created_at, fulfillment_status')
     .eq('store_id', storeId)
     .gte('created_at', range.from)
     .lte('created_at', range.to)
-    .in('status', REVENUE_STATUSES)
+    .in('fulfillment_status', REVENUE_STATUSES)
 
   if (error) throw new Error(`Revenue query failed: ${error.message}`)
 
@@ -149,7 +149,7 @@ export async function queryOrders(
 
   const { data: orders, error } = await supabase
     .from('orders')
-    .select('id, status, total, created_at')
+    .select('id, fulfillment_status, total, created_at')
     .eq('store_id', storeId)
     .gte('created_at', range.from)
     .lte('created_at', range.to)
@@ -158,7 +158,8 @@ export async function queryOrders(
 
   const byStatus: Record<string, number> = {}
   for (const order of orders || []) {
-    byStatus[order.status] = (byStatus[order.status] || 0) + 1
+    const s = order.fulfillment_status || 'unknown'
+    byStatus[s] = (byStatus[s] || 0) + 1
   }
 
   return { total: (orders || []).length, byStatus }
@@ -177,11 +178,11 @@ export async function queryTopProducts(
 
   const { data: items, error } = await supabase
     .from('order_items')
-    .select('product_id, quantity, price, orders!inner(store_id, created_at, status)')
+    .select('product_id, quantity, price, orders!inner(store_id, created_at, fulfillment_status)')
     .eq('orders.store_id', storeId)
     .gte('orders.created_at', range.from)
     .lte('orders.created_at', range.to)
-    .in('orders.status', REVENUE_STATUSES)
+    .in('orders.fulfillment_status', REVENUE_STATUSES)
 
   if (error) throw new Error(`Top products query failed: ${error.message}`)
 

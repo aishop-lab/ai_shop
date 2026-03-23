@@ -21,26 +21,32 @@ interface AgentConfigHints {
   value: string
 }
 
-const AGENT_CONFIG_HINTS: Record<AgentType, AgentConfigHints[]> = {
+interface ConfigOption {
+  label: string
+  value: string
+  options?: string[] // dropdown options
+}
+
+const AGENT_CONFIG_HINTS: Record<AgentType, ConfigOption[]> = {
   support: [
-    { label: 'Response tone', value: 'Friendly & professional' },
-    { label: 'Escalation threshold', value: '3 failed attempts' },
+    { label: 'Response tone', value: 'Friendly & professional', options: ['Friendly & professional', 'Formal & polished', 'Casual & warm', 'Concise & direct'] },
+    { label: 'Escalation threshold', value: '3 failed attempts', options: ['2 failed attempts', '3 failed attempts', '5 failed attempts', 'Never auto-escalate'] },
   ],
   sales: [
-    { label: 'Max discount %', value: '20%' },
-    { label: 'Recovery email delay', value: '1 hour' },
+    { label: 'Max discount %', value: '20%', options: ['5%', '10%', '15%', '20%', '25%', '30%'] },
+    { label: 'Recovery email delay', value: '1 hour', options: ['30 minutes', '1 hour', '3 hours', '6 hours', '24 hours'] },
   ],
   analytics: [
-    { label: 'Report frequency', value: 'Weekly' },
-    { label: 'Anomaly sensitivity', value: 'Medium' },
+    { label: 'Report frequency', value: 'Weekly', options: ['Daily', 'Weekly', 'Bi-weekly', 'Monthly'] },
+    { label: 'Anomaly sensitivity', value: 'Medium', options: ['Low', 'Medium', 'High', 'Critical only'] },
   ],
   technical: [
-    { label: 'Auto-fix threshold', value: 'Minor issues only' },
-    { label: 'SEO audit schedule', value: 'Every Monday' },
+    { label: 'Auto-fix threshold', value: 'Minor issues only', options: ['Minor issues only', 'Minor + moderate', 'All issues', 'Never auto-fix'] },
+    { label: 'SEO audit schedule', value: 'Every Monday', options: ['Daily', 'Every Monday', 'Every 1st of month', 'Manual only'] },
   ],
   marketing: [
-    { label: 'Budget limit', value: '$500 / month' },
-    { label: 'Platform preference', value: 'Meta + Google' },
+    { label: 'Budget limit', value: '$500 / month', options: ['$100 / month', '$250 / month', '$500 / month', '$1000 / month', '$2500 / month', 'No limit'] },
+    { label: 'Platform preference', value: 'Meta + Google', options: ['Meta + Google', 'Meta (Facebook + Instagram)', 'Google Ads only', 'Instagram only', 'All platforms'] },
   ],
 }
 
@@ -54,12 +60,14 @@ function AgentConfigCard({
   settings,
   onToggle,
   onAutonomyChange,
+  onConfigChange,
   saving,
 }: {
   agentType: AgentType
   settings: AgentSettings
   onToggle: () => void
   onAutonomyChange: (level: AutonomyLevel) => void
+  onConfigChange?: (label: string, value: string) => void
   saving?: boolean
 }) {
   const hints = AGENT_CONFIG_HINTS[agentType]
@@ -69,17 +77,17 @@ function AgentConfigCard({
     <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-5 space-y-5">
       {/* Agent header */}
       <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <AgentBadge agentType={agentType} size="md" />
           </div>
-          <p className="text-xs text-[var(--platform-text-muted)]">
+          <p className="text-sm text-[var(--platform-text-muted)]">
             {AGENT_DESCRIPTIONS[agentType]}
           </p>
         </div>
         <div className="flex items-center gap-2">
           {saving && (
-            <span className="font-mono text-[10px] text-[var(--platform-text-muted)]">Saving...</span>
+            <span className="font-mono text-xs text-[var(--platform-text-muted)]">Saving...</span>
           )}
         {/* Toggle */}
         <button
@@ -89,47 +97,44 @@ function AgentConfigCard({
           aria-label={`${AGENT_DISPLAY_NAMES[agentType]} enabled`}
           onClick={onToggle}
           className={cn(
-            'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--platform-accent)]',
+            'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--platform-accent)]',
             settings.enabled ? 'bg-[var(--platform-accent)]' : 'bg-[var(--platform-border)]'
           )}
         >
           <span
             className={cn(
-              'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform',
-              settings.enabled ? 'translate-x-4' : 'translate-x-0'
+              'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform',
+              settings.enabled ? 'translate-x-5' : 'translate-x-0'
             )}
           />
         </button>
         </div>
       </div>
 
-      {/* Autonomy selector */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">
+      {/* Autonomy selector — always editable */}
+      <div className="space-y-2.5">
+        <p className="text-xs font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">
           Autonomy Level
         </p>
-        <div className="flex gap-1.5">
+        <div className="flex gap-2">
           {([1, 2, 3, 4, 5] as AutonomyLevel[]).map((level) => (
             <button
               key={level}
               type="button"
               onClick={() => onAutonomyChange(level)}
-              disabled={!settings.enabled}
               aria-label={`Level ${level}: ${AUTONOMY_LEVELS[level].label}`}
               className={cn(
-                'flex h-8 w-8 shrink-0 items-center justify-center rounded border font-mono text-xs font-medium transition-colors',
-                settings.enabled
-                  ? settings.autonomy === level
-                    ? 'border-[var(--platform-accent)] bg-[var(--platform-accent)]/10 text-[var(--platform-accent)]'
-                    : 'border-[var(--platform-border)] text-[var(--platform-text-muted)] hover:border-[var(--platform-border-hover)] hover:text-[var(--platform-text-secondary)]'
-                  : 'border-[var(--platform-border)] text-[var(--platform-text-muted)] opacity-40 cursor-not-allowed'
+                'flex h-9 w-9 shrink-0 items-center justify-center rounded-md border font-mono text-sm font-medium transition-colors',
+                settings.autonomy === level
+                  ? 'border-[var(--platform-accent)] bg-[var(--platform-accent)]/10 text-[var(--platform-accent)]'
+                  : 'border-[var(--platform-border)] text-[var(--platform-text-muted)] hover:border-[var(--platform-border-hover)] hover:text-[var(--platform-text-secondary)]'
               )}
             >
               {level}
             </button>
           ))}
         </div>
-        <p className="text-xs text-[var(--platform-text-secondary)]">
+        <p className="text-sm text-[var(--platform-text-secondary)]">
           <span className="font-medium text-[var(--platform-text-primary)]">
             {currentLevel.label}
           </span>
@@ -137,37 +142,53 @@ function AgentConfigCard({
           {currentLevel.description}
         </p>
 
-        {/* PL-17: Inline descriptions for all autonomy levels */}
-        <div className="mt-2 space-y-1 rounded border border-[var(--platform-border)] bg-[var(--platform-bg)] px-3 py-2">
-          <p className="text-[9px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)] mb-1">All levels</p>
-          {([1, 2, 3, 4, 5] as AutonomyLevel[]).map((level) => (
-            <p key={level} className={cn(
-              'text-[10px] leading-relaxed',
-              settings.autonomy === level ? 'text-[var(--platform-text-primary)]' : 'text-[var(--platform-text-muted)]'
-            )}>
-              <span className="font-mono font-medium">{level}.</span>{' '}
-              <span className="font-medium">{AUTONOMY_LEVELS[level].label}:</span>{' '}
-              {AUTONOMY_LEVELS[level].description}
-            </p>
-          ))}
-        </div>
+        {/* All levels reference */}
+        <details className="group">
+          <summary className="cursor-pointer text-xs font-medium text-[var(--platform-text-muted)] hover:text-[var(--platform-text-secondary)] transition-colors">
+            View all levels
+          </summary>
+          <div className="mt-2 space-y-1 rounded border border-[var(--platform-border)] bg-[var(--platform-bg)] px-3 py-2">
+            {([1, 2, 3, 4, 5] as AutonomyLevel[]).map((level) => (
+              <p key={level} className={cn(
+                'text-xs leading-relaxed',
+                settings.autonomy === level ? 'text-[var(--platform-text-primary)]' : 'text-[var(--platform-text-muted)]'
+              )}>
+                <span className="font-mono font-medium">{level}.</span>{' '}
+                <span className="font-medium">{AUTONOMY_LEVELS[level].label}:</span>{' '}
+                {AUTONOMY_LEVELS[level].description}
+              </p>
+            ))}
+          </div>
+        </details>
       </div>
 
-      {/* Config hints */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">
+      {/* Configuration — editable dropdowns */}
+      <div className="space-y-2.5">
+        <p className="text-xs font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">
           Configuration
         </p>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {hints.map((hint) => (
             <div
               key={hint.label}
-              className="flex items-center justify-between rounded border border-[var(--platform-border)] bg-[var(--platform-bg)] px-3 py-2"
+              className="flex items-center justify-between gap-3 rounded-md border border-[var(--platform-border)] bg-[var(--platform-bg)] px-3 py-2.5"
             >
-              <span className="text-xs text-[var(--platform-text-secondary)]">{hint.label}</span>
-              <span className="font-mono text-xs text-[var(--platform-text-muted)]">
-                {hint.value}
-              </span>
+              <span className="text-sm text-[var(--platform-text-secondary)]">{hint.label}</span>
+              {hint.options ? (
+                <select
+                  defaultValue={hint.value}
+                  onChange={(e) => onConfigChange?.(hint.label, e.target.value)}
+                  className="rounded border border-[var(--platform-border)] bg-[var(--platform-surface)] px-2 py-1 font-mono text-xs text-[var(--platform-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--platform-accent)] cursor-pointer"
+                >
+                  {hint.options.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              ) : (
+                <span className="font-mono text-sm text-[var(--platform-text-muted)]">
+                  {hint.value}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -262,10 +283,10 @@ export default function AgentConfigPage() {
             <ArrowLeft className="h-3 w-3" />
             Settings
           </Link>
-          <h1 className="font-mono text-lg font-semibold text-[var(--platform-text-primary)]">
+          <h1 className="font-mono text-xl font-semibold text-[var(--platform-text-primary)]">
             Agent Configuration
           </h1>
-          <p className="text-sm text-[var(--platform-text-secondary)]">
+          <p className="text-base text-[var(--platform-text-secondary)]">
             Loading agent settings...
           </p>
         </div>
@@ -287,10 +308,10 @@ export default function AgentConfigPage() {
           <ArrowLeft className="h-3 w-3" />
           Settings
         </Link>
-        <h1 className="font-mono text-lg font-semibold text-[var(--platform-text-primary)]">
+        <h1 className="font-mono text-xl font-semibold text-[var(--platform-text-primary)]">
           Agent Configuration
         </h1>
-        <p className="text-sm text-[var(--platform-text-secondary)]">
+        <p className="text-base text-[var(--platform-text-secondary)]">
           Configure autonomy levels and behavior for each agent
         </p>
       </div>
@@ -304,6 +325,15 @@ export default function AgentConfigPage() {
             settings={agentSettings[agentType]}
             onToggle={() => handleToggle(agentType)}
             onAutonomyChange={(level) => handleAutonomyChange(agentType, level)}
+            onConfigChange={(label, value) => {
+              // Config changes saved to agent config JSON
+              const agentState = agents.find((a) => a.agent_type === agentType)
+              if (agentState && storeId) {
+                const updatedConfig = { ...(agentState.config || {}), [label]: value }
+                updateAgent(storeId, agentType, { config: updatedConfig })
+                showToast(`${AGENT_DISPLAY_NAMES[agentType]}: ${label} updated`)
+              }
+            }}
             saving={savingAgents.has(agentType)}
           />
         ))}

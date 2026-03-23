@@ -5,10 +5,10 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const type = searchParams.get('type')
-  const rawNext = searchParams.get('next') ?? '/dashboard'
+  const rawNext = searchParams.get('next') ?? '/platform'
   // Validate redirect to prevent open redirect attacks (e.g. //evil.com or javascript:)
   const next = rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.includes('://')
-    ? rawNext : '/dashboard'
+    ? rawNext : '/platform'
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
 

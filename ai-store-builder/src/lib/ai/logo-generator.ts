@@ -347,8 +347,8 @@ function buildLogoPrompt(params: {
     brandContext += `\nBrand Story: ${description.substring(0, 150)}`
   }
 
-  // Determine if we should include text in the logo
-  const includeText = feedbackParsed?.wantsText || false
+  // Always include text/initials — the store name is critical for brand recognition
+  const includeText = true
   const textToInclude = feedbackParsed?.textContent || business_name
 
   // Build color directive
@@ -357,13 +357,8 @@ function buildLogoPrompt(params: {
     colorDirective = `PRIMARY COLOR MUST BE ${feedbackParsed.colorRequest.toUpperCase()}. Use ${feedbackParsed.colorRequest} as the dominant color with 1-2 complementary colors.`
   }
 
-  // Build logo type specification
-  let logoTypeSpec: string
-  if (includeText) {
-    logoTypeSpec = `Type: Logo mark WITH text "${textToInclude}" - incorporate the text elegantly into the design`
-  } else {
-    logoTypeSpec = 'Type: Symbol/Icon mark only (NO text, NO letters, NO initials, NO words)'
-  }
+  // Build logo type specification — always incorporate brand name
+  const logoTypeSpec = `Type: Professional logo WITH the text "${textToInclude}" prominently displayed. The brand name must be clearly readable and central to the design.`
 
   // Build feedback section - put it prominently at the top
   let feedbackSection = ''
@@ -387,16 +382,20 @@ ${industryConcepts}
 
 LOGO SPECIFICATIONS:
 ${logoTypeSpec}
-Format: Square, centered, balanced composition
+Format: Square canvas, the logo design MUST FILL THE ENTIRE CANVAS edge-to-edge. NO tiny centered icon with empty space around it.
+Composition: The logo should occupy at least 80% of the canvas area. Large, bold, impactful.
 Colors: ${colorDirective}
-Style: Vector-style flat design, clean edges, no gradients or shadows
+Style: Vector-style flat design, clean edges, professional. Modern brand-quality design.
 Scale: Must be recognizable at 32x32px (favicon) and look great at 512x512px
-Background: Pure white (#FFFFFF)
+Background: Solid colored background that complements the logo (NOT white with a tiny icon in the center)
 
-DESIGN PRINCIPLES:
+CRITICAL RULES:
+- The logo MUST fill the square — no tiny icon floating in a sea of white space
+- The brand name "${business_name}" MUST be readable in the design
 - Create a MEANINGFUL design that captures the brand's essence
 - Use NEGATIVE SPACE cleverly if possible
 - Ensure INSTANT RECOGNITION - the logo should tell a story at a glance
+- Think of real brand logos: Spotify, Slack, Airbnb — bold, full-canvas, memorable
 - Design for MEMORABILITY - simple enough to sketch from memory
 - Professional quality suitable for a real e-commerce brand
 - Think like a top design agency (Pentagram, Landor, Wolff Olins)

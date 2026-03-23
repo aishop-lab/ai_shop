@@ -117,7 +117,10 @@ export default function OrdersPage() {
 
   // Fetch orders from Supabase with pagination and sorting
   const fetchOrders = useCallback(async () => {
-    if (!storeId) return
+    if (!storeId) {
+      setIsLoading(false)
+      return
+    }
     try {
       setIsLoading(true)
       const supabase = createClient()
