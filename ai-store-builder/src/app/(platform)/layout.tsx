@@ -18,14 +18,22 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [storeId, setStoreId] = useState<string | null>(null)
 
-  // Fetch the merchant's store ID
+  // Fetch the merchant's store ID and ensure agents are initialized
   useEffect(() => {
     async function fetchStoreId() {
       try {
         const response = await fetch('/api/dashboard/stats')
         if (response.ok) {
           const data = await response.json()
-          if (data.storeId) setStoreId(data.storeId)
+          if (data.storeId) {
+            setStoreId(data.storeId)
+            // Lazily initialize agent_states if they don't exist yet
+            fetch('/api/agents/initialize', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ store_id: data.storeId }),
+            }).catch(() => {})
+          }
         }
       } catch {
         console.error('[Platform] Failed to fetch store ID')

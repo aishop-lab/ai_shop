@@ -5,6 +5,7 @@ import { getDemoProducts } from '@/lib/products/demo-products'
 import { vercelAI } from '@/lib/ai/vercel-ai-service'
 import { sendWelcomeMerchantEmail } from '@/lib/email/merchant-notifications'
 import { generateStorePolicies } from '@/lib/store/policies'
+import { AGENT_TYPES, DEFAULT_AUTONOMY_LEVEL } from '@/lib/agents/constants'
 
 export async function POST(request: Request) {
   try {
@@ -68,6 +69,35 @@ export async function POST(request: Request) {
         { success: false, error: 'Failed to activate store' },
         { status: 500 }
       )
+    }
+
+    // Initialize agent states for all 5 agents
+    try {
+      const agentRows = AGENT_TYPES.map((agentType) => ({
+        store_id: store_id,
+        agent_type: agentType,
+        is_enabled: false,
+        autonomy_level: DEFAULT_AUTONOMY_LEVEL,
+        status: 'idle' as const,
+        config: {},
+        error_count: 0,
+        total_actions: 0,
+        total_approvals_requested: 0,
+        total_approvals_granted: 0,
+        total_approvals_rejected: 0,
+      }))
+
+      const { error: agentError } = await supabase
+        .from('agent_states')
+        .insert(agentRows)
+
+      if (agentError) {
+        console.error('[Complete] Agent state initialization failed:', agentError)
+      } else {
+        console.log('[Complete] Initialized 5 agent states for store:', store_id)
+      }
+    } catch (agentInitError) {
+      console.error('[Complete] Agent init failed (non-blocking):', agentInitError)
     }
 
     // Generate legal policies for the store
