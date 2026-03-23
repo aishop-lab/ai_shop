@@ -7,12 +7,17 @@ interface Message {
   id: string
   role: 'customer' | 'agent'
   content: string
-  timestamp: Date
+  timestamp: string // ISO string for serialization
 }
 
 interface ChatWidgetProps {
   storeId: string
+  storeName?: string
 }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function getOrCreateSessionId(storeId: string): string {
   const key = `support-session-${storeId}`
@@ -24,7 +29,75 @@ function getOrCreateSessionId(storeId: string): string {
   return newId
 }
 
-export function ChatWidget({ storeId }: ChatWidgetProps) {
+function loadMessages(storeId: string): Message[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(`support-messages-${storeId}`)
+    if (!raw) return []
+    return JSON.parse(raw) as Message[]
+  } catch {
+    return []
+  }
+}
+
+function saveMessages(storeId: string, messages: Message[]): void {
+  if (typeof window === 'undefined') return
+  try {
+    // Keep at most 100 messages in localStorage to avoid bloat
+    const toSave = messages.slice(-100)
+    localStorage.setItem(`support-messages-${storeId}`, JSON.stringify(toSave))
+  } catch {
+    // localStorage full or unavailable — silently ignore
+  }
+}
+
+function loadConversationId(storeId: string): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  return localStorage.getItem(`support-convo-${storeId}`) ?? undefined
+}
+
+function saveConversationId(storeId: string, convoId: string): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(`support-convo-${storeId}`, convoId)
+}
+
+function formatTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  } catch {
+    return ''
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Typing dots animation via CSS keyframes injected once
+// ---------------------------------------------------------------------------
+
+const DOTS_STYLE_ID = 'chat-typing-dots'
+
+function ensureDotsStyle(): void {
+  if (typeof document === 'undefined') return
+  if (document.getElementById(DOTS_STYLE_ID)) return
+  const style = document.createElement('style')
+  style.id = DOTS_STYLE_ID
+  style.textContent = `
+    @keyframes chatTypingBounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-4px); }
+    }
+    .chat-dot { animation: chatTypingBounce 1.4s infinite ease-in-out; }
+    .chat-dot:nth-child(1) { animation-delay: 0s; }
+    .chat-dot:nth-child(2) { animation-delay: 0.2s; }
+    .chat-dot:nth-child(3) { animation-delay: 0.4s; }
+  `
+  document.head.appendChild(style)
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export function ChatWidget({ storeId, storeName }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -32,13 +105,24 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
   const [conversationId, setConversationId] = useState<string | undefined>(undefined)
   const [sessionId, setSessionId] = useState<string>('')
   const [supportAvailable, setSupportAvailable] = useState<boolean | null>(null)
+  const [unreadCount, setUnreadCount] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Initialize session ID from localStorage on mount
+  // Initialize from localStorage
   useEffect(() => {
     setSessionId(getOrCreateSessionId(storeId))
+    setMessages(loadMessages(storeId))
+    setConversationId(loadConversationId(storeId))
+    ensureDotsStyle()
   }, [storeId])
+
+  // Persist messages whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveMessages(storeId, messages)
+    }
+  }, [messages, storeId])
 
   // Check if the support agent is enabled for this store
   useEffect(() => {
@@ -65,7 +149,9 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
   // Focus input when chat opens
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 100)
+      setUnreadCount(0)
+      const timer = setTimeout(() => inputRef.current?.focus(), 100)
+      return () => clearTimeout(timer)
     }
   }, [isOpen])
 
@@ -77,7 +163,7 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
       id: crypto.randomUUID(),
       role: 'customer',
       content: trimmed,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     }
 
     setMessages(prev => [...prev, customerMessage])
@@ -107,18 +193,24 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
         timestamp: string
       }
 
-      if (data.conversationId && !conversationId) {
+      if (data.conversationId) {
         setConversationId(data.conversationId)
+        saveConversationId(storeId, data.conversationId)
       }
 
       const agentMessage: Message = {
         id: crypto.randomUUID(),
         role: 'agent',
         content: data.response,
-        timestamp: new Date(data.timestamp),
+        timestamp: data.timestamp ?? new Date().toISOString(),
       }
 
       setMessages(prev => [...prev, agentMessage])
+
+      // If chat is minimized, increment unread
+      if (!isOpen) {
+        setUnreadCount(prev => prev + 1)
+      }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'unknown'
       const friendlyContent = errMsg === 'support_not_enabled'
@@ -128,14 +220,13 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
         id: crypto.randomUUID(),
         role: 'agent',
         content: friendlyContent,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       }
       setMessages(prev => [...prev, errorMessage])
-      console.error('[ChatWidget] send error:', err)
     } finally {
       setIsLoading(false)
     }
-  }, [inputValue, isLoading, sessionId, storeId, conversationId])
+  }, [inputValue, isLoading, sessionId, storeId, conversationId, isOpen])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -143,9 +234,6 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
       sendMessage()
     }
   }
-
-  const formatTime = (date: Date) =>
-    date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
   // Don't render the widget if support is unavailable or still checking
   if (supportAvailable !== true) return null
@@ -159,18 +247,27 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
         className={[
           'fixed bottom-6 right-6 z-40',
           'w-14 h-14 rounded-full',
-          'bg-[var(--color-primary)]',
-          'shadow-lg shadow-[var(--color-primary)]/30',
+          'bg-[var(--color-primary,#6366f1)]',
+          'shadow-lg shadow-[var(--color-primary,#6366f1)]/30',
           'flex items-center justify-center',
           'transition-all duration-300 hover:scale-110',
-          'focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2',
+          'focus:outline-none focus:ring-2 focus:ring-[var(--color-primary,#6366f1)] focus:ring-offset-2',
           isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100',
         ].join(' ')}
       >
         <MessageCircle className="h-6 w-6 text-white" />
 
-        {/* Pulse ring to draw attention */}
-        <span className="absolute inset-0 rounded-full bg-[var(--color-primary)] opacity-30 animate-ping" />
+        {/* Unread badge */}
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+
+        {/* Pulse ring to draw attention — only when no messages yet */}
+        {messages.length === 0 && (
+          <span className="absolute inset-0 rounded-full bg-[var(--color-primary,#6366f1)] opacity-30 animate-ping" />
+        )}
       </button>
 
       {/* Chat panel */}
@@ -179,12 +276,15 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
         aria-label="Support chat"
         aria-modal="true"
         className={[
-          'fixed bottom-6 right-6 z-50',
-          'w-[380px] max-h-[500px]',
+          'fixed z-50',
+          // Desktop: bottom-right corner, fixed size
+          'bottom-0 right-0 sm:bottom-6 sm:right-6',
+          'w-full sm:w-[400px]',
+          'h-[100dvh] sm:h-auto sm:max-h-[500px]',
           'flex flex-col',
-          'bg-white rounded-2xl',
+          'bg-white sm:rounded-2xl',
           'shadow-2xl shadow-black/10',
-          'border border-gray-200',
+          'border-0 sm:border sm:border-gray-200',
           'transition-all duration-300 origin-bottom-right',
           isOpen
             ? 'scale-100 opacity-100'
@@ -192,13 +292,15 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
         ].join(' ')}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-primary)] rounded-t-2xl">
+        <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-primary,#6366f1)] sm:rounded-t-2xl flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <MessageCircle className="h-4 w-4 text-white" />
             </div>
             <div>
-              <p className="text-white font-semibold text-sm">Support</p>
+              <p className="text-white font-semibold text-sm">
+                {storeName ? `${storeName} Support` : 'Support'}
+              </p>
               <p className="text-white/70 text-xs">We typically reply instantly</p>
             </div>
           </div>
@@ -215,11 +317,11 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
         <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
           {messages.length === 0 && !isLoading && (
             <div className="text-center py-8">
-              <div className="w-12 h-12 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center mx-auto mb-3">
-                <MessageCircle className="h-6 w-6 text-[var(--color-primary)]" />
+              <div className="w-12 h-12 rounded-full bg-[var(--color-primary,#6366f1)]/10 flex items-center justify-center mx-auto mb-3">
+                <MessageCircle className="h-6 w-6 text-[var(--color-primary,#6366f1)]" />
               </div>
               <p className="text-gray-500 text-sm font-medium">How can we help you?</p>
-              <p className="text-gray-400 text-xs mt-1">Ask us anything — we&apos;re here to help.</p>
+              <p className="text-gray-400 text-xs mt-1">Ask us anything &mdash; we&apos;re here to help.</p>
             </div>
           )}
 
@@ -233,9 +335,9 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
             >
               <div
                 className={[
-                  'px-3 py-2 rounded-2xl text-sm leading-relaxed',
+                  'px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words',
                   msg.role === 'customer'
-                    ? 'bg-[var(--color-primary)] text-white rounded-br-sm'
+                    ? 'bg-[var(--color-primary,#6366f1)] text-white rounded-br-sm'
                     : 'bg-gray-100 text-gray-800 rounded-bl-sm',
                 ].join(' ')}
               >
@@ -247,12 +349,13 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
             </div>
           ))}
 
-          {/* Typing indicator */}
+          {/* Typing indicator — animated dots */}
           {isLoading && (
-            <div className="flex items-start gap-2">
-              <div className="bg-gray-100 px-3 py-2 rounded-2xl rounded-bl-sm flex items-center gap-1.5">
-                <Loader2 className="h-3 w-3 text-gray-400 animate-spin" />
-                <span className="text-gray-400 text-xs">Typing…</span>
+            <div className="flex items-start">
+              <div className="bg-gray-100 px-4 py-2.5 rounded-2xl rounded-bl-sm flex items-center gap-1">
+                <span className="chat-dot w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" />
+                <span className="chat-dot w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" />
+                <span className="chat-dot w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" />
               </div>
             </div>
           )}
@@ -261,21 +364,21 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
         </div>
 
         {/* Input bar */}
-        <div className="flex items-center gap-2 px-3 py-3 border-t border-gray-100">
+        <div className="flex items-center gap-2 px-3 py-3 border-t border-gray-100 flex-shrink-0">
           <input
             ref={inputRef}
             type="text"
             value={inputValue}
             onChange={e => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message…"
+            placeholder="Type a message..."
             disabled={isLoading}
             maxLength={2000}
             className={[
               'flex-1 px-3 py-2 text-sm',
               'bg-gray-50 rounded-xl',
               'border border-gray-200',
-              'focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]',
+              'focus:outline-none focus:ring-2 focus:ring-[var(--color-primary,#6366f1)]/30 focus:border-[var(--color-primary,#6366f1)]',
               'placeholder:text-gray-400',
               'disabled:opacity-50',
               'transition-colors',
@@ -287,13 +390,17 @@ export function ChatWidget({ storeId }: ChatWidgetProps) {
             aria-label="Send message"
             className={[
               'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0',
-              'bg-[var(--color-primary)] hover:opacity-90',
+              'bg-[var(--color-primary,#6366f1)] hover:opacity-90',
               'transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:ring-offset-1',
+              'focus:outline-none focus:ring-2 focus:ring-[var(--color-primary,#6366f1)]/30 focus:ring-offset-1',
               'disabled:opacity-40 disabled:cursor-not-allowed',
             ].join(' ')}
           >
-            <Send className="h-4 w-4 text-white" />
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 text-white animate-spin" />
+            ) : (
+              <Send className="h-4 w-4 text-white" />
+            )}
           </button>
         </div>
       </div>

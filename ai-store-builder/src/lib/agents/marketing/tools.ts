@@ -477,6 +477,194 @@ async function executeGetMarketingROAS(
   }
 }
 
+// ---- Tool: getUpcomingSeasonalEvents ----
+
+const getUpcomingSeasonalEventsSchema = z.object({
+  daysAhead: z.number().describe('Number of days ahead to look for upcoming events (e.g., 30, 60, 90)'),
+})
+
+async function executeGetUpcomingSeasonalEvents(
+  args: Record<string, unknown>,
+  _context: AgentExecutionContext
+) {
+  const { daysAhead } = args as z.infer<typeof getUpcomingSeasonalEventsSchema>
+
+  try {
+    const { getUpcomingEvents } = await import('./seasonal-campaigns')
+    const events = getUpcomingEvents(daysAhead)
+
+    if (events.length === 0) {
+      return {
+        success: true,
+        data: { events: [], count: 0 },
+        summary: `No seasonal events found in the next ${daysAhead} days`,
+      }
+    }
+
+    const eventSummaries = events.map((e) => `${e.name} (in ${e.daysUntil} days, ${e.nextOccurrence})`).join(', ')
+
+    return {
+      success: true,
+      data: { events, count: events.length },
+      summary: `Found ${events.length} upcoming events in next ${daysAhead} days: ${eventSummaries}`,
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, summary: `Failed to get upcoming events: ${msg}` }
+  }
+}
+
+// ---- Tool: generateSeasonalCampaign ----
+
+const generateSeasonalCampaignSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+  eventId: z.string().describe('The seasonal event ID (e.g., diwali, black-friday, christmas)'),
+})
+
+async function executeGenerateSeasonalCampaign(
+  args: Record<string, unknown>,
+  _context: AgentExecutionContext
+) {
+  const { storeId, eventId } = args as z.infer<typeof generateSeasonalCampaignSchema>
+
+  try {
+    const { generateCampaignPlan } = await import('./seasonal-campaigns')
+    const plan = await generateCampaignPlan(storeId, eventId)
+
+    return {
+      success: true,
+      data: plan,
+      summary: `Generated ${plan.phases.length}-phase campaign plan for ${plan.eventName}: estimated budget ${plan.totalEstimatedBudget.min}-${plan.totalEstimatedBudget.max} ${plan.totalEstimatedBudget.currency}, expected ROAS ${plan.expectedROAS.min.toFixed(1)}-${plan.expectedROAS.max.toFixed(1)}x`,
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, summary: `Failed to generate seasonal campaign plan: ${msg}` }
+  }
+}
+
+// ---- Tool: getSeasonalCalendar ----
+
+const getSeasonalCalendarSchema = z.object({
+  month: z.number().min(1).max(12).optional().describe('Month number (1-12) to filter events, or omit for full year calendar'),
+})
+
+async function executeGetSeasonalCalendar(
+  args: Record<string, unknown>,
+  _context: AgentExecutionContext
+) {
+  const { month } = args as z.infer<typeof getSeasonalCalendarSchema>
+
+  try {
+    const { getSeasonalCalendar } = await import('./seasonal-campaigns')
+    const events = getSeasonalCalendar(month)
+
+    const monthLabel = month
+      ? new Date(2026, month - 1, 1).toLocaleString('en', { month: 'long' })
+      : 'full year'
+
+    const eventNames = events.map((e) => `${e.name} (${e.region}, ${e.category})`).join(', ')
+
+    return {
+      success: true,
+      data: { events, count: events.length, period: monthLabel },
+      summary: `Seasonal calendar for ${monthLabel}: ${events.length} events — ${eventNames}`,
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, summary: `Failed to get seasonal calendar: ${msg}` }
+  }
+}
+
+// ---- Tool: trackConversion ----
+
+const trackConversionSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+  eventName: z.enum(['Purchase', 'AddToCart', 'InitiateCheckout', 'ViewContent', 'Lead', 'CompleteRegistration']).describe('The conversion event type'),
+  email: z.string().optional().describe('Customer email (will be hashed before sending)'),
+  phone: z.string().optional().describe('Customer phone number (will be hashed before sending)'),
+  clientIpAddress: z.string().optional().describe('Client IP address'),
+  clientUserAgent: z.string().optional().describe('Client user agent string'),
+  fbc: z.string().optional().describe('Meta click ID from _fbc cookie'),
+  fbp: z.string().optional().describe('Meta browser ID from _fbp cookie'),
+  currency: z.string().optional().describe('Currency code (e.g., INR, USD)'),
+  value: z.number().optional().describe('Monetary value of the event'),
+  contentIds: z.array(z.string()).optional().describe('Product/content IDs involved'),
+  contentType: z.string().optional().describe('Content type (e.g., product)'),
+  numItems: z.number().optional().describe('Number of items'),
+  orderId: z.string().optional().describe('Order ID for purchase events'),
+  eventSourceUrl: z.string().optional().describe('URL where the event occurred'),
+})
+
+async function executeTrackConversion(
+  args: Record<string, unknown>,
+  _context: AgentExecutionContext
+) {
+  const {
+    storeId,
+    eventName,
+    email,
+    phone,
+    clientIpAddress,
+    clientUserAgent,
+    fbc,
+    fbp,
+    currency,
+    value,
+    contentIds,
+    contentType,
+    numItems,
+    orderId,
+    eventSourceUrl,
+  } = args as z.infer<typeof trackConversionSchema>
+
+  try {
+    const { sendConversionEvent, hashUserData } = await import('./meta-capi')
+
+    // Build user_data with hashed PII
+    const userData: Record<string, unknown> = {}
+    if (email) userData.em = [hashUserData(email)]
+    if (phone) userData.ph = [hashUserData(phone)]
+    if (clientIpAddress) userData.client_ip_address = clientIpAddress
+    if (clientUserAgent) userData.client_user_agent = clientUserAgent
+    if (fbc) userData.fbc = fbc
+    if (fbp) userData.fbp = fbp
+
+    // Build custom_data
+    const customData: Record<string, unknown> = {}
+    if (currency) customData.currency = currency
+    if (value !== undefined) customData.value = value
+    if (contentIds) customData.content_ids = contentIds
+    if (contentType) customData.content_type = contentType
+    if (numItems !== undefined) customData.num_items = numItems
+    if (orderId) customData.order_id = orderId
+
+    const result = await sendConversionEvent(storeId, {
+      event_name: eventName,
+      event_time: Math.floor(Date.now() / 1000),
+      user_data: userData as import('./meta-capi').ConversionEvent['user_data'],
+      custom_data: Object.keys(customData).length > 0 ? customData as import('./meta-capi').ConversionEvent['custom_data'] : undefined,
+      event_source_url: eventSourceUrl,
+      action_source: 'website',
+      event_id: orderId ? `${eventName.toLowerCase()}_${orderId}` : `${eventName.toLowerCase()}_${Date.now()}`,
+    })
+
+    return {
+      success: true,
+      data: { eventsReceived: result.events_received, fbtrace_id: result.fbtrace_id },
+      summary: `Sent ${eventName} conversion event to Meta CAPI (${result.events_received} event received)${orderId ? ` for order ${orderId}` : ''}${value ? ` — value: ${currency || ''} ${value}` : ''}`,
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    if (msg.includes('not connected') || msg.includes('Pixel ID not configured')) {
+      return {
+        success: false,
+        summary: 'Meta account not connected or Pixel ID not configured. Please connect your Meta Business account and configure your Pixel in Settings > Connections.',
+      }
+    }
+    return { success: false, summary: `Failed to send ${eventName} conversion event: ${msg}` }
+  }
+}
+
 // ---- Export all tools ----
 
 export const marketingTools: AgentToolConfig[] = [
@@ -551,5 +739,37 @@ export const marketingTools: AgentToolConfig[] = [
     category: 'analysis',
     riskLevel: 'low',
     execute: executeGetMarketingROAS,
+  },
+  {
+    name: 'getUpcomingSeasonalEvents',
+    description: 'Get upcoming seasonal events (Indian festivals, global holidays, sales events) with campaign suggestions and recommended channels',
+    inputSchema: getUpcomingSeasonalEventsSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeGetUpcomingSeasonalEvents,
+  },
+  {
+    name: 'generateSeasonalCampaign',
+    description: 'AI-generate a full multi-phase campaign plan for a seasonal event including email, social, WhatsApp content, budget allocation, and timeline',
+    inputSchema: generateSeasonalCampaignSchema,
+    category: 'campaign',
+    riskLevel: 'low',
+    execute: executeGenerateSeasonalCampaign,
+  },
+  {
+    name: 'getSeasonalCalendar',
+    description: 'Get the full seasonal marketing calendar with Indian festivals, global holidays, and sale events, optionally filtered by month',
+    inputSchema: getSeasonalCalendarSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeGetSeasonalCalendar,
+  },
+  {
+    name: 'trackConversion',
+    description: 'Send a server-side conversion event (Purchase, AddToCart, ViewContent, etc.) to Meta Conversions API for accurate attribution tracking',
+    inputSchema: trackConversionSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeTrackConversion,
   },
 ]

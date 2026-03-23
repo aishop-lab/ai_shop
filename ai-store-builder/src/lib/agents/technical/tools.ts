@@ -315,6 +315,157 @@ async function executeUpdateProductSEO(
   }
 }
 
+// ---- Tool: querySearchPerformance ----
+
+const querySearchPerformanceSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+  startDate: z.string().optional().describe('Start date in YYYY-MM-DD format (defaults to 28 days ago)'),
+  endDate: z.string().optional().describe('End date in YYYY-MM-DD format (defaults to 3 days ago)'),
+  dimensions: z
+    .array(z.enum(['query', 'page', 'country', 'device', 'date']))
+    .optional()
+    .describe('Dimensions to group by (default: ["query"])'),
+  rowLimit: z.number().optional().describe('Max rows to return (default: 25)'),
+})
+
+async function executeQuerySearchPerformance(
+  args: Record<string, unknown>,
+  context: AgentExecutionContext
+) {
+  const storeId = (context.storeId || args.storeId) as string
+  const { querySearchPerformance } = await import('./search-console')
+
+  try {
+    const result = await querySearchPerformance(storeId, {
+      startDate: args.startDate as string | undefined,
+      endDate: args.endDate as string | undefined,
+      dimensions: args.dimensions as ('query' | 'page' | 'country' | 'device' | 'date')[] | undefined,
+      rowLimit: args.rowLimit as number | undefined,
+    })
+
+    return {
+      success: true,
+      data: result,
+      summary: `Search Performance (${result.dateRange.startDate} to ${result.dateRange.endDate}): ${result.totals.clicks} clicks, ${result.totals.impressions} impressions, ${result.totals.ctr}% CTR, avg position ${result.totals.position}. Top ${result.rows.length} results returned.`,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      summary: `Search Console query failed: ${error instanceof Error ? error.message : String(error)}`,
+    }
+  }
+}
+
+// ---- Tool: runPageSpeedAudit ----
+
+const runPageSpeedAuditSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+  strategy: z
+    .enum(['mobile', 'desktop'])
+    .optional()
+    .describe('Audit strategy (default: "mobile")'),
+})
+
+async function executeRunPageSpeedAudit(
+  args: Record<string, unknown>,
+  context: AgentExecutionContext
+) {
+  const storeId = (context.storeId || args.storeId) as string
+  const strategy = (args.strategy as 'mobile' | 'desktop') || 'mobile'
+  const { auditStorePageSpeed } = await import('./pagespeed')
+
+  try {
+    const result = await auditStorePageSpeed(storeId, strategy)
+
+    const vitalsStr = [
+      result.coreWebVitals.lcp ? `LCP: ${result.coreWebVitals.lcp.value}ms (${result.coreWebVitals.lcp.rating})` : null,
+      result.coreWebVitals.cls ? `CLS: ${result.coreWebVitals.cls.value} (${result.coreWebVitals.cls.rating})` : null,
+      result.coreWebVitals.inp ? `INP: ${result.coreWebVitals.inp.value}ms (${result.coreWebVitals.inp.rating})` : null,
+      result.coreWebVitals.fcp ? `FCP: ${result.coreWebVitals.fcp.value}ms (${result.coreWebVitals.fcp.rating})` : null,
+    ]
+      .filter(Boolean)
+      .join(', ')
+
+    return {
+      success: true,
+      data: result,
+      summary: `PageSpeed (${strategy}): Performance ${result.performanceScore}/100, Accessibility ${result.accessibilityScore}/100, SEO ${result.seoScore}/100. Core Web Vitals: ${vitalsStr || 'No field data available'}. ${result.recommendations.length} recommendations.`,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      summary: `PageSpeed audit failed: ${error instanceof Error ? error.message : String(error)}`,
+    }
+  }
+}
+
+// ---- Tool: checkUptime ----
+
+const checkUptimeSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+})
+
+async function executeCheckUptime(
+  args: Record<string, unknown>,
+  context: AgentExecutionContext
+) {
+  const storeId = (context.storeId || args.storeId) as string
+  const { checkStoreUptime } = await import('./uptime-monitor')
+
+  try {
+    const result = await checkStoreUptime(storeId)
+
+    const sslInfo = result.sslValid
+      ? `SSL valid (expires ${result.sslExpiresAt ? new Date(result.sslExpiresAt).toLocaleDateString() : 'unknown'})`
+      : 'SSL invalid or check failed'
+
+    return {
+      success: true,
+      data: result,
+      summary: `Uptime Check: ${result.url} is ${result.status.toUpperCase()}. HTTP ${result.httpStatus || 'N/A'}, response time ${result.responseTimeMs}ms. ${sslInfo}.${result.error ? ` Error: ${result.error}` : ''}`,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      summary: `Uptime check failed: ${error instanceof Error ? error.message : String(error)}`,
+    }
+  }
+}
+
+// ---- Tool: checkSSLCertificate ----
+
+const checkSSLCertificateSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+})
+
+async function executeCheckSSLCertificate(
+  args: Record<string, unknown>,
+  context: AgentExecutionContext
+) {
+  const storeId = (context.storeId || args.storeId) as string
+  const { checkStoreSSL } = await import('./ssl-monitor')
+
+  try {
+    const result = await checkStoreSSL(storeId)
+
+    const statusEmoji = result.isValid ? 'Valid' : 'INVALID'
+    const expiryWarning = result.isExpiringSoon
+      ? ` WARNING: Expires in ${result.daysUntilExpiry} days!`
+      : ''
+
+    return {
+      success: true,
+      data: result,
+      summary: `SSL Certificate for ${result.domain}: ${statusEmoji}. Issuer: ${result.issuer}. Expires: ${result.validTo ? new Date(result.validTo).toLocaleDateString() : 'unknown'} (${result.daysUntilExpiry} days remaining).${expiryWarning}${result.error ? ` Note: ${result.error}` : ''}`,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      summary: `SSL check failed: ${error instanceof Error ? error.message : String(error)}`,
+    }
+  }
+}
+
 // ---- Export all tools ----
 
 export const technicalTools: AgentToolConfig[] = [
@@ -380,5 +531,41 @@ export const technicalTools: AgentToolConfig[] = [
     category: 'optimization',
     riskLevel: 'medium',
     execute: executeUpdateProductSEO,
+  },
+  {
+    name: 'querySearchPerformance',
+    description:
+      'Get search performance data (clicks, impressions, CTR, position) from Google Search Console for the store. Requires a connected Google Search Console account.',
+    inputSchema: querySearchPerformanceSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeQuerySearchPerformance,
+  },
+  {
+    name: 'runPageSpeedAudit',
+    description:
+      'Run a PageSpeed Insights audit on the store\'s storefront. Returns Core Web Vitals (LCP, CLS, INP, FCP, TTFB), performance/accessibility/SEO scores, and actionable recommendations.',
+    inputSchema: runPageSpeedAuditSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeRunPageSpeedAudit,
+  },
+  {
+    name: 'checkUptime',
+    description:
+      'Check if the store\'s storefront is online and responding. Returns HTTP status, response time, and SSL validity.',
+    inputSchema: checkUptimeSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeCheckUptime,
+  },
+  {
+    name: 'checkSSLCertificate',
+    description:
+      'Check the SSL certificate validity and expiry for the store\'s domain. Alerts if the certificate expires within 30 days.',
+    inputSchema: checkSSLCertificateSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeCheckSSLCertificate,
   },
 ]

@@ -14,6 +14,16 @@ import {
 } from './queries'
 import { detectAnomalies as runAnomalyDetection } from './anomaly-detection'
 import { generateReport as runReportGeneration } from './report-generator'
+import {
+  getTrafficOverview as fetchTrafficOverview,
+  getTrafficSources as fetchTrafficSources,
+  getTopPages as fetchTopPages,
+} from './ga4-client'
+import {
+  calculateAttribution as runAttribution,
+  getChannelPerformance as runChannelPerformance,
+  type AttributionModel,
+} from './attribution'
 
 // ---- Tool: queryRevenue ----
 
@@ -194,6 +204,181 @@ async function executeGetInsights(args: Record<string, unknown>) {
   }
 }
 
+// ---- Tool: queryTrafficOverview ----
+
+const queryTrafficOverviewSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+  period: z.enum(['7d', '30d', '90d']).describe('Time period to query'),
+})
+
+async function executeQueryTrafficOverview(args: Record<string, unknown>) {
+  const { storeId, period } = args as z.infer<typeof queryTrafficOverviewSchema>
+
+  try {
+    const data = await fetchTrafficOverview(storeId, period)
+    return {
+      success: true,
+      data,
+      summary: `Traffic overview (${period}): ${data.sessions.toLocaleString('en-IN')} sessions, ${data.users.toLocaleString('en-IN')} users, ${data.pageviews.toLocaleString('en-IN')} pageviews, ${(data.bounceRate * 100).toFixed(1)}% bounce rate`,
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    if (message.includes('not connected')) {
+      return {
+        success: false,
+        data: null,
+        summary: 'Google Analytics is not connected. The merchant needs to connect their GA4 property in Settings > Integrations.',
+      }
+    }
+    throw err
+  }
+}
+
+// ---- Tool: queryTrafficSources ----
+
+const queryTrafficSourcesSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+  period: z.enum(['7d', '30d', '90d']).describe('Time period to query'),
+})
+
+async function executeQueryTrafficSources(args: Record<string, unknown>) {
+  const { storeId, period } = args as z.infer<typeof queryTrafficSourcesSchema>
+
+  try {
+    const data = await fetchTrafficSources(storeId, period)
+
+    const topSources = data
+      .slice(0, 3)
+      .map((s) => `${s.source}/${s.medium} (${s.sessions} sessions)`)
+      .join(', ')
+
+    return {
+      success: true,
+      data,
+      summary: `Traffic sources (${period}): ${data.length} sources. Top: ${topSources || 'No data'}`,
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    if (message.includes('not connected')) {
+      return {
+        success: false,
+        data: null,
+        summary: 'Google Analytics is not connected. The merchant needs to connect their GA4 property in Settings > Integrations.',
+      }
+    }
+    throw err
+  }
+}
+
+// ---- Tool: queryTopPages ----
+
+const queryTopPagesSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+  period: z.enum(['7d', '30d', '90d']).describe('Time period to query'),
+})
+
+async function executeQueryTopPages(args: Record<string, unknown>) {
+  const { storeId, period } = args as z.infer<typeof queryTopPagesSchema>
+
+  try {
+    const data = await fetchTopPages(storeId, period)
+
+    const topPages = data
+      .slice(0, 3)
+      .map((p) => `${p.pagePath} (${p.pageviews} views)`)
+      .join(', ')
+
+    return {
+      success: true,
+      data,
+      summary: `Top pages (${period}): ${data.length} pages tracked. Top: ${topPages || 'No data'}`,
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    if (message.includes('not connected')) {
+      return {
+        success: false,
+        data: null,
+        summary: 'Google Analytics is not connected. The merchant needs to connect their GA4 property in Settings > Integrations.',
+      }
+    }
+    throw err
+  }
+}
+
+// ---- Tool: calculateAttribution ----
+
+const calculateAttributionSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+  model: z
+    .enum(['first_touch', 'last_touch', 'linear', 'time_decay', 'position_based'])
+    .describe('Attribution model to use: first_touch (100% to first interaction), last_touch (100% to last), linear (equal split), time_decay (recent weighted), position_based (40/20/40)'),
+  period: z.enum(['7d', '30d', '90d']).describe('Time period to analyze'),
+})
+
+async function executeCalculateAttribution(args: Record<string, unknown>) {
+  const { storeId, model, period } = args as z.infer<typeof calculateAttributionSchema>
+
+  const data = await runAttribution(storeId, model as AttributionModel, period)
+
+  if (data.length === 0) {
+    return {
+      success: true,
+      data: [],
+      summary: `No conversion data available for attribution analysis (${period}). Orders need source/medium tracking.`,
+    }
+  }
+
+  const topChannels = data
+    .slice(0, 3)
+    .map(
+      (r) =>
+        `${r.channel}: ₹${r.attributed_revenue.toLocaleString('en-IN')} (${r.percentage}%)`
+    )
+    .join(', ')
+
+  return {
+    success: true,
+    data,
+    summary: `${model} attribution (${period}): ${data.length} channels. Top: ${topChannels}`,
+  }
+}
+
+// ---- Tool: getChannelPerformance ----
+
+const getChannelPerformanceSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+  period: z.enum(['7d', '30d', '90d']).describe('Time period to analyze'),
+})
+
+async function executeGetChannelPerformance(args: Record<string, unknown>) {
+  const { storeId, period } = args as z.infer<typeof getChannelPerformanceSchema>
+
+  const data = await runChannelPerformance(storeId, period)
+
+  if (data.length === 0) {
+    return {
+      success: true,
+      data: [],
+      summary: `No channel performance data available (${period}). Orders need source/medium tracking for attribution.`,
+    }
+  }
+
+  const topChannels = data
+    .slice(0, 3)
+    .map(
+      (ch) =>
+        `${ch.channel}: ₹${ch.total_revenue.toLocaleString('en-IN')} (${ch.total_conversions.toFixed(1)} conversions)`
+    )
+    .join(', ')
+
+  return {
+    success: true,
+    data,
+    summary: `Channel performance (${period}): ${data.length} channels across 5 attribution models. Top (linear): ${topChannels}`,
+  }
+}
+
 // ---- Export all tools ----
 
 export const analyticsTools: AgentToolConfig[] = [
@@ -268,5 +453,50 @@ export const analyticsTools: AgentToolConfig[] = [
     category: 'analysis',
     riskLevel: 'low',
     execute: executeGetInsights,
+  },
+  {
+    name: 'queryTrafficOverview',
+    description:
+      'Get website traffic overview from Google Analytics 4: sessions, users, pageviews, bounce rate, with daily breakdown',
+    inputSchema: queryTrafficOverviewSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeQueryTrafficOverview,
+  },
+  {
+    name: 'queryTrafficSources',
+    description:
+      'Get traffic source/medium breakdown from Google Analytics 4: sessions, users, bounce rate, avg session duration per source',
+    inputSchema: queryTrafficSourcesSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeQueryTrafficSources,
+  },
+  {
+    name: 'queryTopPages',
+    description:
+      'Get top pages by engagement from Google Analytics 4: pageviews, time on page, bounce rate, entrances per page',
+    inputSchema: queryTopPagesSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeQueryTopPages,
+  },
+  {
+    name: 'calculateAttribution',
+    description:
+      'Run multi-touch attribution analysis on order conversions using first-touch, last-touch, linear, time-decay, or position-based models',
+    inputSchema: calculateAttributionSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeCalculateAttribution,
+  },
+  {
+    name: 'getChannelPerformance',
+    description:
+      'Get channel performance with all five attribution models compared side by side: revenue and conversions per channel across first-touch, last-touch, linear, time-decay, and position-based',
+    inputSchema: getChannelPerformanceSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeGetChannelPerformance,
   },
 ]

@@ -3,6 +3,7 @@ import { BaseAgent, type AgentToolConfig } from '../base-agent'
 import type { AgentTrigger, AgentState } from '../types'
 import { buildKnowledgeBase, formatKnowledgeBaseForPrompt } from './knowledge-base'
 import { getSupportTools } from './tools'
+import { detectLanguage, getLanguageSystemPrompt, type SupportedLanguage } from './language-detector'
 
 export class SupportAgent extends BaseAgent {
   readonly agentType = 'support' as const
@@ -11,24 +12,48 @@ export class SupportAgent extends BaseAgent {
   buildSystemPrompt(state: AgentState, trigger: AgentTrigger): string {
     // Note: knowledge base is built asynchronously and injected at call time
     // via the async variant below. This sync version provides a fallback.
-    return this._buildPrompt(state, trigger, null)
+    const language = this._detectLanguageFromTrigger(trigger)
+    return this._buildPrompt(state, trigger, null, undefined, language)
   }
 
   override async buildSystemPromptAsync(state: AgentState, trigger: AgentTrigger): Promise<string> {
     const kb = await buildKnowledgeBase(trigger.storeId)
     const kbText = formatKnowledgeBaseForPrompt(kb)
-    return this._buildPrompt(state, trigger, kbText, kb.storeName)
+    const language = this._detectLanguageFromTrigger(trigger)
+    return this._buildPrompt(state, trigger, kbText, kb.storeName, language)
+  }
+
+  /**
+   * Extract the latest user message from the trigger and detect its language.
+   */
+  private _detectLanguageFromTrigger(trigger: AgentTrigger): SupportedLanguage {
+    // Check for explicitly provided language in context
+    if (trigger.context?.language) {
+      return trigger.context.language as SupportedLanguage
+    }
+
+    // Detect from the latest user message
+    const userMessages = trigger.messages?.filter(m => m.role === 'user') ?? []
+    const latestMessage = userMessages[userMessages.length - 1]?.content
+    if (latestMessage) {
+      const detection = detectLanguage(latestMessage)
+      return detection.detected
+    }
+
+    return 'en'
   }
 
   private _buildPrompt(
     state: AgentState,
     _trigger: AgentTrigger,
     kbText: string | null,
-    storeName?: string
+    storeName?: string,
+    language: SupportedLanguage = 'en'
   ): string {
     const name = storeName ?? 'Our Store'
     const tone = state.config.tone ?? 'friendly'
     const autonomy = state.autonomy_level
+    const languageInstructions = getLanguageSystemPrompt(language)
 
     return `You are the Customer Support Agent for ${name}.
 
@@ -53,7 +78,7 @@ ${kbText ?? 'Knowledge base loading — use lookup tools to fetch store and orde
 - If you don't know the answer, escalate rather than guessing
 - Keep responses concise — customers want quick answers
 - Always include the order number or product name when referring to specific items
-
+${languageInstructions}
 ## Autonomy Level: ${autonomy}
 ${
   autonomy <= 2

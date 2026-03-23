@@ -8,6 +8,17 @@ import { sendRecoveryEmail } from '@/lib/cart/abandoned-cart'
 import { getRecommendations } from '@/lib/ai/recommendations'
 import { segmentCustomers } from './segmentation'
 import { createCampaign, getCampaigns, updateCampaignStats } from './campaign-engine'
+import {
+  analyzePricingOpportunities,
+  applyPriceChange,
+  getPricingHistory,
+} from './dynamic-pricing'
+import {
+  getCompetitorPrices as fetchCompetitorPrices,
+  addCompetitorPrice as insertCompetitorPrice,
+  analyzeCompetitivePricing as runCompetitivePricingAnalysis,
+  getPricingStrategy,
+} from './competitor-monitor'
 
 // ---- Tool: getAbandonedCarts ----
 
@@ -399,9 +410,9 @@ async function executeSendTargetedCampaign(
   }
 }
 
-// ---- Export all tools ----
+// ---- Original tools array (new tools appended after their definitions below) ----
 
-export const salesTools: AgentToolConfig[] = [
+const _originalTools: AgentToolConfig[] = [
   {
     name: 'getAbandonedCarts',
     description: 'Retrieve abandoned carts for a store, optionally filtered by minimum value and age',
@@ -457,5 +468,257 @@ export const salesTools: AgentToolConfig[] = [
     category: 'campaign',
     riskLevel: 'high',
     execute: executeSendTargetedCampaign,
+  },
+]
+
+// ---- Tool: analyzePricing ----
+
+const analyzePricingSchema = z.object({
+  storeId: z.string().describe('The store ID to analyze pricing for'),
+})
+
+async function executeAnalyzePricing(
+  args: Record<string, unknown>,
+  _context: AgentExecutionContext
+) {
+  const { storeId } = args as z.infer<typeof analyzePricingSchema>
+
+  try {
+    const recommendations = await analyzePricingOpportunities(storeId)
+
+    if (recommendations.length === 0) {
+      return {
+        success: true,
+        data: { recommendations: [], count: 0 },
+        summary: 'No pricing opportunities found — all products appear optimally priced',
+      }
+    }
+
+    const increases = recommendations.filter(r => r.priceChange > 0)
+    const decreases = recommendations.filter(r => r.priceChange < 0)
+    const totalImpact = recommendations.reduce((sum, r) => sum + Math.abs(r.priceChange), 0)
+
+    return {
+      success: true,
+      data: {
+        recommendations,
+        count: recommendations.length,
+        summary: {
+          increases: increases.length,
+          decreases: decreases.length,
+          totalImpact: Math.round(totalImpact * 100) / 100,
+        },
+      },
+      summary: `Found ${recommendations.length} pricing opportunities: ${increases.length} price increases, ${decreases.length} markdowns. Total potential impact: $${totalImpact.toFixed(2)}`,
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, summary: `Failed to analyze pricing: ${msg}` }
+  }
+}
+
+// ---- Tool: applyPriceRecommendation ----
+
+const applyPriceRecommendationSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+  productId: z.string().describe('The product ID to update the price for'),
+  newPrice: z.number().describe('The new price to set for the product'),
+  reason: z.string().optional().describe('Reason for the price change'),
+})
+
+async function executeApplyPriceRecommendation(
+  args: Record<string, unknown>,
+  _context: AgentExecutionContext
+) {
+  const { storeId, productId, newPrice, reason } =
+    args as z.infer<typeof applyPriceRecommendationSchema>
+
+  try {
+    const result = await applyPriceChange(
+      storeId,
+      productId,
+      newPrice,
+      reason || 'Dynamic pricing adjustment'
+    )
+
+    return {
+      success: result.success,
+      data: result.data,
+      summary: result.summary,
+      relatedEntityType: 'product',
+      relatedEntityId: productId,
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, summary: `Failed to apply price change: ${msg}` }
+  }
+}
+
+// ---- Tool: getCompetitorPrices ----
+
+const getCompetitorPricesSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+  productId: z.string().optional().describe('Optional product ID to filter competitor prices for a specific product'),
+})
+
+async function executeGetCompetitorPrices(
+  args: Record<string, unknown>,
+  _context: AgentExecutionContext
+) {
+  const { storeId, productId } = args as z.infer<typeof getCompetitorPricesSchema>
+
+  try {
+    const competitorData = await fetchCompetitorPrices(storeId, productId)
+
+    if (competitorData.length === 0) {
+      return {
+        success: true,
+        data: { products: [], count: 0 },
+        summary: productId
+          ? 'No competitor price data found for this product'
+          : 'No competitor price data found. Use addCompetitorPrice to add competitor pricing data.',
+      }
+    }
+
+    const positions = competitorData.reduce(
+      (acc, p) => {
+        acc[p.pricePosition] = (acc[p.pricePosition] || 0) + 1
+        return acc
+      },
+      {} as Record<string, number>
+    )
+
+    const positionSummary = Object.entries(positions)
+      .map(([pos, count]) => `${count} ${pos.replace('_', ' ')}`)
+      .join(', ')
+
+    return {
+      success: true,
+      data: { products: competitorData, count: competitorData.length },
+      summary: `Competitor data for ${competitorData.length} products: ${positionSummary}`,
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, summary: `Failed to get competitor prices: ${msg}` }
+  }
+}
+
+// ---- Tool: addCompetitorPrice ----
+
+const addCompetitorPriceSchema = z.object({
+  storeId: z.string().describe('The store ID'),
+  productId: z.string().describe('The product ID this competitor price is for'),
+  source: z.string().describe('Name of the competitor or marketplace (e.g., "Amazon", "Flipkart", "CompetitorStore")'),
+  price: z.number().describe('The competitor price for this product'),
+  url: z.string().optional().describe('Optional URL to the competitor product listing'),
+})
+
+async function executeAddCompetitorPrice(
+  args: Record<string, unknown>,
+  _context: AgentExecutionContext
+) {
+  const { storeId, productId, source, price, url } =
+    args as z.infer<typeof addCompetitorPriceSchema>
+
+  try {
+    const result = await insertCompetitorPrice(storeId, {
+      productId,
+      source,
+      price,
+      url,
+    })
+
+    return {
+      success: result.success,
+      data: { productId, source, price, url },
+      summary: result.summary,
+      relatedEntityType: 'product',
+      relatedEntityId: productId,
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, summary: `Failed to add competitor price: ${msg}` }
+  }
+}
+
+// ---- Tool: analyzeCompetitivePricing ----
+
+const analyzeCompetitivePricingSchema = z.object({
+  storeId: z.string().describe('The store ID to analyze competitive pricing for'),
+})
+
+async function executeAnalyzeCompetitivePricing(
+  args: Record<string, unknown>,
+  _context: AgentExecutionContext
+) {
+  const { storeId } = args as z.infer<typeof analyzeCompetitivePricingSchema>
+
+  try {
+    const analysis = await runCompetitivePricingAnalysis(storeId)
+
+    if (analysis.productsWithCompetitorData === 0) {
+      return {
+        success: true,
+        data: analysis,
+        summary: `No competitor data available for any of the ${analysis.totalProducts} active products. Add competitor prices first.`,
+      }
+    }
+
+    const { pricePositionBreakdown: b } = analysis
+
+    return {
+      success: true,
+      data: analysis,
+      summary: `Competitive analysis for ${analysis.productsWithCompetitorData}/${analysis.totalProducts} products: ${b.cheapest} cheapest, ${b.below_avg} below avg, ${b.average} average, ${b.above_avg} above avg, ${b.most_expensive} most expensive. ${analysis.overallStrategy}`,
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, summary: `Failed to analyze competitive pricing: ${msg}` }
+  }
+}
+
+// ---- Export all tools ----
+
+export const salesTools: AgentToolConfig[] = [
+  ..._originalTools,
+  {
+    name: 'analyzePricing',
+    description: 'Scan all active products for dynamic pricing opportunities based on demand, inventory, competitor prices, margins, and seasonality',
+    inputSchema: analyzePricingSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeAnalyzePricing,
+  },
+  {
+    name: 'applyPriceRecommendation',
+    description: 'Apply a recommended price change to a product. Enforces constraints: max 30% increase, never below cost, max 50% off compare-at price',
+    inputSchema: applyPriceRecommendationSchema,
+    category: 'optimization',
+    riskLevel: 'high',
+    execute: executeApplyPriceRecommendation,
+  },
+  {
+    name: 'getCompetitorPrices',
+    description: 'Get stored competitor price data for products, showing price positioning and suggested actions',
+    inputSchema: getCompetitorPricesSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeGetCompetitorPrices,
+  },
+  {
+    name: 'addCompetitorPrice',
+    description: 'Add a competitor price data point for a product from a specific source/competitor',
+    inputSchema: addCompetitorPriceSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeAddCompetitorPrice,
+  },
+  {
+    name: 'analyzeCompetitivePricing',
+    description: 'Analyze pricing across all products vs competitors with AI-generated strategy recommendations',
+    inputSchema: analyzeCompetitivePricingSchema,
+    category: 'analysis',
+    riskLevel: 'low',
+    execute: executeAnalyzeCompetitivePricing,
   },
 ]

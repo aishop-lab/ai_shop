@@ -1,7 +1,7 @@
 // src/app/(platform)/layout.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRequireAuth } from '@/lib/hooks/use-require-auth'
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard'
 import { useAgentStates } from '@/lib/hooks/use-agents'
@@ -11,12 +11,14 @@ import { PlatformSidebar } from '@/components/platform/layout/sidebar'
 import { TopBar } from '@/components/platform/layout/top-bar'
 import { MobileNav } from '@/components/platform/layout/mobile-nav'
 import { CommandPalette } from '@/components/platform/layout/command-palette'
+import { AgentIntroOverlay } from '@/components/platform/onboarding/agent-intro-overlay'
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   const { isLoading: authLoading } = useRequireAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [storeId, setStoreId] = useState<string | null>(null)
+  const [showAgentIntro, setShowAgentIntro] = useState(false)
 
   // Fetch the merchant's store ID and ensure agents are initialized
   useEffect(() => {
@@ -33,6 +35,12 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ store_id: data.storeId }),
             }).catch(() => {})
+
+            // Check if user has completed the agent intro
+            const introKey = `agent-intro-${data.storeId}`
+            if (!localStorage.getItem(introKey)) {
+              setShowAgentIntro(true)
+            }
           }
         }
       } catch {
@@ -41,6 +49,13 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
     }
     fetchStoreId()
   }, [])
+
+  const handleIntroComplete = useCallback(() => {
+    if (storeId) {
+      localStorage.setItem(`agent-intro-${storeId}`, 'completed')
+    }
+    setShowAgentIntro(false)
+  }, [storeId])
 
   // Real-time agent states and approvals
   const { agents } = useAgentStates(storeId)
@@ -97,6 +112,10 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
       />
+
+      {showAgentIntro && storeId && (
+        <AgentIntroOverlay storeId={storeId} onComplete={handleIntroComplete} />
+      )}
     </div>
   )
 }

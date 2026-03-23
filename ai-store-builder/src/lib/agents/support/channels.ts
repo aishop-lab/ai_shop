@@ -3,6 +3,9 @@
 
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import type { ConversationChannel } from '@/lib/agents/types'
+import { detectLanguage } from './language-detector'
+import { supportAgent } from './agent'
+import { logger } from '@/lib/logger'
 
 export interface RouteMessageParams {
   channel: ConversationChannel
@@ -16,13 +19,13 @@ export interface RouteMessageParams {
 export interface RouteMessageResult {
   conversationId: string
   response: string
+  language?: string
 }
 
 /**
  * Route an incoming customer message through the appropriate channel.
- * Finds or creates a conversation, saves the message, and returns an agent response.
- *
- * TODO: Integrate real SupportAgent execution once agent orchestration is wired up.
+ * Finds or creates a conversation, saves the message, invokes the Support Agent,
+ * and returns the response.
  */
 export async function routeIncomingMessage(
   params: RouteMessageParams
@@ -30,6 +33,9 @@ export async function routeIncomingMessage(
   const { channel, storeId, message, channelIdentifier, customerId, conversationId } = params
   const supabase = getSupabaseAdmin()
   const now = new Date().toISOString()
+
+  // Detect language for context
+  const languageDetection = detectLanguage(message)
 
   // 1. Find or create conversation
   let convoId = conversationId
@@ -94,7 +100,7 @@ export async function routeIncomingMessage(
     conversation_id: convoId,
     role: 'customer',
     content: message,
-    metadata: { channel, channelIdentifier },
+    metadata: { channel, channelIdentifier, language: languageDetection.detected },
   })
 
   if (msgError) {
@@ -128,33 +134,85 @@ export async function routeIncomingMessage(
       .eq('id', convoId)
   }
 
-  // 4. TODO: Execute SupportAgent with real AI response
-  // When the agent orchestration layer is ready, replace the placeholder below with:
-  //
-  // const result = await supportAgent.execute({
-  //   storeId,
-  //   agentType: 'support',
-  //   source: 'chat',
-  //   context: { conversationId: convoId, message, channel },
-  //   messages: [{ role: 'user', content: message }],
-  // })
-  // const agentResponse = result.actions[0]?.details?.response as string ?? '...'
+  // 4. Load previous conversation messages for context
+  const { data: previousMessages } = await supabase
+    .from('conversation_messages')
+    .select('role, content')
+    .eq('conversation_id', convoId)
+    .order('created_at', { ascending: true })
+    .limit(20) // Keep context window manageable
 
-  const agentResponse =
-    'Thank you for reaching out! Our support agent is processing your query and will get back to you shortly.'
+  const aiMessages: Array<{ role: 'user' | 'assistant'; content: string }> = []
+  for (const msg of previousMessages ?? []) {
+    aiMessages.push({
+      role: msg.role === 'customer' ? 'user' : 'assistant',
+      content: msg.content,
+    })
+  }
 
-  // 5. Save agent response as a conversation message
+  // 5. Execute Support Agent with real AI response
+  let agentResponse: string = ''
+
+  try {
+    const result = await supportAgent.execute({
+      storeId,
+      agentType: 'support',
+      source: 'chat',
+      context: {
+        conversationId: convoId,
+        channel,
+        language: languageDetection.detected,
+      },
+      messages: aiMessages,
+    })
+
+    // Extract the response text from the agent result
+    // The agent may have used the sendReply tool, or we take the last action summary
+    const replyAction = result.actions.find(a => a.actionType === 'sendReply')
+    if (replyAction?.details?.args) {
+      const args = replyAction.details.args as Record<string, unknown>
+      agentResponse = (args.message as string) ?? ''
+    }
+
+    if (!agentResponse) {
+      // Fall back to any action summary or a generic response
+      agentResponse = result.actions[0]?.summary ?? generateFallbackResponse(languageDetection.detected)
+    }
+  } catch (error) {
+    logger.error('[channels] Support agent execution failed', error instanceof Error ? error : undefined)
+    agentResponse = generateFallbackResponse(languageDetection.detected)
+  }
+
+  // 6. Save agent response as a conversation message
   const { error: agentMsgError } = await supabase.from('conversation_messages').insert({
     conversation_id: convoId,
     role: 'agent',
     content: agentResponse,
-    metadata: { channel, automated: true },
+    metadata: { channel, automated: true, language: languageDetection.detected },
   })
 
   if (agentMsgError) {
     // Non-fatal — we still have the response; log and continue
-    console.error('Failed to save agent response message:', agentMsgError.message)
+    logger.error(`Failed to save agent response message: ${agentMsgError.message}`)
   }
 
-  return { conversationId: convoId!, response: agentResponse }
+  return {
+    conversationId: convoId!,
+    response: agentResponse,
+    language: languageDetection.detected,
+  }
+}
+
+/**
+ * Generate a fallback response when the agent fails, in the detected language.
+ */
+function generateFallbackResponse(language: string): string {
+  switch (language) {
+    case 'hi':
+      return 'धन्यवाद! हमारी सहायता टीम आपकी बात पर काम कर रही है और जल्द ही आपसे संपर्क करेगी।'
+    case 'hinglish':
+      return 'Thank you! Humari support team aapki query pe kaam kar rahi hai aur jald hi aapko reply karegi.'
+    default:
+      return 'Thank you for reaching out! Our support team is looking into your query and will get back to you shortly.'
+  }
 }

@@ -94,7 +94,7 @@ export default async function StoreLayout({ children, params }: StoreLayoutProps
                   </main>
                   <StoreFooter />
                 </div>
-                <ChatWidget storeId={store.id} />
+                <ChatWidget storeId={store.id} storeName={store.name} />
               </StoreClientWrapper>
             </AnalyticsProvider>
           </SidebarProvider>

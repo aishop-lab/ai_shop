@@ -1,6 +1,6 @@
 // src/lib/agents/orchestrator.ts
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
-import type { AgentType, AgentAction } from './types'
+import type { AgentType, AgentAction, ApprovalPriority } from './types'
 
 // ---- Constants ----
 
@@ -296,4 +296,258 @@ export function getTriggerRouting(): Record<string, AgentType[]> {
  */
 export function registerTriggerRoute(triggerType: string, agents: AgentType[]): void {
   TRIGGER_ROUTING[triggerType] = agents
+}
+
+// ---- Conflict Escalation ----
+
+export interface ConflictEscalation {
+  id: string
+  store_id: string
+  agents_involved: AgentType[]
+  entity_type: string
+  entity_id: string
+  conflict_description: string
+  auto_resolution?: string
+  merchant_decision_required: boolean
+  resolved: boolean
+  resolution?: string
+  created_at: string
+}
+
+/**
+ * Escalate a conflict between two agents that cannot be auto-resolved.
+ *
+ * When two agents have the same priority or the conflict involves a high-stakes
+ * decision (e.g., pricing change vs marketing campaign), this creates an
+ * approval request for the merchant to decide.
+ *
+ * If priorities differ, attempts auto-resolution first. If priorities are equal,
+ * the conflict is always escalated to the merchant.
+ *
+ * Returns the escalation/approval ID.
+ */
+export async function escalateConflict(
+  storeId: string,
+  agentA: AgentType,
+  agentB: AgentType,
+  entityType: string,
+  entityId: string,
+  description: string
+): Promise<string> {
+  const supabase = getSupabaseAdmin()
+
+  const priorityA = AGENT_PRIORITY[agentA]
+  const priorityB = AGENT_PRIORITY[agentB]
+  const samePriority = priorityA === priorityB
+
+  // Determine if we can auto-resolve or need merchant input
+  let autoResolution: string | undefined
+  let merchantDecisionRequired = true
+
+  if (!samePriority) {
+    const winner = priorityA > priorityB ? agentA : agentB
+    const loser = winner === agentA ? agentB : agentA
+    autoResolution = `Auto-resolved: ${winner} wins over ${loser} (priority ${AGENT_PRIORITY[winner]} vs ${AGENT_PRIORITY[loser]})`
+    merchantDecisionRequired = false
+  }
+
+  // Determine urgency based on involved agents
+  let priority: ApprovalPriority = 'normal'
+  const involvedAgents = [agentA, agentB]
+  if (involvedAgents.includes('support')) {
+    priority = 'high' // Customer-facing conflicts are high priority
+  }
+  if (involvedAgents.includes('sales') && involvedAgents.includes('marketing')) {
+    priority = 'high' // Revenue-impacting conflicts
+  }
+
+  // If merchant decision required, create an approval
+  if (merchantDecisionRequired) {
+    const { data, error } = await supabase
+      .from('agent_approvals')
+      .insert({
+        store_id: storeId,
+        agent_type: agentA, // Primary agent requesting resolution
+        action_type: 'conflict_escalation',
+        summary: `Conflict: ${agentA} vs ${agentB} on ${entityType}`,
+        reasoning: description,
+        details: {
+          escalation: true,
+          agents_involved: involvedAgents,
+          entity_type: entityType,
+          entity_id: entityId,
+          conflict_description: description,
+          auto_resolution: autoResolution ?? null,
+          merchant_decision_required: merchantDecisionRequired,
+        },
+        priority,
+        status: 'pending',
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h expiry
+      })
+      .select('id')
+      .single()
+
+    if (error) {
+      throw new Error(`Failed to escalate conflict: ${error.message}`)
+    }
+
+    // Also log as an agent action for the activity feed
+    await supabase
+      .from('agent_actions')
+      .insert({
+        store_id: storeId,
+        agent_type: agentA,
+        action_type: 'conflict_escalation',
+        action_category: 'communication',
+        summary: `Escalated conflict with ${agentB} on ${entityType}:${entityId}`,
+        details: {
+          agents_involved: involvedAgents,
+          entity_type: entityType,
+          entity_id: entityId,
+          description,
+          approval_id: data.id,
+          merchant_decision_required: true,
+        },
+        status: 'requires_approval',
+        execution_mode: 'approved',
+        approval_id: data.id,
+        related_entity_type: entityType,
+        related_entity_id: entityId,
+        tokens_input: 0,
+        tokens_output: 0,
+        estimated_cost_usd: 0,
+        api_costs: {},
+        started_at: new Date().toISOString(),
+        duration_ms: 0,
+      })
+
+    return data.id
+  }
+
+  // Auto-resolved: just log the action
+  const { data, error } = await supabase
+    .from('agent_actions')
+    .insert({
+      store_id: storeId,
+      agent_type: agentA,
+      action_type: 'conflict_auto_resolved',
+      action_category: 'communication',
+      summary: `Auto-resolved conflict with ${agentB} on ${entityType}:${entityId}`,
+      details: {
+        agents_involved: involvedAgents,
+        entity_type: entityType,
+        entity_id: entityId,
+        description,
+        auto_resolution: autoResolution,
+        merchant_decision_required: false,
+      },
+      status: 'completed',
+      execution_mode: 'auto',
+      related_entity_type: entityType,
+      related_entity_id: entityId,
+      tokens_input: 0,
+      tokens_output: 0,
+      estimated_cost_usd: 0,
+      api_costs: {},
+      started_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      duration_ms: 0,
+    })
+    .select('id')
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to log auto-resolved conflict: ${error.message}`)
+  }
+
+  return data.id
+}
+
+/**
+ * Resolve a conflict escalation that was sent to the merchant.
+ * Updates the approval record and logs the resolution.
+ */
+export async function resolveEscalation(
+  escalationId: string,
+  resolution: string,
+  winningAgent: AgentType
+): Promise<void> {
+  const supabase = getSupabaseAdmin()
+
+  // Update the approval
+  const { data: approval, error: approvalError } = await supabase
+    .from('agent_approvals')
+    .update({
+      status: 'approved',
+      resolved_at: new Date().toISOString(),
+      modifications: {
+        resolution,
+        winning_agent: winningAgent,
+      },
+    })
+    .eq('id', escalationId)
+    .eq('action_type', 'conflict_escalation')
+    .select('*')
+    .single()
+
+  if (approvalError) {
+    throw new Error(`Failed to resolve escalation: ${approvalError.message}`)
+  }
+
+  // Update the corresponding agent action
+  const { error: actionError } = await supabase
+    .from('agent_actions')
+    .update({
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+      details: {
+        ...(approval.details as Record<string, unknown>),
+        resolved: true,
+        resolution,
+        winning_agent: winningAgent,
+      },
+    })
+    .eq('approval_id', escalationId)
+    .eq('action_type', 'conflict_escalation')
+
+  if (actionError) {
+    throw new Error(`Failed to update escalation action: ${actionError.message}`)
+  }
+}
+
+/**
+ * Get pending conflict escalations for a store.
+ */
+export async function getPendingEscalations(
+  storeId: string
+): Promise<ConflictEscalation[]> {
+  const supabase = getSupabaseAdmin()
+
+  const { data, error } = await supabase
+    .from('agent_approvals')
+    .select('*')
+    .eq('store_id', storeId)
+    .eq('action_type', 'conflict_escalation')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    throw new Error(`Failed to get pending escalations: ${error.message}`)
+  }
+
+  return (data ?? []).map((row) => {
+    const details = row.details as Record<string, unknown>
+    return {
+      id: row.id,
+      store_id: row.store_id,
+      agents_involved: (details.agents_involved as AgentType[]) ?? [],
+      entity_type: (details.entity_type as string) ?? '',
+      entity_id: (details.entity_id as string) ?? '',
+      conflict_description: (details.conflict_description as string) ?? '',
+      auto_resolution: details.auto_resolution as string | undefined,
+      merchant_decision_required: (details.merchant_decision_required as boolean) ?? true,
+      resolved: false,
+      created_at: row.created_at,
+    }
+  })
 }

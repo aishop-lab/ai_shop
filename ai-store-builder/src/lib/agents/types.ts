@@ -122,7 +122,7 @@ export interface AgentSchedule {
   updated_at: string
 }
 
-export type ConnectionProvider = 'meta' | 'google_ads' | 'google_analytics'
+export type ConnectionProvider = 'meta' | 'google_ads' | 'google_analytics' | 'google_search_console'
 export type ConnectionStatus = 'active' | 'expired' | 'revoked' | 'error'
 
 // ConnectedAccount (maps to connected_accounts table - tokens never exposed to frontend)
