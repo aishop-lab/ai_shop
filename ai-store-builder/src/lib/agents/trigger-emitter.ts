@@ -25,8 +25,8 @@ export async function emitTrigger(params: {
 
     const results = await dispatchTrigger(trigger)
 
-    const accepted = results.filter(r => r.status === 'accepted').length
-    const blocked = results.filter(r => r.status === 'blocked').length
+    const accepted = results.filter(r => r.accepted).length
+    const blocked = results.filter(r => !r.accepted).length
 
     if (accepted > 0 || blocked > 0) {
       console.log(
