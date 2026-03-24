@@ -538,6 +538,8 @@
       font-size: 15px;
       color: #fafafa;
       font-family: var(--font-mono);
+      display: flex;
+      align-items: center;
     }
 
     /* 24. Topbar center */
@@ -593,6 +595,13 @@
       top: 56px;
       bottom: 0;
       overflow-y: auto;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+      z-index: 10;
+    }
+    .wf-tree.collapsed {
+      transform: translateX(calc(-1 * var(--tree-width)));
+      opacity: 0;
+      pointer-events: none;
     }
     .wf-tree-group-label {
       padding: 8px 16px;
@@ -632,7 +641,27 @@
     }
 
     /* 28. Panels */
-    .wf-panels { margin-left: var(--tree-width); flex: 1; padding: 32px 40px; }
+    .wf-panels { margin-left: var(--tree-width); flex: 1; padding: 32px 40px; transition: margin-left 0.2s ease; }
+    .wf-panels.expanded { margin-left: 0; }
+
+    /* Sidebar toggle button */
+    .wf-sidebar-toggle {
+      background: transparent;
+      border: 1px solid #333;
+      color: #999;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.15s;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+    .wf-sidebar-toggle:hover { color: #fff; border-color: #555; background: #222; }
 
     /* 29. Page */
     .wf-page { margin-bottom: 80px; scroll-margin-top: 72px; }
@@ -762,7 +791,10 @@
        WIREFRAME TOPBAR
        ========================================== -->
   <div class="wf-topbar">
-    <div class="wf-topbar-left">StoreForge Wireframes</div>
+    <div class="wf-topbar-left">
+      <button class="wf-sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar (⌘B)">☰</button>
+      StoreForge Wireframes
+    </div>
     <div class="wf-topbar-center">
       <button class="wf-tab active" data-view="atlas">Atlas</button>
       <button class="wf-tab" data-view="flow">Flow</button>
@@ -10943,6 +10975,23 @@ Contact us at support@priyasbeauty.com with your order number and reason for ret
       { id: 'notification-popover', name: 'Notification Popover', route: '(Header)', group: 'Components', persona: 'Merchant' },
       { id: 'user-dropdown', name: 'User Dropdown', route: '(Sidebar)', group: 'Components', persona: 'Merchant' }
     ];
+
+    // Sidebar toggle
+    function toggleSidebar() {
+      var tree = document.getElementById('wf-tree');
+      var panels = document.querySelector('.wf-panels');
+      if (!tree || !panels) return;
+      tree.classList.toggle('collapsed');
+      panels.classList.toggle('expanded');
+    }
+
+    // Keyboard shortcut: Cmd+B / Ctrl+B
+    document.addEventListener('keydown', function(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    });
 
     // View switching
     function switchView(view) {
