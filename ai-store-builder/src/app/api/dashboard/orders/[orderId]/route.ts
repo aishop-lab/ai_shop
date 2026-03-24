@@ -10,6 +10,7 @@ import {
 } from '@/lib/email/order-confirmation'
 import { restoreInventory, releaseReservation } from '@/lib/orders/inventory'
 import { refundPayment } from '@/lib/payment/razorpay'
+import { emitTrigger } from '@/lib/agents/trigger-emitter'
 
 interface RouteParams {
   params: Promise<{ orderId: string }>
@@ -293,6 +294,17 @@ export async function PATCH(
         { ...order, store: storeInfo },
         refundResult ? 'Your payment will be refunded within 5-7 business days.' : undefined
       )
+    }
+
+    // Emit agent trigger for order cancellation
+    if (order_status === 'cancelled') {
+      emitTrigger({
+        store_id: order.store_id,
+        trigger_type: 'order.cancelled',
+        entity_type: 'order',
+        entity_id: orderId,
+        payload: { order_number: order.order_number, total: order.total }
+      }).catch(() => {})
     }
 
     return NextResponse.json({

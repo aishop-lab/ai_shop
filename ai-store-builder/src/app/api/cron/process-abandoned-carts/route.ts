@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { processAbandonedCarts } from '@/lib/cart/abandoned-cart'
+import { emitTrigger } from '@/lib/agents/trigger-emitter'
 
 export async function GET(request: Request) {
   try {
@@ -16,6 +17,18 @@ export async function GET(request: Request) {
     const result = await processAbandonedCarts()
 
     console.log(`[Cron] Abandoned cart processing complete:`, result)
+
+    // Emit trigger if any carts were processed
+    // Note: processAbandonedCarts doesn't return per-store data,
+    // so we emit a platform-level trigger with aggregate counts
+    if (result.processed > 0) {
+      emitTrigger({
+        store_id: 'platform',
+        trigger_type: 'cart.abandoned_batch_processed',
+        entity_type: 'cart',
+        payload: { processed: result.processed, emails_sent: result.emailsSent, errors_count: result.errors.length }
+      }).catch(() => {})
+    }
 
     return NextResponse.json({
       success: true,

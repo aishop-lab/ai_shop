@@ -4,6 +4,7 @@ import { refundPayment, getStoreRazorpayCredentials } from '@/lib/payment/razorp
 import { restoreInventory } from '@/lib/orders/inventory'
 import { sendRefundProcessedEmail } from '@/lib/email/order-confirmation'
 import { z } from 'zod'
+import { emitTrigger } from '@/lib/agents/trigger-emitter'
 
 const refundRequestSchema = z.object({
   amount: z.number().positive('Amount must be positive'),
@@ -188,6 +189,15 @@ export async function POST(
         // Non-critical error, continue
       }
     }
+
+    // Emit agent trigger for refund request
+    emitTrigger({
+      store_id: order.stores.id,
+      trigger_type: 'order.refund_requested',
+      entity_type: 'order',
+      entity_id: orderId,
+      payload: { amount, reason, is_full_refund: isFullRefund }
+    }).catch(() => {})
 
     return NextResponse.json({
       success: true,

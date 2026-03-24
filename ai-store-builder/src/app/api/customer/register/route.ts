@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { registerCustomer } from '@/lib/customer/auth'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
+import { emitTrigger } from '@/lib/agents/trigger-emitter'
 
 const registerSchema = z.object({
   storeId: z.string().uuid(),
@@ -43,6 +44,15 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Emit agent trigger for new customer signup
+    emitTrigger({
+      store_id: validation.data.storeId,
+      trigger_type: 'customer.signup',
+      entity_type: 'customer',
+      entity_id: result.customer!.id,
+      payload: { email: result.customer!.email, name: result.customer!.full_name }
+    }).catch(() => {})
 
     // Set session cookie
     const response = NextResponse.json({

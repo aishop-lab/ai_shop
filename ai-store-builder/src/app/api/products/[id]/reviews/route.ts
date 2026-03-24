@@ -2,6 +2,7 @@
 
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { emitTrigger } from '@/lib/agents/trigger-emitter'
 
 export const dynamic = 'force-dynamic'
 
@@ -148,7 +149,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         // Verify the order exists and belongs to this customer
         const { data: order, error: orderError } = await supabase
             .from('orders')
-            .select('id, customer_email, order_status')
+            .select('id, store_id, customer_email, order_status')
             .eq('id', order_id)
             .single()
 
@@ -227,6 +228,25 @@ export async function POST(request: Request, { params }: RouteParams) {
                 { success: false, error: 'Failed to submit review' },
                 { status: 500 }
             )
+        }
+
+        // Emit agent triggers for new review
+        emitTrigger({
+          store_id: order.store_id,
+          trigger_type: 'review.created',
+          entity_type: 'review',
+          entity_id: newReview.id,
+          payload: { product_id: productId, rating: newReview.rating, customer_name: newReview.customer_name }
+        }).catch(() => {})
+
+        if (newReview.rating <= 2) {
+          emitTrigger({
+            store_id: order.store_id,
+            trigger_type: 'review.negative',
+            entity_type: 'review',
+            entity_id: newReview.id,
+            payload: { product_id: productId, rating: newReview.rating, review_text: newReview.review_text }
+          }).catch(() => {})
         }
 
         return NextResponse.json({

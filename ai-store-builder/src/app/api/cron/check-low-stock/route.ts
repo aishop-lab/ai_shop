@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { sendLowStockAlertEmail } from '@/lib/email/merchant-notifications'
+import { emitTrigger } from '@/lib/agents/trigger-emitter'
 
 // Default low stock threshold
 const DEFAULT_LOW_STOCK_THRESHOLD = 5
@@ -123,6 +124,27 @@ export async function GET(request: Request) {
             data: { products: formattedProducts },
             read: false
           })
+
+          // Emit agent triggers for out-of-stock and low-stock products
+          const outOfStock = formattedProducts.filter(p => p.current_stock === 0)
+          const lowStock = formattedProducts.filter(p => p.current_stock > 0)
+
+          if (outOfStock.length > 0) {
+            emitTrigger({
+              store_id: store.id,
+              trigger_type: 'product.out_of_stock',
+              entity_type: 'product',
+              payload: { products: outOfStock.map(p => ({ id: p.id, title: p.title })), count: outOfStock.length }
+            }).catch(() => {})
+          }
+          if (lowStock.length > 0) {
+            emitTrigger({
+              store_id: store.id,
+              trigger_type: 'product.low_stock',
+              entity_type: 'product',
+              payload: { products: lowStock.map(p => ({ id: p.id, title: p.title, stock: p.current_stock })), count: lowStock.length }
+            }).catch(() => {})
+          }
 
           console.log(`[Cron] Low stock alert sent for store ${store.name}`)
         } else {

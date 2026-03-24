@@ -9,6 +9,7 @@ import { unifiedAI, AUTO_APPLY_THRESHOLD as LEGACY_AUTO_APPLY_THRESHOLD } from '
 import { vercelAI, AUTO_APPLY_THRESHOLD } from '@/lib/ai/vercel-ai-service'
 import { USE_VERCEL_AI } from '@/lib/ai/provider'
 import { productExtractor } from '@/lib/ai/product-extractor'
+import { emitTrigger } from '@/lib/agents/trigger-emitter'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // Allow up to 60 seconds for image processing
@@ -293,6 +294,15 @@ export async function POST(request: Request) {
       tags: finalTags,
       status: productData.status === 'published' ? 'active' : (productData.status as 'draft' | 'active' || 'draft')
     }))
+
+    // Emit agent trigger for new product
+    emitTrigger({
+      store_id: storeId,
+      trigger_type: 'product.created',
+      entity_type: 'product',
+      entity_id: finalProduct.id,
+      payload: { title: finalProduct.title, price: finalProduct.price, category: finalProduct.categories }
+    }).catch(() => {})
 
     // Return the product with images and AI suggestions
     return NextResponse.json({

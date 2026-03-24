@@ -11,6 +11,7 @@ import { sendOrderConfirmationEmail } from '@/lib/email/order-confirmation'
 import { sendShipmentFailedEmail } from '@/lib/email/merchant-notifications'
 import { autoCreateShipmentForStore } from '@/lib/shipping/provider-manager'
 import { createNotification } from '@/lib/notifications'
+import { emitTrigger } from '@/lib/agents/trigger-emitter'
 import { validateSession } from '@/lib/customer/auth'
 import type { StoreSettings } from '@/lib/types/store'
 import type { CreateOrderResponse, ShippingAddress } from '@/lib/types/order'
@@ -463,7 +464,16 @@ export async function POST(
         })
     }
 
-    // 11. Return order details
+    // 11. Emit agent trigger for new order
+    emitTrigger({
+      store_id,
+      trigger_type: 'order.created',
+      entity_type: 'order',
+      entity_id: orderId,
+      payload: { order_number: orderNumber, total_amount: totals.total, currency, customer_email: customer_details.email, item_count: items.length }
+    }).catch(() => {})
+
+    // 12. Return order details
     return NextResponse.json({
       success: true,
       order: {
