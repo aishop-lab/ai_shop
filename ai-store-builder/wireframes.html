@@ -10485,6 +10485,384 @@ Contact us at support@priyasbeauty.com with your order number and reason for ret
     </main>
   </div>
 </section>
+
+
+<!-- ============================================================
+     Global Component: AI Bot Panel
+     ============================================================ -->
+<section id="page-ai-bot" class="wf-page" data-links-to="">
+  <div class="wf-page-header">
+    <h2>AI Bot Panel</h2>
+    <code>(Global — all Dashboard &amp; Platform pages)</code>
+    <span class="wf-persona wf-persona-merchant">Merchant</span>
+  </div>
+
+  <p style="color:var(--muted-foreground); font-size:0.875rem; padding:0 16px 16px;">
+    This panel appears on all Dashboard and Platform pages. Triggered by the floating button (bottom-right) or ⌘K.
+  </p>
+
+  <div class="wf-mockup" style="padding:32px;">
+    <div style="display:flex; gap:48px; align-items:flex-start; justify-content:center; flex-wrap:wrap;">
+
+      <!-- LEFT: Floating Trigger Button -->
+      <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+        <div style="font-size:0.75rem; font-weight:600; color:var(--muted-foreground); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">Floating Trigger</div>
+        <div style="position:relative;">
+          <div style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg, #8b5cf6, #3b82f6); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 20px rgba(139,92,246,0.4);">
+            <span style="font-size:1.25rem;">✨</span>
+          </div>
+          <!-- Notification dot -->
+          <div style="position:absolute; top:-2px; right:-2px; width:10px; height:10px; border-radius:50%; background:#ef4444; border:2px solid var(--background);"></div>
+        </div>
+        <div style="font-size:0.6875rem; color:var(--muted-foreground); background:var(--card); padding:2px 8px; border-radius:4px; border:1px solid var(--border);">⌘K</div>
+      </div>
+
+      <!-- RIGHT: Expanded Panel -->
+      <div style="width:380px; background:var(--background); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+        <!-- Header -->
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border);">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1rem;">✨</span>
+            <span style="font-weight:600; font-size:0.9375rem;">AI Assistant</span>
+          </div>
+          <button class="sf-btn sf-btn-ghost sf-btn-icon" style="width:28px; height:28px; padding:0; font-size:0.875rem;">✕</button>
+        </div>
+
+        <!-- Messages area -->
+        <div style="padding:16px 20px; display:flex; flex-direction:column; gap:12px; min-height:320px; max-height:400px; overflow-y:auto;">
+          <!-- User message 1 -->
+          <div style="display:flex; justify-content:flex-end;">
+            <div style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.2); border-radius:12px 12px 4px 12px; padding:10px 14px; max-width:85%; font-size:0.8125rem; color:var(--foreground);">
+              Show me today's orders
+            </div>
+          </div>
+
+          <!-- Assistant message 1 -->
+          <div style="display:flex; justify-content:flex-start;">
+            <div style="background:var(--card); border:1px solid var(--border); border-radius:12px 12px 12px 4px; padding:10px 14px; max-width:85%; font-size:0.8125rem; color:var(--foreground); line-height:1.5;">
+              Here are today's 3 orders:<br>
+              <span style="color:var(--muted-foreground);">#SF-1234</span> — ₹2,450<br>
+              <span style="color:var(--muted-foreground);">#SF-1235</span> — ₹899<br>
+              <span style="color:var(--muted-foreground);">#SF-1236</span> — ₹3,200<br>
+              <span style="font-weight:500; margin-top:4px; display:inline-block;">Total revenue: ₹6,549</span>
+            </div>
+          </div>
+
+          <!-- User message 2 -->
+          <div style="display:flex; justify-content:flex-end;">
+            <div style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.2); border-radius:12px 12px 4px 12px; padding:10px 14px; max-width:85%; font-size:0.8125rem; color:var(--foreground);">
+              Create a 15% discount code for returning customers
+            </div>
+          </div>
+
+          <!-- Assistant message 2 (with confirmation) -->
+          <div style="display:flex; justify-content:flex-start;">
+            <div style="background:var(--card); border:1px solid var(--border); border-radius:12px 12px 12px 4px; padding:10px 14px; max-width:85%; font-size:0.8125rem; color:var(--foreground); line-height:1.5;">
+              I'll create that coupon for you. Please confirm the action below.
+            </div>
+          </div>
+
+          <!-- Confirmation Overlay -->
+          <div style="background:var(--card); border:1px solid rgba(245,158,11,0.3); border-radius:var(--radius); padding:14px; margin:4px 0;">
+            <div style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:0.8125rem; color:#f59e0b; margin-bottom:8px;">
+              ⚠️ Confirm Action
+            </div>
+            <div style="font-size:0.8125rem; color:var(--muted-foreground); margin-bottom:12px;">
+              Create coupon <strong style="color:var(--foreground);">RETURN15</strong> — 15% off, returning customers only
+            </div>
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+              <button class="sf-btn sf-btn-ghost sf-btn-sm">Cancel</button>
+              <button class="sf-btn sf-btn-primary sf-btn-sm" style="background:#10b981; color:white;">✅ Confirm</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick suggestions -->
+        <div style="padding:8px 20px; border-top:1px solid var(--border); display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="sf-btn sf-btn-outline sf-btn-sm" style="font-size:0.6875rem; height:28px; padding:0 10px;">📊 Show analytics</button>
+          <button class="sf-btn sf-btn-outline sf-btn-sm" style="font-size:0.6875rem; height:28px; padding:0 10px;">📦 Add product</button>
+          <button class="sf-btn sf-btn-outline sf-btn-sm" style="font-size:0.6875rem; height:28px; padding:0 10px;">🏷️ Create coupon</button>
+        </div>
+
+        <!-- Input bar -->
+        <div style="padding:12px 20px 16px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:flex-end;">
+          <textarea class="sf-input" rows="1" placeholder="Ask anything about your store..." style="flex:1; resize:none; min-height:36px; font-size:0.8125rem;"></textarea>
+          <button class="sf-btn sf-btn-primary sf-btn-icon" style="width:36px; height:36px; padding:0; flex-shrink:0;">▶</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wf-nav-map">
+    <div><strong>Links to:</strong> —</div>
+    <div><strong>Linked from:</strong> All Dashboard &amp; Platform pages</div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     Global Component: Command Palette
+     ============================================================ -->
+<section id="page-command-palette" class="wf-page" data-links-to="">
+  <div class="wf-page-header">
+    <h2>Command Palette</h2>
+    <code>(⌘K Overlay)</code>
+    <span class="wf-persona wf-persona-merchant">Merchant</span>
+  </div>
+
+  <div class="wf-mockup" style="padding:32px;">
+    <!-- Dark overlay with centered modal -->
+    <div style="background:rgba(0,0,0,0.6); border-radius:var(--radius); padding:80px 40px; display:flex; justify-content:center;">
+      <div style="width:560px; background:var(--background); border:1px solid var(--border); border-radius:12px; overflow:hidden; box-shadow:0 16px 48px rgba(0,0,0,0.5);">
+
+        <!-- Search input -->
+        <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px;">
+          <span style="font-size:1.125rem; opacity:0.5;">🔍</span>
+          <input class="sf-input" type="text" placeholder="Type a command or search..." style="border:none; background:transparent; font-size:0.9375rem; flex:1; padding:0; height:auto;" />
+        </div>
+
+        <!-- Results list -->
+        <div style="padding:8px 0; max-height:400px; overflow-y:auto;">
+
+          <!-- NAVIGATION group -->
+          <div style="padding:8px 20px 4px; font-size:0.6875rem; font-weight:600; color:var(--muted-foreground); text-transform:uppercase; letter-spacing:0.05em;">Navigation</div>
+          <div style="display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; padding:8px 20px; cursor:pointer; background:rgba(59,130,246,0.08); border-left:2px solid var(--platform-accent);">
+              <span style="width:24px; text-align:center; margin-right:12px;">🏠</span>
+              <span style="flex:1; font-size:0.875rem;">Home</span>
+              <span style="font-size:0.75rem; color:var(--muted-foreground);">→</span>
+            </div>
+            <div style="display:flex; align-items:center; padding:8px 20px; cursor:pointer;">
+              <span style="width:24px; text-align:center; margin-right:12px;">📦</span>
+              <span style="flex:1; font-size:0.875rem;">Products</span>
+              <span style="font-size:0.75rem; color:var(--muted-foreground);">→</span>
+            </div>
+            <div style="display:flex; align-items:center; padding:8px 20px; cursor:pointer;">
+              <span style="width:24px; text-align:center; margin-right:12px;">🛒</span>
+              <span style="flex:1; font-size:0.875rem;">Orders</span>
+              <span style="font-size:0.75rem; color:var(--muted-foreground);">→</span>
+            </div>
+            <div style="display:flex; align-items:center; padding:8px 20px; cursor:pointer;">
+              <span style="width:24px; text-align:center; margin-right:12px;">📊</span>
+              <span style="flex:1; font-size:0.875rem;">Analytics</span>
+              <span style="font-size:0.75rem; color:var(--muted-foreground);">→</span>
+            </div>
+            <div style="display:flex; align-items:center; padding:8px 20px; cursor:pointer;">
+              <span style="width:24px; text-align:center; margin-right:12px;">⚙️</span>
+              <span style="flex:1; font-size:0.875rem;">Settings</span>
+              <span style="font-size:0.75rem; color:var(--muted-foreground);">→</span>
+            </div>
+          </div>
+
+          <!-- ACTIONS group -->
+          <div style="padding:12px 20px 4px; font-size:0.6875rem; font-weight:600; color:var(--muted-foreground); text-transform:uppercase; letter-spacing:0.05em;">Actions</div>
+          <div style="display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; padding:8px 20px; cursor:pointer;">
+              <span style="width:24px; text-align:center; margin-right:12px;">➕</span>
+              <span style="flex:1; font-size:0.875rem;">Add Product</span>
+              <span style="font-size:0.6875rem; color:var(--muted-foreground); background:var(--card); padding:2px 6px; border-radius:4px; border:1px solid var(--border);">⌘N</span>
+            </div>
+            <div style="display:flex; align-items:center; padding:8px 20px; cursor:pointer;">
+              <span style="width:24px; text-align:center; margin-right:12px;">🏷️</span>
+              <span style="flex:1; font-size:0.875rem;">Create Coupon</span>
+              <span style="font-size:0.6875rem; color:var(--muted-foreground); background:var(--card); padding:2px 6px; border-radius:4px; border:1px solid var(--border);">⌘⇧C</span>
+            </div>
+            <div style="display:flex; align-items:center; padding:8px 20px; cursor:pointer;">
+              <span style="width:24px; text-align:center; margin-right:12px;">📥</span>
+              <span style="flex:1; font-size:0.875rem;">Export Data</span>
+              <span style="font-size:0.6875rem; color:var(--muted-foreground); background:var(--card); padding:2px 6px; border-radius:4px; border:1px solid var(--border);">⌘⇧E</span>
+            </div>
+          </div>
+
+          <!-- AGENTS group -->
+          <div style="padding:12px 20px 4px; font-size:0.6875rem; font-weight:600; color:var(--muted-foreground); text-transform:uppercase; letter-spacing:0.05em;">Agents</div>
+          <div style="display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; padding:8px 20px; cursor:pointer;">
+              <span style="width:24px; text-align:center; margin-right:12px;">🛡️</span>
+              <span style="flex:1; font-size:0.875rem;">Talk to SENTINEL</span>
+              <span style="font-size:0.6875rem; color:var(--agent-support);">Support</span>
+            </div>
+            <div style="display:flex; align-items:center; padding:8px 20px; cursor:pointer;">
+              <span style="width:24px; text-align:center; margin-right:12px;">🔥</span>
+              <span style="flex:1; font-size:0.875rem;">Talk to FORGE</span>
+              <span style="font-size:0.6875rem; color:var(--agent-sales);">Sales</span>
+            </div>
+            <div style="display:flex; align-items:center; padding:8px 20px; cursor:pointer;">
+              <span style="width:24px; text-align:center; margin-right:12px;">📈</span>
+              <span style="flex:1; font-size:0.875rem;">Talk to PULSE</span>
+              <span style="font-size:0.6875rem; color:var(--agent-analytics);">Analytics</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding:10px 20px; border-top:1px solid var(--border); display:flex; gap:16px; justify-content:center;">
+          <span style="font-size:0.6875rem; color:var(--muted-foreground);">↑↓ Navigate</span>
+          <span style="font-size:0.6875rem; color:var(--muted-foreground);">·</span>
+          <span style="font-size:0.6875rem; color:var(--muted-foreground);">Enter Select</span>
+          <span style="font-size:0.6875rem; color:var(--muted-foreground);">·</span>
+          <span style="font-size:0.6875rem; color:var(--muted-foreground);">Esc Close</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wf-nav-map">
+    <div><strong>Links to:</strong> —</div>
+    <div><strong>Linked from:</strong> All Dashboard &amp; Platform pages (⌘K)</div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     Global Component: Notification Popover
+     ============================================================ -->
+<section id="page-notification-popover" class="wf-page" data-links-to="">
+  <div class="wf-page-header">
+    <h2>Notification Popover</h2>
+    <code>(Dashboard header)</code>
+    <span class="wf-persona wf-persona-merchant">Merchant</span>
+  </div>
+
+  <div class="wf-mockup" style="padding:32px; display:flex; justify-content:center;">
+    <div style="width:380px; background:var(--background); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+
+      <!-- Header -->
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border);">
+        <span style="font-weight:600; font-size:0.9375rem;">Notifications</span>
+        <a href="#" style="font-size:0.75rem; color:var(--platform-accent); text-decoration:none;">Mark all read</a>
+      </div>
+
+      <!-- Notification items -->
+      <div style="display:flex; flex-direction:column;">
+
+        <!-- 1. New order (unread) -->
+        <div style="display:flex; gap:12px; padding:12px 16px; background:rgba(59,130,246,0.04); border-bottom:1px solid var(--border); cursor:pointer;">
+          <div style="flex-shrink:0; width:32px; height:32px; border-radius:8px; background:rgba(59,130,246,0.1); display:flex; align-items:center; justify-content:center; font-size:0.875rem;">🛒</div>
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:0.8125rem; font-weight:600;">New order #SF-1237</span>
+              <div style="width:6px; height:6px; border-radius:50%; background:var(--platform-accent); flex-shrink:0;"></div>
+            </div>
+            <div style="font-size:0.75rem; color:var(--muted-foreground); margin-top:2px;">Ananya placed an order for ₹1,200</div>
+            <div style="font-size:0.6875rem; color:var(--muted-foreground); margin-top:4px; opacity:0.7;">2m ago</div>
+          </div>
+        </div>
+
+        <!-- 2. Payment received (unread) -->
+        <div style="display:flex; gap:12px; padding:12px 16px; background:rgba(59,130,246,0.04); border-bottom:1px solid var(--border); cursor:pointer;">
+          <div style="flex-shrink:0; width:32px; height:32px; border-radius:8px; background:rgba(16,185,129,0.1); display:flex; align-items:center; justify-content:center; font-size:0.875rem;">💰</div>
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:0.8125rem; font-weight:600;">Payment received</span>
+              <div style="width:6px; height:6px; border-radius:50%; background:var(--platform-accent); flex-shrink:0;"></div>
+            </div>
+            <div style="font-size:0.75rem; color:var(--muted-foreground); margin-top:2px;">₹2,450 from order #SF-1234</div>
+            <div style="font-size:0.6875rem; color:var(--muted-foreground); margin-top:4px; opacity:0.7;">15m ago</div>
+          </div>
+        </div>
+
+        <!-- 3. Low stock (read) -->
+        <div style="display:flex; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border); cursor:pointer;">
+          <div style="flex-shrink:0; width:32px; height:32px; border-radius:8px; background:rgba(245,158,11,0.1); display:flex; align-items:center; justify-content:center; font-size:0.875rem;">⚠️</div>
+          <div style="flex:1; min-width:0;">
+            <span style="font-size:0.8125rem; font-weight:500;">Low stock alert</span>
+            <div style="font-size:0.75rem; color:var(--muted-foreground); margin-top:2px;">Neem Hair Oil: only 3 left</div>
+            <div style="font-size:0.6875rem; color:var(--muted-foreground); margin-top:4px; opacity:0.7;">1h ago</div>
+          </div>
+        </div>
+
+        <!-- 4. New review (read) -->
+        <div style="display:flex; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border); cursor:pointer;">
+          <div style="flex-shrink:0; width:32px; height:32px; border-radius:8px; background:rgba(245,158,11,0.1); display:flex; align-items:center; justify-content:center; font-size:0.875rem;">⭐</div>
+          <div style="flex:1; min-width:0;">
+            <span style="font-size:0.8125rem; font-weight:500;">New review</span>
+            <div style="font-size:0.75rem; color:var(--muted-foreground); margin-top:2px;">5-star review on Kumkumadi Serum</div>
+            <div style="font-size:0.6875rem; color:var(--muted-foreground); margin-top:4px; opacity:0.7;">3h ago</div>
+          </div>
+        </div>
+
+        <!-- 5. Order shipped (read) -->
+        <div style="display:flex; gap:12px; padding:12px 16px; cursor:pointer;">
+          <div style="flex-shrink:0; width:32px; height:32px; border-radius:8px; background:rgba(59,130,246,0.1); display:flex; align-items:center; justify-content:center; font-size:0.875rem;">📦</div>
+          <div style="flex:1; min-width:0;">
+            <span style="font-size:0.8125rem; font-weight:500;">Order shipped</span>
+            <div style="font-size:0.75rem; color:var(--muted-foreground); margin-top:2px;">#SF-1230 picked up by Delhivery</div>
+            <div style="font-size:0.6875rem; color:var(--muted-foreground); margin-top:4px; opacity:0.7;">5h ago</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding:12px 16px; border-top:1px solid var(--border); text-align:center;">
+        <a href="#" style="font-size:0.8125rem; color:var(--platform-accent); text-decoration:none;">View all notifications</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="wf-nav-map">
+    <div><strong>Links to:</strong> —</div>
+    <div><strong>Linked from:</strong> Dashboard header bell icon</div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     Global Component: User Dropdown
+     ============================================================ -->
+<section id="page-user-dropdown" class="wf-page" data-links-to="">
+  <div class="wf-page-header">
+    <h2>User Dropdown</h2>
+    <code>(Sidebar footer)</code>
+    <span class="wf-persona wf-persona-merchant">Merchant</span>
+  </div>
+
+  <div class="wf-mockup" style="padding:32px; display:flex; justify-content:center;">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+
+      <!-- Trigger -->
+      <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:var(--radius); border:1px solid var(--border); background:var(--card); cursor:pointer; width:240px;">
+        <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, #8b5cf6, #3b82f6); display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:600; color:white;">PK</div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:0.8125rem; font-weight:500;">Priya Kumar</div>
+          <div style="font-size:0.6875rem; color:var(--muted-foreground); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">priya@gmail.com</div>
+        </div>
+        <span style="font-size:0.75rem; color:var(--muted-foreground);">▾</span>
+      </div>
+
+      <!-- Dropdown -->
+      <div style="width:240px; background:var(--background); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+        <div style="padding:8px 12px 4px; font-size:0.6875rem; color:var(--muted-foreground); font-weight:500;">My Account</div>
+
+        <div style="display:flex; flex-direction:column; padding:4px 0;">
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-size:0.8125rem;">
+            <span style="width:20px; text-align:center;">👤</span> Profile
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-size:0.8125rem;">
+            <span style="width:20px; text-align:center;">⚙️</span> Settings
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-size:0.8125rem;">
+            <span style="width:20px; text-align:center;">🏪</span> Store Settings
+          </div>
+        </div>
+
+        <div style="height:1px; background:var(--border); margin:4px 0;"></div>
+
+        <div style="padding:4px 0;">
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-size:0.8125rem; color:#ef4444;">
+            <span style="width:20px; text-align:center;">🚪</span> Sign Out
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wf-nav-map">
+    <div><strong>Links to:</strong> —</div>
+    <div><strong>Linked from:</strong> Sidebar footer (all Dashboard pages)</div>
+  </div>
+</section>
+
     </div><!-- /.wf-panels -->
   </div><!-- /#atlas-view -->
 
@@ -10558,7 +10936,12 @@ Contact us at support@priyasbeauty.com with your order number and reason for ret
       { id: 'admin-orders', name: 'Orders', route: '/admin/orders', group: 'Admin', persona: 'Admin' },
       { id: 'admin-products', name: 'Products', route: '/admin/products', group: 'Admin', persona: 'Admin' },
       { id: 'admin-analytics', name: 'Analytics', route: '/admin/analytics', group: 'Admin', persona: 'Admin' },
-      { id: 'admin-agents', name: 'Agent Health', route: '/admin/agents', group: 'Admin', persona: 'Admin' }
+      { id: 'admin-agents', name: 'Agent Health', route: '/admin/agents', group: 'Admin', persona: 'Admin' },
+      // Global Components
+      { id: 'ai-bot', name: 'AI Bot Panel', route: '(Global)', group: 'Components', persona: 'Merchant' },
+      { id: 'command-palette', name: 'Command Palette', route: '(⌘K)', group: 'Components', persona: 'Merchant' },
+      { id: 'notification-popover', name: 'Notification Popover', route: '(Header)', group: 'Components', persona: 'Merchant' },
+      { id: 'user-dropdown', name: 'User Dropdown', route: '(Sidebar)', group: 'Components', persona: 'Merchant' }
     ];
 
     // View switching
