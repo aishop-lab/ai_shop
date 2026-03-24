@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StoreForge Wireframes</title>
+  <style>
+    /* ========================================
+       RESET & GLOBALS
+       ======================================== */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font-sans); background: #0a0a0a; color: #fafafa; }
+    a { color: var(--platform-accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: var(--font-mono); }
+
+    /* ========================================
+       CSS CUSTOM PROPERTIES
+       ======================================== */
+    :root {
+      /* Dark theme tokens */
+      --background: #242424;
+      --foreground: #fafafa;
+      --card: #333333;
+      --card-foreground: #fafafa;
+      --muted: #444444;
+      --muted-foreground: #a3a3a3;
+      --border: rgba(255,255,255,0.1);
+      --input: rgba(255,255,255,0.15);
+      --primary: #ebebeb;
+      --primary-foreground: #333333;
+      --secondary: #444444;
+      --secondary-foreground: #fafafa;
+      --destructive: #ef4444;
+      --accent: #444444;
+      --accent-foreground: #fafafa;
+      --ring: #8f8f8f;
+      --radius: 10px;
+
+      /* Platform theme (agent pages) */
+      --platform-bg: #0a0a0a;
+      --platform-surface: #171717;
+      --platform-surface-hover: #1f1f1f;
+      --platform-border: #262626;
+      --platform-border-hover: #3a3a3a;
+      --platform-text-primary: #ededed;
+      --platform-text-secondary: #888;
+      --platform-text-muted: #555;
+      --platform-accent: #3b82f6;
+
+      /* Agent colors */
+      --agent-support: #3b82f6;
+      --agent-sales: #10b981;
+      --agent-analytics: #f59e0b;
+      --agent-marketing: #a855f7;
+      --agent-technical: #06b6d4;
+
+      /* Typography */
+      --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "Geist Mono", "SF Mono", "Cascadia Code", "Consolas", monospace;
+
+      /* Layout */
+      --sidebar-width: 256px;
+      --platform-sidebar-width: 224px;
+      --navbar-height: 64px;
+      --platform-topbar-height: 56px;
+      --tree-width: 260px;
+    }
+
+    /* ========================================
+       1. BUTTONS — .sf-btn
+       ======================================== */
+    .sf-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      height: 36px;
+      padding: 0 16px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: var(--font-sans);
+    }
+    .sf-btn-primary { background: var(--primary); color: var(--primary-foreground); }
+    .sf-btn-primary:hover { opacity: 0.9; }
+    .sf-btn-destructive { background: var(--destructive); color: white; }
+    .sf-btn-destructive:hover { opacity: 0.9; }
+    .sf-btn-outline { background: transparent; border: 1px solid var(--border); color: var(--foreground); }
+    .sf-btn-outline:hover { background: rgba(255,255,255,0.05); }
+    .sf-btn-secondary { background: var(--secondary); color: var(--secondary-foreground); }
+    .sf-btn-secondary:hover { opacity: 0.9; }
+    .sf-btn-ghost { background: transparent; color: var(--foreground); }
+    .sf-btn-ghost:hover { background: rgba(255,255,255,0.05); }
+    .sf-btn-sm { height: 32px; padding: 0 12px; font-size: 13px; border-radius: 6px; }
+    .sf-btn-lg { height: 40px; padding: 0 24px; }
+    .sf-btn-icon { width: 36px; height: 36px; padding: 0; }
+
+    /* ========================================
+       2. INPUTS — .sf-input
+       ======================================== */
+    .sf-input {
+      height: 36px;
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      padding: 0 12px;
+      font-size: 14px;
+      color: var(--foreground);
+      font-family: var(--font-sans);
+      outline: none;
+    }
+    .sf-input:focus {
+      border-color: var(--ring);
+      box-shadow: 0 0 0 3px rgba(143,143,143,0.2);
+    }
+    .sf-input::placeholder { color: var(--muted-foreground); }
+
+    /* ========================================
+       3. TEXTAREA — .sf-textarea
+       ======================================== */
+    .sf-textarea {
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      padding: 8px 12px;
+      font-size: 14px;
+      color: var(--foreground);
+      font-family: var(--font-sans);
+      outline: none;
+      min-height: 60px;
+      resize: vertical;
+    }
+    .sf-textarea:focus {
+      border-color: var(--ring);
+      box-shadow: 0 0 0 3px rgba(143,143,143,0.2);
+    }
+    .sf-textarea::placeholder { color: var(--muted-foreground); }
+
+    /* ========================================
+       4. SELECT — .sf-select
+       ======================================== */
+    .sf-select {
+      height: 36px;
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      padding: 0 12px;
+      font-size: 14px;
+      color: var(--foreground);
+      font-family: var(--font-sans);
+      outline: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+    .sf-select:focus {
+      border-color: var(--ring);
+      box-shadow: 0 0 0 3px rgba(143,143,143,0.2);
+    }
+
+    /* ========================================
+       5. BADGE — .sf-badge
+       ======================================== */
+    .sf-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .sf-badge-default { background: var(--primary); color: var(--primary-foreground); }
+    .sf-badge-secondary { background: var(--secondary); color: var(--secondary-foreground); }
+    .sf-badge-destructive { background: var(--destructive); color: white; }
+    .sf-badge-outline { background: transparent; border-color: var(--border); color: var(--foreground); }
+    .sf-badge-green { background: rgba(16,185,129,0.1); color: #10b981; }
+    .sf-badge-amber { background: rgba(245,158,11,0.1); color: #f59e0b; }
+    .sf-badge-blue { background: rgba(59,130,246,0.1); color: #3b82f6; }
+    .sf-badge-purple { background: rgba(168,85,247,0.1); color: #a855f7; }
+    .sf-badge-red { background: rgba(239,68,68,0.1); color: #ef4444; }
+    .sf-badge-cyan { background: rgba(6,182,212,0.1); color: #06b6d4; }
+
+    /* ========================================
+       6. CARD — .sf-card
+       ======================================== */
+    .sf-card {
+      background: var(--card);
+      color: var(--card-foreground);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .sf-card-header { padding: 24px 24px 0; }
+    .sf-card-title { font-size: 16px; font-weight: 600; line-height: 1; }
+    .sf-card-description { color: var(--muted-foreground); font-size: 14px; margin-top: 4px; }
+    .sf-card-content { padding: 24px; }
+
+    /* ========================================
+       7. TABLE — .sf-table
+       ======================================== */
+    .sf-table { width: 100%; font-size: 14px; border-collapse: collapse; }
+    .sf-table th {
+      height: 40px;
+      padding: 0 8px;
+      text-align: left;
+      font-weight: 500;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+    .sf-table td {
+      padding: 8px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .sf-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* ========================================
+       8. TABS — .sf-tabs-list
+       ======================================== */
+    .sf-tabs-list {
+      display: inline-flex;
+      height: 40px;
+      align-items: center;
+      border-radius: 6px;
+      background: var(--muted);
+      padding: 4px;
+    }
+    .sf-tab {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 12px;
+      height: 32px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted-foreground);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      font-family: var(--font-sans);
+    }
+    .sf-tab-active {
+      background: var(--background);
+      color: var(--foreground);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    /* ========================================
+       9. SWITCH — .sf-switch
+       ======================================== */
+    .sf-switch {
+      display: inline-flex;
+      width: 36px;
+      height: 20px;
+      border-radius: 9999px;
+      background: var(--input);
+      cursor: pointer;
+      position: relative;
+      transition: background 0.15s;
+      border: none;
+    }
+    .sf-switch-checked { background: var(--primary); }
+    .sf-switch::after {
+      content: '';
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--background);
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.15s;
+    }
+    .sf-switch-checked::after { transform: translateX(16px); }
+
+    /* ========================================
+       10. LABEL — .sf-label
+       ======================================== */
+    .sf-label { font-size: 14px; font-weight: 500; line-height: 1; }
+
+    /* ========================================
+       11. SEPARATOR — .sf-separator
+       ======================================== */
+    .sf-separator { height: 1px; background: var(--border); width: 100%; margin: 16px 0; }
+
+    /* ========================================
+       12. SKELETON — .sf-skeleton
+       ======================================== */
+    .sf-skeleton {
+      border-radius: 6px;
+      background: var(--muted);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ========================================
+       13. ALERT — .sf-alert
+       ======================================== */
+    .sf-alert {
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 16px;
+      position: relative;
+    }
+    .sf-alert-destructive { border-color: rgba(239,68,68,0.5); color: var(--destructive); }
+
+    /* ========================================
+       14. DIALOG — .sf-dialog
+       ======================================== */
+    .sf-dialog-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sf-dialog-content {
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 512px;
+      width: 100%;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+    }
+
+    /* ========================================
+       15. DROPDOWN — .sf-dropdown
+       ======================================== */
+    .sf-dropdown {
+      position: absolute;
+      min-width: 8rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      padding: 4px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .sf-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .sf-dropdown-item:hover { background: rgba(255,255,255,0.05); }
+
+    /* ========================================
+       16. POPOVER — .sf-popover
+       ======================================== */
+    .sf-popover {
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      padding: 16px;
+      width: 288px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+
+    /* ========================================
+       17. DASHBOARD LAYOUT — .layout-dashboard
+       ======================================== */
+    .layout-dashboard {
+      display: flex;
+      min-height: 100vh;
+    }
+    .layout-dashboard .sidebar {
+      width: var(--sidebar-width);
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100%;
+    }
+    .layout-dashboard .navbar {
+      height: var(--navbar-height);
+      border-bottom: 1px solid var(--border);
+      background: var(--background);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+    }
+    .layout-dashboard .main {
+      flex: 1;
+      padding: 24px;
+      background: var(--background);
+    }
+
+    /* ========================================
+       18. PLATFORM LAYOUT — .layout-platform
+       ======================================== */
+    .layout-platform {
+      display: flex;
+      min-height: 100vh;
+      background: var(--platform-bg);
+    }
+    .layout-platform .sidebar {
+      width: var(--platform-sidebar-width);
+      background: var(--platform-surface);
+      border-right: 1px solid var(--platform-border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100%;
+    }
+    .layout-platform .topbar {
+      height: var(--platform-topbar-height);
+      border-bottom: 1px solid var(--platform-border);
+      background: var(--platform-bg);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+    }
+    .layout-platform .main {
+      flex: 1;
+      padding: 24px;
+      background: var(--platform-bg);
+    }
+
+    /* ========================================
+       19. ADMIN LAYOUT — .layout-admin
+       ======================================== */
+    .layout-admin {
+      display: flex;
+      min-height: 100vh;
+    }
+    .layout-admin .sidebar {
+      width: var(--sidebar-width);
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100%;
+    }
+    .layout-admin .navbar {
+      height: var(--navbar-height);
+      border-bottom: 1px solid var(--border);
+      background: var(--background);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+    }
+    .layout-admin .main {
+      flex: 1;
+      padding: 24px;
+      background: var(--background);
+    }
+
+    /* ========================================
+       20. AUTH LAYOUT — .layout-auth
+       ======================================== */
+    .layout-auth {
+      min-height: 600px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0a0a0a;
+      position: relative;
+      padding: 32px;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .layout-auth::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 300px;
+      background: radial-gradient(ellipse at center, rgba(168,85,247,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* ========================================
+       21. MARKETING LAYOUT — .layout-marketing
+       ======================================== */
+    .layout-marketing {
+      background: #09090b;
+      color: #fafafa;
+      min-height: 800px;
+    }
+
+    /* ========================================
+       WIREFRAME DOCUMENT NAVIGATION
+       ======================================== */
+
+    /* 22. Topbar */
+    .wf-topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: #111;
+      border-bottom: 1px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 100;
+      font-family: var(--font-sans);
+    }
+
+    /* 23. Topbar left */
+    .wf-topbar-left {
+      font-weight: 600;
+      font-size: 15px;
+      color: #fafafa;
+      font-family: var(--font-mono);
+    }
+
+    /* 24. Topbar center */
+    .wf-topbar-center {
+      display: flex;
+      gap: 4px;
+      background: #222;
+      border-radius: 8px;
+      padding: 4px;
+    }
+    .wf-topbar-center .wf-tab {
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #888;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      transition: all 0.15s;
+      font-family: var(--font-sans);
+    }
+    .wf-topbar-center .wf-tab:hover { color: #bbb; }
+    .wf-topbar-center .wf-tab.active { background: #333; color: #fff; }
+
+    /* 25. Search */
+    .wf-search {
+      height: 32px;
+      width: 200px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      padding: 0 10px;
+      font-size: 13px;
+      color: #fafafa;
+      outline: none;
+      font-family: var(--font-sans);
+    }
+    .wf-search:focus { border-color: #555; }
+
+    /* 26. Views */
+    .wf-view { margin-top: 56px; min-height: calc(100vh - 56px); }
+    #flow-view { padding: 40px 24px; }
+    #atlas-view { display: flex; }
+
+    /* 27. Tree */
+    .wf-tree {
+      width: var(--tree-width);
+      background: #111;
+      border-right: 1px solid #333;
+      padding: 16px 0;
+      position: fixed;
+      top: 56px;
+      bottom: 0;
+      overflow-y: auto;
+    }
+    .wf-tree-group-label {
+      padding: 8px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #666;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+    .wf-tree-group-label:hover { color: #888; }
+    .wf-tree-group-label .chevron {
+      transition: transform 0.15s;
+      font-size: 10px;
+    }
+    .wf-tree-group-label.collapsed .chevron { transform: rotate(-90deg); }
+    .wf-tree-group-items { overflow: hidden; }
+    .wf-tree-group-label.collapsed + .wf-tree-group-items { display: none; }
+    .wf-tree-item {
+      padding: 6px 16px 6px 32px;
+      font-size: 13px;
+      color: #999;
+      cursor: pointer;
+      display: block;
+      text-decoration: none;
+      transition: all 0.1s;
+    }
+    .wf-tree-item:hover { color: #ddd; background: rgba(255,255,255,0.03); text-decoration: none; }
+    .wf-tree-item.active {
+      color: #fff;
+      background: rgba(255,255,255,0.06);
+      border-right: 2px solid var(--platform-accent);
+    }
+
+    /* 28. Panels */
+    .wf-panels { margin-left: var(--tree-width); flex: 1; padding: 32px 40px; }
+
+    /* 29. Page */
+    .wf-page { margin-bottom: 80px; scroll-margin-top: 72px; }
+
+    /* 30. Page header */
+    .wf-page-header {
+      margin-bottom: 24px;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .wf-page-header h2 { font-size: 22px; font-weight: 600; color: #fafafa; margin: 0; }
+    .wf-page-header code { font-size: 13px; color: #666; font-family: var(--font-mono); }
+
+    /* 31. Persona badges */
+    .wf-persona {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #1a3a5c;
+      color: #60a5fa;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .wf-persona-admin { background: #2d1a4e; color: #c084fc; }
+    .wf-persona-visitor { background: #27272a; color: #a1a1aa; }
+    .wf-persona-merchant { background: #1a3a5c; color: #60a5fa; }
+
+    /* 32. Mockup */
+    .wf-mockup {
+      border: 1px solid #333;
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--background);
+    }
+
+    /* 33. State tabs */
+    .wf-state-tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+    .wf-state-tabs .wf-tab {
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #888;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      transition: all 0.15s;
+      font-family: var(--font-sans);
+    }
+    .wf-state-tabs .wf-tab:hover { color: #bbb; }
+    .wf-state-tabs .wf-tab.active { background: #333; color: #fff; }
+
+    /* 34. Nav map */
+    .wf-nav-map {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: #111;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #666;
+    }
+    .wf-nav-map a { color: var(--platform-accent); }
+
+    /* 35. Modal section */
+    .wf-modal-section {
+      margin-top: 24px;
+      border: 1px dashed #333;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .wf-modal-toggle {
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #888;
+      cursor: pointer;
+      border: 1px solid #333;
+      background: transparent;
+      transition: all 0.15s;
+      font-family: var(--font-sans);
+    }
+    .wf-modal-toggle:hover { color: #bbb; border-color: #555; }
+    .wf-modal-content { display: none; margin-top: 16px; }
+    .wf-modal-content.visible { display: block; }
+
+    /* 36. Planned badge */
+    .wf-planned {
+      border: 2px dashed #f59e0b !important;
+      position: relative;
+    }
+    .wf-planned::after {
+      content: 'PLANNED';
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #f59e0b;
+      color: #000;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* 37. Flow diagram styles */
+    .wf-flow-section { margin-bottom: 48px; }
+    .wf-flow-title { font-size: 18px; font-weight: 600; color: #fafafa; margin-bottom: 16px; }
+    .wf-flow-section svg rect { rx: 8; fill: #1a1a1a; stroke: #333; }
+    .wf-flow-section svg text { fill: #fafafa; font-size: 13px; font-family: var(--font-sans); }
+    .wf-flow-section svg path.connector { stroke: #444; stroke-width: 1.5; fill: none; }
+    .wf-flow-section svg .flow-node:hover rect { stroke: var(--platform-accent); }
+    .wf-flow-section svg marker path { fill: #444; }
+
+    /* ========================================
+       UTILITY: Hidden state for filter
+       ======================================== */
+    .wf-hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- ==========================================
+       WIREFRAME TOPBAR
+       ========================================== -->
+  <div class="wf-topbar">
+    <div class="wf-topbar-left">StoreForge Wireframes</div>
+    <div class="wf-topbar-center">
+      <button class="wf-tab active" data-view="atlas">Atlas</button>
+      <button class="wf-tab" data-view="flow">Flow</button>
+    </div>
+    <input type="text" class="wf-search" placeholder="Search pages...">
+  </div>
+
+  <!-- ==========================================
+       FLOW VIEW
+       ========================================== -->
+  <div id="flow-view" class="wf-view" style="display:none;">
+    <div class="wf-flow-section">
+      <div class="wf-flow-title">User Flows</div>
+      <p style="color:#666;font-size:14px;">Flow diagrams will be added in a later task.</p>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       ATLAS VIEW
+       ========================================== -->
+  <div id="atlas-view" class="wf-view" style="display:flex;">
+    <!-- Tree sidebar -->
+    <div class="wf-tree" id="wf-tree"></div>
+
+    <!-- Page panels -->
+    <div class="wf-panels">
+
+      <!-- ============ SIGN IN ============ -->
+      <section id="page-sign-in" class="wf-page" data-links-to="sign-up,reset-password,platform,onboarding">
+        <div class="wf-page-header">
+          <h2>Sign In</h2>
+          <code>/sign-in</code>
+          <span class="wf-persona wf-persona-visitor">Visitor</span>
+        </div>
+        <div class="wf-mockup">
+          <div class="layout-auth">
+            <div style="max-width:450px;width:100%;">
+              <div class="sf-card">
+                <div class="sf-card-header" style="text-align:center;">
+                  <div class="sf-card-title" style="font-size:20px;">Welcome back</div>
+                  <div class="sf-card-description">Sign in to your account to continue</div>
+                </div>
+                <div class="sf-card-content">
+                  <p style="text-align:center;color:var(--muted-foreground);font-size:14px;">
+                    [Full mockup will be built in Task 3]
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="wf-nav-map">
+          Links to: <a href="#sign-up" onclick="showPage('sign-up')">sign-up</a>,
+          <a href="#reset-password" onclick="showPage('reset-password')">reset-password</a>
+          <div class="linked-from"></div>
+        </div>
+      </section>
+
+    </div><!-- /.wf-panels -->
+  </div><!-- /#atlas-view -->
+
+  <!-- ==========================================
+       JAVASCRIPT
+       ========================================== -->
+  <script>
+    // PAGES data array — will be populated as pages are added
+    var PAGES = [
+      { id: 'sign-in', name: 'Sign In', route: '/sign-in', group: 'Auth', persona: 'Visitor' }
+      // more entries added in later tasks
+    ];
+
+    // View switching
+    function switchView(view) {
+      document.querySelectorAll('.wf-view').forEach(function(v) { v.style.display = 'none'; });
+      document.querySelectorAll('.wf-topbar-center .wf-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.getElementById(view + '-view').style.display = (view === 'flow') ? 'block' : 'flex';
+      var tab = document.querySelector('[data-view="' + view + '"]');
+      if (tab) tab.classList.add('active');
+      if (view === 'atlas') buildTree();
+    }
+
+    // Tree building — uses safe DOM methods
+    function buildTree() {
+      var tree = document.getElementById('wf-tree');
+      if (!tree) return;
+
+      var groups = {};
+      PAGES.forEach(function(p) {
+        if (!groups[p.group]) groups[p.group] = [];
+        groups[p.group].push(p);
+      });
+
+      // Clear existing tree
+      while (tree.firstChild) tree.removeChild(tree.firstChild);
+
+      Object.keys(groups).forEach(function(group) {
+        var groupDiv = document.createElement('div');
+        groupDiv.className = 'wf-tree-group';
+
+        var label = document.createElement('div');
+        label.className = 'wf-tree-group-label';
+        label.setAttribute('onclick', 'toggleGroup(this)');
+        var chevron = document.createElement('span');
+        chevron.className = 'chevron';
+        chevron.textContent = '\u25BC';
+        label.appendChild(chevron);
+        label.appendChild(document.createTextNode(' ' + group));
+        groupDiv.appendChild(label);
+
+        var itemsDiv = document.createElement('div');
+        itemsDiv.className = 'wf-tree-group-items';
+
+        groups[group].forEach(function(p) {
+          var link = document.createElement('a');
+          link.className = 'wf-tree-item' + (location.hash === '#' + p.id ? ' active' : '');
+          link.setAttribute('data-page', p.id);
+          link.href = '#' + p.id;
+          link.textContent = p.name;
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            showPage(p.id);
+          });
+          itemsDiv.appendChild(link);
+        });
+
+        groupDiv.appendChild(itemsDiv);
+        tree.appendChild(groupDiv);
+      });
+    }
+
+    // Tree group toggle
+    function toggleGroup(el) {
+      el.classList.toggle('collapsed');
+    }
+
+    // Show page (scroll to it, highlight in tree)
+    function showPage(id) {
+      switchView('atlas');
+      var el = document.getElementById('page-' + id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Update active tree item
+      document.querySelectorAll('.wf-tree-item').forEach(function(i) { i.classList.remove('active'); });
+      var treeItem = document.querySelector('[data-page="' + id + '"]');
+      if (treeItem) treeItem.classList.add('active');
+      // Update URL hash
+      history.replaceState(null, '', '#' + id);
+    }
+
+    // Search filtering
+    function filterTree(query) {
+      var q = query.toLowerCase().trim();
+      // Filter tree items
+      document.querySelectorAll('.wf-tree-item').forEach(function(item) {
+        var text = item.textContent.toLowerCase();
+        var pageId = item.getAttribute('data-page');
+        var match = !q || text.indexOf(q) !== -1 || (pageId && pageId.indexOf(q) !== -1);
+        item.classList.toggle('wf-hidden', !match);
+      });
+      // Filter page sections
+      document.querySelectorAll('.wf-page').forEach(function(page) {
+        var header = page.querySelector('.wf-page-header');
+        if (!header) return;
+        var text = header.textContent.toLowerCase();
+        var id = page.id.replace('page-', '');
+        var match = !q || text.indexOf(q) !== -1 || id.indexOf(q) !== -1;
+        page.classList.toggle('wf-hidden', !match);
+      });
+      // Show groups that have visible items
+      document.querySelectorAll('.wf-tree-group').forEach(function(group) {
+        var hasVisible = group.querySelector('.wf-tree-item:not(.wf-hidden)');
+        group.classList.toggle('wf-hidden', !hasVisible);
+      });
+    }
+
+    // Modal toggle
+    function toggleModal(pageId, modalName) {
+      var section = document.querySelector('#page-' + pageId + ' .wf-modal-content[data-modal="' + modalName + '"]');
+      if (section) section.classList.toggle('visible');
+    }
+
+    // State tab switching
+    function switchState(pageId, state) {
+      var page = document.getElementById('page-' + pageId);
+      if (!page) return;
+      // Update state tab buttons
+      page.querySelectorAll('.wf-state-tabs .wf-tab').forEach(function(t) {
+        t.classList.toggle('active', t.getAttribute('data-state') === state);
+      });
+      // Show/hide state panels
+      page.querySelectorAll('[data-state-panel]').forEach(function(panel) {
+        panel.style.display = (panel.getAttribute('data-state-panel') === state) ? 'block' : 'none';
+      });
+    }
+
+    // Compute "Linked from" reverse map
+    function computeLinkedFrom() {
+      var linkedFrom = {};
+      document.querySelectorAll('.wf-page[data-links-to]').forEach(function(page) {
+        var from = page.id.replace('page-', '');
+        var links = page.getAttribute('data-links-to') || '';
+        links.split(',').forEach(function(to) {
+          to = to.trim();
+          if (!to) return;
+          if (!linkedFrom[to]) linkedFrom[to] = [];
+          linkedFrom[to].push(from);
+        });
+      });
+      // Populate nav maps using safe DOM methods
+      document.querySelectorAll('.wf-nav-map').forEach(function(navMap) {
+        var pageEl = navMap.closest('.wf-page');
+        if (!pageEl) return;
+        var pageId = pageEl.id.replace('page-', '');
+        var fromList = linkedFrom[pageId] || [];
+        var fromEl = navMap.querySelector('.linked-from');
+        if (fromEl && fromList.length) {
+          while (fromEl.firstChild) fromEl.removeChild(fromEl.firstChild);
+          fromEl.appendChild(document.createTextNode('Linked from: '));
+          fromList.forEach(function(id, idx) {
+            if (idx > 0) fromEl.appendChild(document.createTextNode(', '));
+            var a = document.createElement('a');
+            a.href = '#' + id;
+            a.textContent = id;
+            a.addEventListener('click', function(e) {
+              e.preventDefault();
+              showPage(id);
+            });
+            fromEl.appendChild(a);
+          });
+        }
+      });
+    }
+
+    // Init
+    window.addEventListener('DOMContentLoaded', function() {
+      buildTree();
+      computeLinkedFrom();
+      var hash = location.hash.slice(1);
+      if (hash) showPage(hash);
+      // Search input
+      var searchInput = document.querySelector('.wf-search');
+      if (searchInput) {
+        searchInput.addEventListener('input', function(e) { filterTree(e.target.value); });
+      }
+      // Tab clicks
+      document.querySelectorAll('.wf-topbar-center .wf-tab').forEach(function(t) {
+        t.addEventListener('click', function() { switchView(t.dataset.view); });
+      });
+    });
+  </script>
+
+</body>
+</html>
