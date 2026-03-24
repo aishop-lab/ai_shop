@@ -11,6 +11,27 @@ const MAX_CONSECUTIVE_FAILURES = 5
 /** How far ahead to look for due schedules (prevents clock skew issues) */
 const DUE_WINDOW_SECONDS = 60
 
+/** Default schedules created when an agent is enabled */
+const DEFAULT_SCHEDULES: Record<string, Array<{ task_type: string; schedule_cron: string }>> = {
+  sales: [
+    { task_type: 'abandoned_cart_recovery', schedule_cron: '0 */6 * * *' },
+    { task_type: 'customer_segmentation', schedule_cron: '0 3 * * 1' },
+  ],
+  analytics: [
+    { task_type: 'daily_digest', schedule_cron: '0 8 * * *' },
+    { task_type: 'weekly_report', schedule_cron: '0 8 * * 1' },
+  ],
+  marketing: [
+    { task_type: 'campaign_performance_check', schedule_cron: '0 9 * * *' },
+    { task_type: 'spend_sync', schedule_cron: '0 */6 * * *' },
+  ],
+  technical: [
+    { task_type: 'seo_audit', schedule_cron: '0 3 * * 0' },
+    { task_type: 'health_check', schedule_cron: '0 4 * * *' },
+  ],
+  support: [],
+}
+
 // ---- Types ----
 
 interface CreateScheduleInput {
@@ -330,4 +351,55 @@ export async function getStoreSchedules(
   }
 
   return (data ?? []) as AgentSchedule[]
+}
+
+/**
+ * Create default schedules when an agent is enabled.
+ * Uses upsert to avoid duplicates if schedules already exist.
+ * Reactivates and recomputes next_run_at for existing inactive schedules.
+ */
+export async function createDefaultSchedules(storeId: string, agentType: string): Promise<void> {
+  const schedules = DEFAULT_SCHEDULES[agentType] || []
+  if (schedules.length === 0) return
+
+  const supabase = getSupabaseAdmin()
+
+  for (const schedule of schedules) {
+    const timezone = 'Asia/Kolkata'
+    const next_run_at = getNextRun(schedule.schedule_cron, timezone)
+
+    const { error } = await supabase.from('agent_schedules').upsert(
+      {
+        store_id: storeId,
+        agent_type: agentType,
+        task_type: schedule.task_type,
+        schedule_cron: schedule.schedule_cron,
+        timezone,
+        is_active: true,
+        config: {},
+        next_run_at,
+        consecutive_failures: 0,
+      },
+      { onConflict: 'store_id,agent_type,task_type' }
+    )
+    if (error) {
+      console.error(`[schedules] Failed to create ${schedule.task_type} for ${agentType}:`, error)
+    }
+  }
+}
+
+/**
+ * Deactivate all schedules for an agent when it is disabled.
+ */
+export async function deactivateSchedules(storeId: string, agentType: string): Promise<void> {
+  const supabase = getSupabaseAdmin()
+  const { error } = await supabase
+    .from('agent_schedules')
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq('store_id', storeId)
+    .eq('agent_type', agentType)
+
+  if (error) {
+    console.error(`[schedules] Failed to deactivate schedules for ${agentType}:`, error)
+  }
 }

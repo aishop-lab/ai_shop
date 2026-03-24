@@ -2,6 +2,7 @@
 import { NextRequest } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { authenticateAgentRequest, jsonError, jsonSuccess } from '@/lib/agents/auth'
+import { createDefaultSchedules, deactivateSchedules } from '@/lib/agents/scheduler'
 import type { AutonomyLevel, AgentConfig } from '@/lib/agents/types'
 
 export const runtime = 'nodejs'
@@ -84,6 +85,20 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   if (error) {
     console.error('[Agents API] Failed to update agent:', error)
     return jsonError('Failed to update agent', 500)
+  }
+
+  // Auto-create or deactivate schedules when agent is enabled/disabled
+  if (body.is_enabled !== undefined && updated?.agent_type) {
+    try {
+      if (body.is_enabled) {
+        await createDefaultSchedules(storeId, updated.agent_type)
+      } else {
+        await deactivateSchedules(storeId, updated.agent_type)
+      }
+    } catch (scheduleError) {
+      // Log but don't fail the request — agent state update already succeeded
+      console.error('[Agents API] Schedule sync error:', scheduleError)
+    }
   }
 
   return jsonSuccess(updated)
