@@ -8,7 +8,13 @@
 
 ## Goal
 
-Create a single self-contained HTML file that serves as a high-fidelity, pixel-accurate visual map of every screen in the AI Store Builder platform (excluding storefront pages). The document replicates the actual UI: exact colors, fonts, sizes, placements, buttons, and interactions — serving as both a user journey walkthrough and a page-by-page reference.
+Create a single self-contained HTML file that serves as a high-fidelity visual map of every screen in the AI Store Builder platform (excluding storefront pages). The document replicates the actual UI's default/resting visual state: exact colors, fonts, sizes, placements, and buttons — serving as both a user journey walkthrough and a page-by-page reference.
+
+**"Pixel-accurate" definition:** Matches the default visual state of each component. Animations, transitions, drag-and-drop interactions, and real-time dynamic behavior (e.g., chart hover tooltips, typeahead) are out of scope. Interactive states beyond what static HTML can show are represented by their resting state.
+
+**Viewport:** Targets desktop at minimum 1280px viewport width. The wireframe document itself is not responsive — it shows all pages in their desktop layout.
+
+**Print/export:** Out of scope. The document is browser-only.
 
 ---
 
@@ -113,7 +119,7 @@ Create a single self-contained HTML file that serves as a high-fidelity, pixel-a
 
 ### Flow View
 
-Five interactive journey maps rendered as connected node diagrams:
+Five interactive journey maps rendered as inline SVG diagrams. Each flow is an SVG element containing positioned `<foreignObject>` nodes (rounded rectangles with page name + route) connected by `<path>` elements (curved connector lines). Pure SVG — no canvas or external libraries.
 
 1. **New Merchant Journey**
    Landing → Sign Up → Email Verify → Sign In → 2FA (optional) → Onboarding Step 1-4 → Agent Intro (5 cards) → Team Summary → Command Center
@@ -170,7 +176,8 @@ Collapsible tree sidebar (left, 240px wide) + wireframe panel (right, remaining 
   Analytics
   ▾ Products
     List
-    Create/Edit (ProductForm)
+    Create (ProductForm)
+    Edit (ProductForm + status toggle, delete)
   ▾ Collections
     List
     Create/Edit
@@ -237,7 +244,21 @@ Below each mockup, expandable sections for modals/dialogs triggered from that pa
 - Each modal shows: trigger description, all form fields, buttons, validation states
 
 ### 4. Navigation Map
-Small section showing: "Links to: [page1], [page2], ..." and "Linked from: [page3], ..."
+Small section showing: "Links to: [page1], [page2], ..." — each is a clickable anchor.
+"Linked from" data is computed automatically at page load from the "Links to" declarations via JS, avoiding manual bidirectional maintenance.
+
+### 5. State Variants
+Standard patterns for state tabs (when applicable):
+- **Loading:** Skeleton shimmer elements matching the default layout shape (gray pulsing rectangles for cards, table rows, chart areas)
+- **Empty:** Centered icon (muted, 48px) + heading + description text + primary action button (e.g., "Add Your First Product")
+- **Error:** Centered alert triangle icon (destructive color) + error message text + "Retry" button
+
+### 6. Charts & Data Visualization
+Charts (revenue trends, signups, bar charts) are rendered as **static inline SVGs** with representative sample data. No charting library. Each chart SVG contains:
+- Axis labels (text elements)
+- Data points/bars/areas as SVG paths
+- A subtle grid pattern
+- Sample values that look realistic but are clearly placeholder
 
 ---
 
@@ -313,10 +334,10 @@ The HTML file embeds a CSS section replicating the exact design tokens:
 ## Technical Implementation
 
 ### File Structure
-Single HTML file with embedded CSS and JavaScript. No external dependencies except Google Fonts (Geist).
+Single HTML file with embedded CSS and JavaScript. Fully self-contained — no external dependencies.
 
 ### Approximate Size
-~20,000-30,000 lines. ~60 page mockups × ~300-500 lines each + CSS + JS navigation logic.
+~40,000-60,000 lines. ~60 page mockups × ~500-800 lines each + CSS design system + JS navigation logic + inline SVG flow diagrams. The single-file approach is explicitly accepted despite size — it keeps the deliverable portable and zero-dependency.
 
 ### Key JavaScript Features
 - Tab switching (Flow View ↔ Atlas View)
@@ -327,12 +348,15 @@ Single HTML file with embedded CSS and JavaScript. No external dependencies exce
 - State tab switching (Default/Loading/Empty/Error)
 - Smooth scroll to anchors
 - URL hash navigation (#page-name)
+- Auto-computed "Linked from" reverse navigation map
 
 ### Font Loading
-```html
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+Geist is not available on Google Fonts. The document uses system font stacks that closely match Geist:
+```css
+--font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+--font-mono: "SF Mono", "Cascadia Code", "Fira Mono", "Consolas", monospace;
 ```
-Fallback to system fonts if offline.
+These system fonts provide a near-identical visual match to Geist Sans/Mono on macOS, Windows, and Linux. If the user has Geist installed locally, it will be picked up by adding `"Geist"` and `"Geist Mono"` as first entries in the stack.
 
 ---
 
@@ -343,10 +367,11 @@ Elements that exist in the PRD vision but are not fully built will be marked wit
 - "PLANNED" badge in top-right corner
 - Tooltip explaining what's missing
 
-Based on codebase exploration, candidates include:
-- Agent chat functionality (exists but may be incomplete)
-- Some agent configuration options
-- Marketing connections (Google Analytics marked "Coming Soon")
+Definitive list based on codebase audit:
+- **Google Analytics connection** — UI exists at `/platform/settings/connections` but marked "Coming Soon" (disabled button)
+- **Agent chat streaming** — chat tab exists in agent detail but real AI streaming may not be fully wired
+- **Monthly cost metric** — Command Center shows `monthlyCost` but it's hardcoded to 0
+- **AI Bot trigger** — floating button appears in all Dashboard pages; the expanded panel is documented once under a dedicated "AI Bot Panel" section, and the trigger button is shown in the sidebar/header chrome of all Dashboard and Platform mockups
 
 ---
 
