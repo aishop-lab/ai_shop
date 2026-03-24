@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { executeScheduledTasks } from '@/lib/agents/scheduler'
 import { expireStaleApprovals } from '@/lib/agents/db'
+import { executeScheduledTask } from '@/lib/agents/schedule-executor'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -14,13 +15,17 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Execute due scheduled tasks
-    // Real agent execution will be wired up in Phase 2C
+    // Execute due scheduled tasks — dispatch each to the appropriate agent
     const results = await executeScheduledTasks(async (schedule) => {
       console.log(
-        `[cron] Scheduled task due: store=${schedule.store_id} agent=${schedule.agent_type} task=${schedule.task_type} schedule=${schedule.schedule_cron}`
+        `[cron] Dispatching: store=${schedule.store_id} agent=${schedule.agent_type} task=${schedule.task_type}`
       )
-      // Phase 2C: dispatch to orchestrator → agent execution
+      await executeScheduledTask({
+        store_id: schedule.store_id,
+        agent_type: schedule.agent_type,
+        task_type: schedule.task_type,
+        config: schedule.config,
+      })
     })
 
     // Expire stale approvals that have passed their deadline
