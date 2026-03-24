@@ -746,6 +746,7 @@
     .wf-flow-section svg rect { rx: 8; fill: #1a1a1a; stroke: #333; }
     .wf-flow-section svg text { fill: #fafafa; font-size: 13px; font-family: var(--font-sans); }
     .wf-flow-section svg path.connector { stroke: #444; stroke-width: 1.5; fill: none; }
+    .wf-flow-section svg .flow-node { cursor: pointer; transition: all 0.15s; }
     .wf-flow-section svg .flow-node:hover rect { stroke: var(--platform-accent); }
     .wf-flow-section svg marker path { fill: #444; }
 
@@ -773,10 +774,520 @@
        FLOW VIEW
        ========================================== -->
   <div id="flow-view" class="wf-view" style="display:none;">
+
+    <!-- ====== FLOW 1: New Merchant Journey ====== -->
     <div class="wf-flow-section">
-      <div class="wf-flow-title">User Flows</div>
-      <p style="color:#666;font-size:14px;">Flow diagrams will be added in a later task.</p>
+      <h3 class="wf-flow-title">New Merchant Journey</h3>
+      <svg viewBox="0 0 1100 420" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#444"/>
+          </marker>
+        </defs>
+        <!-- Row 1: Landing → Sign Up → Email Verify → Sign In → 2FA -->
+        <g class="flow-node" onclick="showPage('landing')" style="cursor:pointer">
+          <rect x="20" y="20" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="90" y="42" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Landing Page</text>
+          <text x="90" y="58" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/</text>
+        </g>
+        <g class="flow-node" onclick="showPage('sign-up')" style="cursor:pointer">
+          <rect x="220" y="20" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="290" y="42" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Sign Up</text>
+          <text x="290" y="58" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/sign-up</text>
+        </g>
+        <g class="flow-node" onclick="showPage('auth-confirm')" style="cursor:pointer">
+          <rect x="420" y="20" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="490" y="42" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Email Verify</text>
+          <text x="490" y="58" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/auth/confirm</text>
+        </g>
+        <g class="flow-node" onclick="showPage('sign-in')" style="cursor:pointer">
+          <rect x="620" y="20" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="690" y="42" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Sign In</text>
+          <text x="690" y="58" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/sign-in</text>
+        </g>
+        <g class="flow-node" onclick="showPage('verify-2fa')" style="cursor:pointer">
+          <rect x="820" y="20" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="890" y="42" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">2FA (optional)</text>
+          <text x="890" y="58" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/verify-2fa</text>
+        </g>
+        <!-- Row 1 connectors -->
+        <path class="connector" d="M 160,46 C 180,46 200,46 220,46" marker-end="url(#arrow1)"/>
+        <path class="connector" d="M 360,46 C 380,46 400,46 420,46" marker-end="url(#arrow1)"/>
+        <path class="connector" d="M 560,46 C 580,46 600,46 620,46" marker-end="url(#arrow1)"/>
+        <path class="connector" d="M 760,46 C 780,46 800,46 820,46" marker-end="url(#arrow1)"/>
+
+        <!-- Row 2: Onboarding Steps 1-4 -->
+        <g class="flow-node" onclick="showPage('onboarding-step-1')" style="cursor:pointer">
+          <rect x="120" y="140" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="190" y="162" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Onboarding Step 1</text>
+          <text x="190" y="178" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/onboarding</text>
+        </g>
+        <g class="flow-node" onclick="showPage('onboarding-step-2')" style="cursor:pointer">
+          <rect x="320" y="140" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="390" y="162" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Onboarding Step 2</text>
+          <text x="390" y="178" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/onboarding</text>
+        </g>
+        <g class="flow-node" onclick="showPage('onboarding-step-3')" style="cursor:pointer">
+          <rect x="520" y="140" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="590" y="162" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Onboarding Step 3</text>
+          <text x="590" y="178" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/onboarding</text>
+        </g>
+        <g class="flow-node" onclick="showPage('onboarding-step-4')" style="cursor:pointer">
+          <rect x="720" y="140" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="790" y="162" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Onboarding Step 4</text>
+          <text x="790" y="178" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/onboarding</text>
+        </g>
+        <!-- Row 1→2 connector (2FA down to Step 1) -->
+        <path class="connector" d="M 890,72 C 890,100 190,100 190,140" marker-end="url(#arrow1)"/>
+        <!-- Row 2 connectors -->
+        <path class="connector" d="M 260,166 C 280,166 300,166 320,166" marker-end="url(#arrow1)"/>
+        <path class="connector" d="M 460,166 C 480,166 500,166 520,166" marker-end="url(#arrow1)"/>
+        <path class="connector" d="M 660,166 C 680,166 700,166 720,166" marker-end="url(#arrow1)"/>
+
+        <!-- Row 3: Agent Intro → Team Summary → Command Center -->
+        <g class="flow-node" onclick="showPage('agent-intro')" style="cursor:pointer">
+          <rect x="220" y="260" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="290" y="282" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Agent Intro</text>
+          <text x="290" y="298" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/onboarding</text>
+        </g>
+        <g class="flow-node" onclick="showPage('agent-intro')" style="cursor:pointer">
+          <rect x="420" y="260" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="490" y="282" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Team Summary</text>
+          <text x="490" y="298" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/onboarding</text>
+        </g>
+        <g class="flow-node" onclick="showPage('platform')" style="cursor:pointer">
+          <rect x="620" y="260" width="160" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="700" y="282" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Command Center</text>
+          <text x="700" y="298" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/platform</text>
+        </g>
+        <!-- Row 2→3 connector -->
+        <path class="connector" d="M 790,192 C 790,220 290,220 290,260" marker-end="url(#arrow1)"/>
+        <!-- Row 3 connectors -->
+        <path class="connector" d="M 360,286 C 380,286 400,286 420,286" marker-end="url(#arrow1)"/>
+        <path class="connector" d="M 560,286 C 580,286 600,286 620,286" marker-end="url(#arrow1)"/>
+      </svg>
     </div>
+
+    <!-- ====== FLOW 2: Authentication Flows ====== -->
+    <div class="wf-flow-section">
+      <h3 class="wf-flow-title">Authentication Flows</h3>
+      <svg viewBox="0 0 1100 340" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#444"/>
+          </marker>
+        </defs>
+        <!-- Row 1: Sign In ↔ Sign Up (bidirectional) -->
+        <g class="flow-node" onclick="showPage('sign-in')" style="cursor:pointer">
+          <rect x="120" y="20" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="190" y="42" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Sign In</text>
+          <text x="190" y="58" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/sign-in</text>
+        </g>
+        <g class="flow-node" onclick="showPage('sign-up')" style="cursor:pointer">
+          <rect x="380" y="20" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="450" y="42" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Sign Up</text>
+          <text x="450" y="58" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/sign-up</text>
+        </g>
+        <!-- Bidirectional arrows -->
+        <path class="connector" d="M 260,38 C 300,38 340,38 380,38" marker-end="url(#arrow2)"/>
+        <path class="connector" d="M 380,54 C 340,54 300,54 260,54" marker-end="url(#arrow2)"/>
+
+        <!-- Row 2: Sign In → 2FA → Platform -->
+        <g class="flow-node" onclick="showPage('sign-in')" style="cursor:pointer">
+          <rect x="120" y="130" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="190" y="152" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Sign In</text>
+          <text x="190" y="168" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/sign-in</text>
+        </g>
+        <g class="flow-node" onclick="showPage('verify-2fa')" style="cursor:pointer">
+          <rect x="380" y="130" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="450" y="152" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">2FA Verification</text>
+          <text x="450" y="168" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/verify-2fa</text>
+        </g>
+        <g class="flow-node" onclick="showPage('platform')" style="cursor:pointer">
+          <rect x="640" y="130" width="160" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="720" y="152" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Platform</text>
+          <text x="720" y="168" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/platform</text>
+        </g>
+        <path class="connector" d="M 260,156 C 300,156 340,156 380,156" marker-end="url(#arrow2)"/>
+        <path class="connector" d="M 520,156 C 560,156 600,156 640,156" marker-end="url(#arrow2)"/>
+
+        <!-- Row 3: Sign In → Reset Password → Update Password → Sign In (loop) -->
+        <g class="flow-node" onclick="showPage('sign-in')" style="cursor:pointer">
+          <rect x="120" y="240" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="190" y="262" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Sign In</text>
+          <text x="190" y="278" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/sign-in</text>
+        </g>
+        <g class="flow-node" onclick="showPage('reset-password')" style="cursor:pointer">
+          <rect x="380" y="240" width="160" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="460" y="262" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Reset Password</text>
+          <text x="460" y="278" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/reset-password</text>
+        </g>
+        <g class="flow-node" onclick="showPage('update-password')" style="cursor:pointer">
+          <rect x="640" y="240" width="160" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="720" y="262" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Update Password</text>
+          <text x="720" y="278" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/update-password</text>
+        </g>
+        <path class="connector" d="M 260,266 C 310,266 340,266 380,266" marker-end="url(#arrow2)"/>
+        <path class="connector" d="M 540,266 C 580,266 600,266 640,266" marker-end="url(#arrow2)"/>
+        <!-- Loop back: Update Password → Sign In -->
+        <path class="connector" d="M 720,292 C 720,320 190,320 190,292" marker-end="url(#arrow2)"/>
+
+        <!-- Auth Confirmation (standalone) -->
+        <g class="flow-node" onclick="showPage('auth-confirm')" style="cursor:pointer">
+          <rect x="900" y="240" width="160" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="980" y="262" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Auth Confirmation</text>
+          <text x="980" y="278" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/auth/confirm</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- ====== FLOW 3: Platform Command Center ====== -->
+    <div class="wf-flow-section">
+      <h3 class="wf-flow-title">Platform Command Center</h3>
+      <svg viewBox="0 0 1100 480" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#444"/>
+          </marker>
+        </defs>
+        <!-- Center: Command Center -->
+        <g class="flow-node" onclick="showPage('platform')" style="cursor:pointer">
+          <rect x="430" y="180" width="180" height="52" rx="8" fill="#1a1a1a" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="520" y="202" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Command Center</text>
+          <text x="520" y="218" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/platform</text>
+        </g>
+
+        <!-- Top: Agent Detail -->
+        <g class="flow-node" onclick="showPage('platform-agent-detail')" style="cursor:pointer">
+          <rect x="450" y="30" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="520" y="52" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Agent Detail</text>
+          <text x="520" y="68" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/platform/agent</text>
+        </g>
+        <path class="connector" d="M 520,180 C 520,140 520,120 520,82" marker-end="url(#arrow3)"/>
+
+        <!-- Top-right: Approvals -->
+        <g class="flow-node" onclick="showPage('platform-approvals')" style="cursor:pointer">
+          <rect x="720" y="50" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="790" y="72" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Approvals</text>
+          <text x="790" y="88" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/platform/approvals</text>
+        </g>
+        <path class="connector" d="M 610,185 C 660,160 720,120 730,102" marker-end="url(#arrow3)"/>
+
+        <!-- Right: Analytics -->
+        <g class="flow-node" onclick="showPage('platform-analytics')" style="cursor:pointer">
+          <rect x="750" y="180" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="820" y="202" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Analytics</text>
+          <text x="820" y="218" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/platform/analytics</text>
+        </g>
+        <path class="connector" d="M 610,206 C 660,206 700,206 750,206" marker-end="url(#arrow3)"/>
+
+        <!-- Bottom-right: Orders -->
+        <g class="flow-node" onclick="showPage('platform-orders')" style="cursor:pointer">
+          <rect x="720" y="310" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="790" y="332" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Orders</text>
+          <text x="790" y="348" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/platform/orders</text>
+        </g>
+        <path class="connector" d="M 610,227 C 660,250 720,290 730,310" marker-end="url(#arrow3)"/>
+
+        <!-- Bottom: Products -->
+        <g class="flow-node" onclick="showPage('platform-products')" style="cursor:pointer">
+          <rect x="450" y="340" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="520" y="362" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Products</text>
+          <text x="520" y="378" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/platform/products</text>
+        </g>
+        <path class="connector" d="M 520,232 C 520,270 520,300 520,340" marker-end="url(#arrow3)"/>
+
+        <!-- Left: Settings Hub -->
+        <g class="flow-node" onclick="showPage('platform-settings')" style="cursor:pointer">
+          <rect x="130" y="180" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="200" y="202" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Settings Hub</text>
+          <text x="200" y="218" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/platform/settings</text>
+        </g>
+        <path class="connector" d="M 430,206 C 370,206 320,206 270,206" marker-end="url(#arrow3)"/>
+
+        <!-- Settings sub-nodes -->
+        <g class="flow-node" onclick="showPage('platform-settings-agents')" style="cursor:pointer">
+          <rect x="20" y="300" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="90" y="322" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Agent Config</text>
+          <text x="90" y="338" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/settings/agents</text>
+        </g>
+        <g class="flow-node" onclick="showPage('platform-settings-agent-memory')" style="cursor:pointer">
+          <rect x="180" y="300" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="250" y="322" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Agent Memory</text>
+          <text x="250" y="338" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/settings/memory</text>
+        </g>
+        <g class="flow-node" onclick="showPage('platform-settings-connections')" style="cursor:pointer">
+          <rect x="100" y="400" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="170" y="422" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Connections</text>
+          <text x="170" y="438" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/settings/connections</text>
+        </g>
+        <path class="connector" d="M 170,232 C 140,260 110,280 100,300" marker-end="url(#arrow3)"/>
+        <path class="connector" d="M 210,232 C 230,260 240,280 245,300" marker-end="url(#arrow3)"/>
+        <path class="connector" d="M 195,232 C 185,300 175,360 172,400" marker-end="url(#arrow3)"/>
+      </svg>
+    </div>
+
+    <!-- ====== FLOW 4: Merchant Dashboard ====== -->
+    <div class="wf-flow-section">
+      <h3 class="wf-flow-title">Merchant Dashboard</h3>
+      <svg viewBox="0 0 1100 600" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#444"/>
+          </marker>
+        </defs>
+        <!-- Row 1: Dashboard Home (center) -->
+        <g class="flow-node" onclick="showPage('dashboard')" style="cursor:pointer">
+          <rect x="460" y="20" width="160" height="52" rx="8" fill="#1a1a1a" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="540" y="42" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Dashboard Home</text>
+          <text x="540" y="58" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/dashboard</text>
+        </g>
+
+        <!-- Row 2: Products, Orders, Collections, Coupons -->
+        <g class="flow-node" onclick="showPage('dashboard-products')" style="cursor:pointer">
+          <rect x="30" y="130" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="100" y="152" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Products List</text>
+          <text x="100" y="168" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/products</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-orders')" style="cursor:pointer">
+          <rect x="300" y="130" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="370" y="152" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Orders List</text>
+          <text x="370" y="168" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/orders</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-collections')" style="cursor:pointer">
+          <rect x="560" y="130" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="630" y="152" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Collections</text>
+          <text x="630" y="168" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/collections</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-coupons')" style="cursor:pointer">
+          <rect x="820" y="130" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="890" y="152" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Coupons</text>
+          <text x="890" y="168" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/coupons</text>
+        </g>
+        <!-- Row 1→2 connectors -->
+        <path class="connector" d="M 480,72 C 380,100 200,110 140,130" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 510,72 C 470,100 420,110 400,130" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 570,72 C 590,100 610,110 620,130" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 600,72 C 700,100 820,110 870,130" marker-end="url(#arrow4)"/>
+
+        <!-- Sub-nodes for Products -->
+        <g class="flow-node" onclick="showPage('dashboard-products-create')" style="cursor:pointer">
+          <rect x="20" y="230" width="130" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="85" y="252" text-anchor="middle" fill="#fafafa" font-size="12" font-family="var(--font-sans)">Product Create</text>
+          <text x="85" y="268" text-anchor="middle" fill="#666" font-size="10" font-family="var(--font-mono)">/products/new</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-products-edit')" style="cursor:pointer">
+          <rect x="160" y="230" width="130" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="225" y="252" text-anchor="middle" fill="#fafafa" font-size="12" font-family="var(--font-sans)">Product Edit</text>
+          <text x="225" y="268" text-anchor="middle" fill="#666" font-size="10" font-family="var(--font-mono)">/products/[id]</text>
+        </g>
+        <path class="connector" d="M 70,182 C 65,200 70,215 75,230" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 130,182 C 160,200 200,215 215,230" marker-end="url(#arrow4)"/>
+
+        <!-- Sub-node for Orders -->
+        <g class="flow-node" onclick="showPage('dashboard-order-detail')" style="cursor:pointer">
+          <rect x="310" y="230" width="130" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="375" y="252" text-anchor="middle" fill="#fafafa" font-size="12" font-family="var(--font-sans)">Order Detail</text>
+          <text x="375" y="268" text-anchor="middle" fill="#666" font-size="10" font-family="var(--font-mono)">/orders/[id]</text>
+        </g>
+        <path class="connector" d="M 370,182 C 372,200 374,215 375,230" marker-end="url(#arrow4)"/>
+
+        <!-- Sub-node for Collections -->
+        <g class="flow-node" onclick="showPage('dashboard-collections')" style="cursor:pointer">
+          <rect x="560" y="230" width="130" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="625" y="252" text-anchor="middle" fill="#fafafa" font-size="12" font-family="var(--font-sans)">Create / Edit</text>
+          <text x="625" y="268" text-anchor="middle" fill="#666" font-size="10" font-family="var(--font-mono)">/collections/[id]</text>
+        </g>
+        <path class="connector" d="M 630,182 C 628,200 626,215 625,230" marker-end="url(#arrow4)"/>
+
+        <!-- Sub-node for Coupons -->
+        <g class="flow-node" onclick="showPage('dashboard-coupons')" style="cursor:pointer">
+          <rect x="820" y="230" width="130" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="885" y="252" text-anchor="middle" fill="#fafafa" font-size="12" font-family="var(--font-sans)">Create / Edit</text>
+          <text x="885" y="268" text-anchor="middle" fill="#666" font-size="10" font-family="var(--font-mono)">/coupons/[id]</text>
+        </g>
+        <path class="connector" d="M 890,182 C 888,200 886,215 885,230" marker-end="url(#arrow4)"/>
+
+        <!-- Row 3: Abandoned Carts, Migration, Reports, Refunds, Returns, Reviews -->
+        <g class="flow-node" onclick="showPage('dashboard-abandoned-carts')" style="cursor:pointer">
+          <rect x="20" y="340" width="130" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="85" y="362" text-anchor="middle" fill="#fafafa" font-size="12" font-family="var(--font-sans)">Abandoned Carts</text>
+          <text x="85" y="378" text-anchor="middle" fill="#666" font-size="10" font-family="var(--font-mono)">/abandoned-carts</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-migrate')" style="cursor:pointer">
+          <rect x="170" y="340" width="130" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="235" y="362" text-anchor="middle" fill="#fafafa" font-size="12" font-family="var(--font-sans)">Migration</text>
+          <text x="235" y="378" text-anchor="middle" fill="#666" font-size="10" font-family="var(--font-mono)">/migrate</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-reports')" style="cursor:pointer">
+          <rect x="320" y="340" width="130" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="385" y="362" text-anchor="middle" fill="#fafafa" font-size="12" font-family="var(--font-sans)">Reports</text>
+          <text x="385" y="378" text-anchor="middle" fill="#666" font-size="10" font-family="var(--font-mono)">/reports</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-refunds')" style="cursor:pointer">
+          <rect x="470" y="340" width="130" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="535" y="362" text-anchor="middle" fill="#fafafa" font-size="12" font-family="var(--font-sans)">Refunds</text>
+          <text x="535" y="378" text-anchor="middle" fill="#666" font-size="10" font-family="var(--font-mono)">/refunds</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-returns')" style="cursor:pointer">
+          <rect x="620" y="340" width="130" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="685" y="362" text-anchor="middle" fill="#fafafa" font-size="12" font-family="var(--font-sans)">Returns</text>
+          <text x="685" y="378" text-anchor="middle" fill="#666" font-size="10" font-family="var(--font-mono)">/returns</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-reviews')" style="cursor:pointer">
+          <rect x="770" y="340" width="130" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="835" y="362" text-anchor="middle" fill="#fafafa" font-size="12" font-family="var(--font-sans)">Reviews</text>
+          <text x="835" y="378" text-anchor="middle" fill="#666" font-size="10" font-family="var(--font-mono)">/reviews</text>
+        </g>
+        <!-- Row 1→3 connectors (from dashboard home) -->
+        <path class="connector" d="M 470,72 C 300,180 120,280 85,340" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 490,72 C 380,180 270,280 235,340" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 510,72 C 460,180 410,280 385,340" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 535,72 C 535,180 535,280 535,340" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 560,72 C 610,180 660,280 685,340" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 580,72 C 680,180 780,280 835,340" marker-end="url(#arrow4)"/>
+
+        <!-- Row 4: Settings branch -->
+        <g class="flow-node" onclick="showPage('dashboard-settings')" style="cursor:pointer">
+          <rect x="460" y="450" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="530" y="472" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Settings</text>
+          <text x="530" y="488" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/settings</text>
+        </g>
+        <path class="connector" d="M 540,72 C 540,240 530,380 530,450" marker-end="url(#arrow4)"/>
+
+        <!-- Settings sub-items -->
+        <g class="flow-node" onclick="showPage('dashboard-settings-payments')" style="cursor:pointer">
+          <rect x="20" y="540" width="105" height="48" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="72" y="560" text-anchor="middle" fill="#fafafa" font-size="11" font-family="var(--font-sans)">Payments</text>
+          <text x="72" y="574" text-anchor="middle" fill="#666" font-size="9" font-family="var(--font-mono)">/payments</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-settings-shipping')" style="cursor:pointer">
+          <rect x="135" y="540" width="105" height="48" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="187" y="560" text-anchor="middle" fill="#fafafa" font-size="11" font-family="var(--font-sans)">Shipping</text>
+          <text x="187" y="574" text-anchor="middle" fill="#666" font-size="9" font-family="var(--font-mono)">/shipping</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-settings-shipping-providers')" style="cursor:pointer">
+          <rect x="250" y="540" width="105" height="48" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="302" y="560" text-anchor="middle" fill="#fafafa" font-size="11" font-family="var(--font-sans)">Ship Providers</text>
+          <text x="302" y="574" text-anchor="middle" fill="#666" font-size="9" font-family="var(--font-mono)">/ship-providers</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-settings-notifications')" style="cursor:pointer">
+          <rect x="365" y="540" width="105" height="48" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="417" y="560" text-anchor="middle" fill="#fafafa" font-size="11" font-family="var(--font-sans)">Notifications</text>
+          <text x="417" y="574" text-anchor="middle" fill="#666" font-size="9" font-family="var(--font-mono)">/notifications</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-settings-security')" style="cursor:pointer">
+          <rect x="480" y="540" width="105" height="48" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="532" y="560" text-anchor="middle" fill="#fafafa" font-size="11" font-family="var(--font-sans)">Security</text>
+          <text x="532" y="574" text-anchor="middle" fill="#666" font-size="9" font-family="var(--font-mono)">/security</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-settings-domain')" style="cursor:pointer">
+          <rect x="595" y="540" width="105" height="48" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="647" y="560" text-anchor="middle" fill="#fafafa" font-size="11" font-family="var(--font-sans)">Domain</text>
+          <text x="647" y="574" text-anchor="middle" fill="#666" font-size="9" font-family="var(--font-mono)">/domain</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-settings-policies')" style="cursor:pointer">
+          <rect x="710" y="540" width="105" height="48" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="762" y="560" text-anchor="middle" fill="#fafafa" font-size="11" font-family="var(--font-sans)">Policies</text>
+          <text x="762" y="574" text-anchor="middle" fill="#666" font-size="9" font-family="var(--font-mono)">/policies</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-settings-marketing')" style="cursor:pointer">
+          <rect x="825" y="540" width="105" height="48" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="877" y="560" text-anchor="middle" fill="#fafafa" font-size="11" font-family="var(--font-sans)">Marketing</text>
+          <text x="877" y="574" text-anchor="middle" fill="#666" font-size="9" font-family="var(--font-mono)">/marketing</text>
+        </g>
+        <g class="flow-node" onclick="showPage('dashboard-settings-data')" style="cursor:pointer">
+          <rect x="940" y="540" width="105" height="48" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="992" y="560" text-anchor="middle" fill="#fafafa" font-size="11" font-family="var(--font-sans)">Data Export</text>
+          <text x="992" y="574" text-anchor="middle" fill="#666" font-size="9" font-family="var(--font-mono)">/data-export</text>
+        </g>
+        <!-- Settings → sub-items connectors -->
+        <path class="connector" d="M 470,502 C 300,520 150,530 72,540" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 480,502 C 350,520 250,530 187,540" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 490,502 C 400,520 340,530 302,540" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 500,502 C 460,520 440,530 417,540" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 530,502 C 530,520 532,530 532,540" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 560,502 C 600,520 630,530 647,540" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 570,502 C 640,520 710,530 762,540" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 580,502 C 700,520 810,530 877,540" marker-end="url(#arrow4)"/>
+        <path class="connector" d="M 590,502 C 750,520 900,530 992,540" marker-end="url(#arrow4)"/>
+      </svg>
+    </div>
+
+    <!-- ====== FLOW 5: Platform Admin ====== -->
+    <div class="wf-flow-section">
+      <h3 class="wf-flow-title">Platform Admin</h3>
+      <svg viewBox="0 0 1100 340" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#444"/>
+          </marker>
+        </defs>
+        <!-- Center: Admin Overview -->
+        <g class="flow-node" onclick="showPage('admin')" style="cursor:pointer">
+          <rect x="440" y="30" width="160" height="52" rx="8" fill="#1a1a1a" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="520" y="52" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Admin Overview</text>
+          <text x="520" y="68" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/admin</text>
+        </g>
+
+        <!-- Branching nodes -->
+        <g class="flow-node" onclick="showPage('admin-stores')" style="cursor:pointer">
+          <rect x="40" y="160" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="110" y="182" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Stores List</text>
+          <text x="110" y="198" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/admin/stores</text>
+        </g>
+        <g class="flow-node" onclick="showPage('admin-sellers')" style="cursor:pointer">
+          <rect x="220" y="160" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="290" y="182" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Sellers</text>
+          <text x="290" y="198" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/admin/sellers</text>
+        </g>
+        <g class="flow-node" onclick="showPage('admin-customers')" style="cursor:pointer">
+          <rect x="400" y="160" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="470" y="182" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Customers</text>
+          <text x="470" y="198" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/admin/customers</text>
+        </g>
+        <g class="flow-node" onclick="showPage('admin-orders')" style="cursor:pointer">
+          <rect x="580" y="160" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="650" y="182" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Orders</text>
+          <text x="650" y="198" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/admin/orders</text>
+        </g>
+        <g class="flow-node" onclick="showPage('admin-products')" style="cursor:pointer">
+          <rect x="760" y="160" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="830" y="182" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Products</text>
+          <text x="830" y="198" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/admin/products</text>
+        </g>
+        <g class="flow-node" onclick="showPage('admin-analytics')" style="cursor:pointer">
+          <rect x="680" y="270" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="750" y="292" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Analytics</text>
+          <text x="750" y="308" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/admin/analytics</text>
+        </g>
+        <g class="flow-node" onclick="showPage('admin-agents')" style="cursor:pointer">
+          <rect x="860" y="270" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="930" y="292" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Agent Health</text>
+          <text x="930" y="308" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/admin/agents</text>
+        </g>
+
+        <!-- Store Detail (sub-node of Stores List) -->
+        <g class="flow-node" onclick="showPage('admin-store-detail')" style="cursor:pointer">
+          <rect x="40" y="270" width="140" height="52" rx="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+          <text x="110" y="292" text-anchor="middle" fill="#fafafa" font-size="13" font-family="var(--font-sans)">Store Detail</text>
+          <text x="110" y="308" text-anchor="middle" fill="#666" font-size="11" font-family="var(--font-mono)">/admin/stores/[id]</text>
+        </g>
+
+        <!-- Connectors from Admin Overview -->
+        <path class="connector" d="M 460,82 C 340,110 180,130 130,160" marker-end="url(#arrow5)"/>
+        <path class="connector" d="M 480,82 C 400,110 330,130 300,160" marker-end="url(#arrow5)"/>
+        <path class="connector" d="M 520,82 C 500,110 480,130 475,160" marker-end="url(#arrow5)"/>
+        <path class="connector" d="M 550,82 C 580,110 620,130 640,160" marker-end="url(#arrow5)"/>
+        <path class="connector" d="M 570,82 C 650,110 770,130 820,160" marker-end="url(#arrow5)"/>
+        <path class="connector" d="M 560,82 C 620,140 700,220 745,270" marker-end="url(#arrow5)"/>
+        <path class="connector" d="M 580,82 C 700,140 870,220 925,270" marker-end="url(#arrow5)"/>
+
+        <!-- Stores List → Store Detail -->
+        <path class="connector" d="M 110,212 C 110,232 110,250 110,270" marker-end="url(#arrow5)"/>
+      </svg>
+    </div>
+
   </div>
 
   <!-- ==========================================
