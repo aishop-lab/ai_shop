@@ -204,10 +204,39 @@ export default function ProductsPage() {
   }
 
   const handleDuplicate = async (productId: string) => {
-    toast({
-      title: 'Coming Soon',
-      description: 'Product duplication will be available soon'
-    })
+    try {
+      const response = await fetch(`/api/products/${productId}/duplicate`, {
+        method: 'POST'
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        toast({
+          title: 'Product Duplicated',
+          description: (
+            <span>
+              Created &quot;{data.product.title}&quot; as draft.{' '}
+              <a
+                href={`/dashboard/products/${data.product.id}`}
+                className="underline font-medium"
+              >
+                Edit it now
+              </a>
+            </span>
+          ) as unknown as string
+        })
+        fetchProducts()
+      } else {
+        throw new Error(data.error || 'Duplication failed')
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to duplicate product',
+        variant: 'destructive'
+      })
+    }
   }
 
   return (
