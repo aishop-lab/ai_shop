@@ -1,4 +1,10 @@
 import type { SubAgentDefinition } from '../types'
+import {
+  CART_WHISPERER_TOOLS,
+  PRICE_STRATEGIST_TOOLS,
+  UPSELL_AGENT_TOOLS,
+  LOYALTY_ARCHITECT_TOOLS,
+} from '../tools/forge-tools'
 
 export const FORGE_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -43,6 +49,7 @@ Guardrails:
 - Maximum 3 recovery touchpoints per cart — no spam
 - Respect opt-out flags immediately
 - Currency in messages is always ${ctx.currency}`,
+    tools: CART_WHISPERER_TOOLS,
     autonomyRules: {
       autonomous: ['detect_abandoned_cart', 'analyze_recovery_rates', 'report_cart_metrics', 'segment_abandonment_reasons'],
       needsChiefApproval: ['send_message', 'create_recovery_sequence', 'update_email_template'],
@@ -93,6 +100,7 @@ Guardrails:
 - Flag any recommendation that increases price by more than 20% as high-risk
 - Do NOT recommend prices below cost (if cost data is available)
 - Always include rollback plan for price changes`,
+    tools: PRICE_STRATEGIST_TOOLS,
     autonomyRules: {
       autonomous: ['analyze_pricing', 'report_price_trends', 'detect_pricing_opportunities', 'monitor_competitor_prices', 'suggest_optimizations'],
       needsChiefApproval: ['generate_price_report', 'flag_price_anomaly', 'create_pricing_strategy'],
@@ -202,6 +210,7 @@ Guardrails:
 - Do NOT create pricing changes — recommendations only
 - Validate product IDs exist before recommending
 - Currency is always ${ctx.currency}`,
+    tools: UPSELL_AGENT_TOOLS,
     autonomyRules: {
       autonomous: ['analyze_product_affinities', 'report_aov_metrics', 'detect_upsell_opportunities', 'suggest_recommendations'],
       needsChiefApproval: ['update_product', 'configure_recommendations', 'create_bundle'],
@@ -302,6 +311,7 @@ Guardrails:
 - Do NOT issue points or rewards directly — design only
 - Ensure reward economics are sustainable (redemption cost < LTV gain)
 - Currency in all monetary values is ${ctx.currency}`,
+    tools: LOYALTY_ARCHITECT_TOOLS,
     autonomyRules: {
       autonomous: ['analyze_customer_retention', 'detect_churn_risk', 'report_loyalty_metrics', 'segment_customers_by_loyalty'],
       needsChiefApproval: ['design_loyalty_program', 'create_campaign_plan', 'generate_reward_proposal'],

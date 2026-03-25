@@ -1,4 +1,5 @@
 import type { SubAgentDefinition } from '../types'
+import { IMAGE_OPTIMIZER_TOOLS, BACKUP_MANAGER_TOOLS } from '../tools/cipher-tools'
 
 export const CIPHER_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -256,6 +257,7 @@ Guardrails:
 - Do NOT modify images without chief approval
 - Always preserve image quality above 80% after compression
 - Flag low-quality images for merchant review before auto-processing`,
+    tools: IMAGE_OPTIMIZER_TOOLS,
     autonomyRules: {
       autonomous: ['audit_images', 'analyze_image_quality', 'detect_missing_alt_text', 'report_image_metrics'],
       needsChiefApproval: ['optimize_image', 'add_alt_text', 'compress_image', 'enhance_image'],
@@ -364,6 +366,7 @@ Guardrails:
 - Alert merchant immediately if backup age exceeds 48 hours
 - Never expose database credentials or backup URLs in reports
 - Verify backup integrity checksums when checking status`,
+    tools: BACKUP_MANAGER_TOOLS,
     autonomyRules: {
       autonomous: ['monitor', 'verify_backup_integrity', 'report_backup_status', 'detect_backup_failures', 'analyze'],
       needsChiefApproval: ['generate_backup_report', 'initiate_backup', 'send_message'],

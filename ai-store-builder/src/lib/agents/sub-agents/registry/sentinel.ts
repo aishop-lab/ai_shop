@@ -1,4 +1,11 @@
 import type { SubAgentDefinition } from '../types'
+import {
+  CHAT_RESPONDER_TOOLS,
+  EMAIL_HANDLER_TOOLS,
+  WHATSAPP_AGENT_TOOLS,
+  RETURNS_MANAGER_TOOLS,
+  REVIEW_CURATOR_TOOLS,
+} from '../tools/sentinel-tools'
 
 export const SENTINEL_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -41,6 +48,7 @@ Guardrails:
 - Do NOT provide inaccurate product specifications — say "let me check" when uncertain
 - Escalate immediately for any mention of legal action, fraud, or physical harm
 - Keep responses under 150 words for chat — concise wins`,
+    tools: CHAT_RESPONDER_TOOLS,
     autonomyRules: {
       autonomous: ['respond_to_query', 'detect_sentiment', 'answer_faq', 'check_order_status', 'analyze_chat_metrics'],
       needsChiefApproval: ['send_message', 'escalate_conversation', 'update_faq'],
@@ -93,6 +101,7 @@ Guardrails:
 - Do NOT promise specific delivery dates without checking shipping data
 - Mark phishing/fraud attempts immediately — do not engage
 - Maintain ${ctx.brandVibe} tone in every response`,
+    tools: EMAIL_HANDLER_TOOLS,
     autonomyRules: {
       autonomous: ['categorize_email', 'analyze_email_volume', 'detect_sentiment', 'draft_response', 'report_support_metrics'],
       needsChiefApproval: ['send_message', 'update_email_template', 'escalate_conversation'],
@@ -141,6 +150,7 @@ Guardrails:
 - Free-form messages only valid within 24-hour customer interaction window (WhatsApp policy)
 - Escalate immediately for payment disputes
 - Currency in messages is always ${ctx.currency}`,
+    tools: WHATSAPP_AGENT_TOOLS,
     autonomyRules: {
       autonomous: ['detect_message_intent', 'draft_response', 'check_order_status', 'analyze_whatsapp_metrics', 'monitor_response_times'],
       needsChiefApproval: ['send_message', 'send_template_message', 'escalate_conversation'],
@@ -192,6 +202,7 @@ Guardrails:
 - Do NOT approve returns beyond the store's policy window without escalation
 - Do NOT share shipping label costs with customers — handle internally
 - Flag suspected fraud return patterns (serial returners) to merchant`,
+    tools: RETURNS_MANAGER_TOOLS,
     autonomyRules: {
       autonomous: ['assess_return_eligibility', 'analyze_return_rates', 'detect_return_patterns', 'report_returns_metrics'],
       needsChiefApproval: ['send_message', 'initiate_return', 'generate_return_label'],
@@ -247,6 +258,7 @@ Guardrails:
 - Flag reviews that appear fake (identical phrasing, impossible timeline, suspicious accounts)
 - Never be defensive — always empathetic and solution-oriented
 - Keep public responses under 150 words`,
+    tools: REVIEW_CURATOR_TOOLS,
     autonomyRules: {
       autonomous: ['monitor_reviews', 'analyze_sentiment', 'detect_fake_reviews', 'report_reputation_metrics', 'draft_response'],
       needsChiefApproval: ['send_message', 'publish_content', 'flag_review'],
