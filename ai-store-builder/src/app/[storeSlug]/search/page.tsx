@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useStore } from '@/lib/contexts/store-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { Button } from '@/components/ui/button'
+import { addToSearchHistory, getSearchHistory, clearSearchHistory } from '@/lib/utils/search-history'
 
 interface ProductResult {
   id: string
@@ -44,6 +45,13 @@ function SearchContent() {
     isLoading: false,
     error: null,
   })
+  const [searchHistory, setSearchHistory] = useState<string[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+
+  // Load search history on mount
+  useEffect(() => {
+    setSearchHistory(getSearchHistory())
+  }, [])
 
   const performSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
@@ -104,13 +112,46 @@ function SearchContent() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value)
+    if (!e.target.value.trim() && searchHistory.length > 0) {
+      setShowHistory(true)
+    } else {
+      setShowHistory(false)
+    }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (inputValue.trim()) {
+      addToSearchHistory(inputValue.trim())
+      setSearchHistory(getSearchHistory())
+      setShowHistory(false)
       performSearch(inputValue.trim())
     }
+  }
+
+  const handleHistoryClick = (query: string) => {
+    setInputValue(query)
+    setShowHistory(false)
+    addToSearchHistory(query)
+    setSearchHistory(getSearchHistory())
+    performSearch(query)
+  }
+
+  const handleClearHistory = () => {
+    clearSearchHistory()
+    setSearchHistory([])
+    setShowHistory(false)
+  }
+
+  const handleInputFocus = () => {
+    if (!inputValue.trim() && searchHistory.length > 0) {
+      setShowHistory(true)
+    }
+  }
+
+  const handleInputBlur = () => {
+    // Delay to allow click on history items
+    setTimeout(() => setShowHistory(false), 200)
   }
 
   // No query state
