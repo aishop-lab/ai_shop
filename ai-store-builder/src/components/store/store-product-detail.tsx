@@ -13,6 +13,8 @@ import ProductCard from './themes/modern-minimal/product-card'
 import { ReviewsList } from '@/components/reviews/reviews-list'
 import { PincodeChecker } from './pincode-checker'
 import WishlistButton from './wishlist-button'
+import RecentlyViewed from './recently-viewed'
+import { addToRecentlyViewed } from '@/lib/utils/recently-viewed'
 import { toast } from 'sonner'
 
 interface StoreProductDetailProps {
@@ -83,7 +85,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
     ? Math.round(((effectiveCompareAtPrice - effectivePrice) / effectiveCompareAtPrice) * 100)
     : 0
 
-  // Track product view
+  // Track product view and add to recently viewed
   useEffect(() => {
     analytics.trackViewProduct({
       id: product.id,
@@ -91,6 +93,14 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
       price: effectivePrice,
       category: product.categories?.[0],
       variant: selectedVariant?.id
+    })
+
+    addToRecentlyViewed(store.slug, {
+      id: product.id,
+      title: product.title,
+      price: product.price,
+      image: product.images?.[0]?.url,
+      slug: product.slug,
     })
   }, [product.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -479,6 +489,9 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
       <section className="mt-16 pt-12 border-t">
         <ReviewsList productId={product.id} />
       </section>
+
+      {/* Recently Viewed */}
+      <RecentlyViewed currentProductId={product.id} storeSlug={store.slug} />
 
       {/* Image Lightbox */}
       {lightboxOpen && currentImage && (
