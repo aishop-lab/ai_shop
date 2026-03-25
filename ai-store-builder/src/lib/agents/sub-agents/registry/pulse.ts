@@ -1,4 +1,12 @@
 import type { SubAgentDefinition } from '../types'
+import {
+  revenueTrackerQuery,
+  trafficAnalystQuery,
+  customerProfilerQuery,
+  productRankerQuery,
+  funnelAnalystQuery,
+  anomalySentinelQuery,
+} from '../query-functions/pulse-queries'
 
 export const PULSE_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -9,6 +17,7 @@ export const PULSE_SUB_AGENTS: SubAgentDefinition[] = [
     description: 'Tracks real-time revenue metrics, GMV, AOV, and revenue trends. Powered by database queries — no LLM needed.',
     category: 'data-only',
     systemPrompt: (ctx) => `You are REVENUE-TRACKER, the Revenue Intelligence Engine for ${ctx.storeName}. You operate in data-only mode — your output is structured revenue data, not LLM prose. Currency: ${ctx.currency}.`,
+    queryFn: revenueTrackerQuery,
     autonomyRules: {
       autonomous: ['analyze', 'report', 'monitor', 'detect'],
       needsChiefApproval: [],
@@ -24,6 +33,7 @@ export const PULSE_SUB_AGENTS: SubAgentDefinition[] = [
     description: 'Monitors visitor traffic, session data, bounce rates, and traffic source attribution using GA4 and internal data.',
     category: 'data-only',
     systemPrompt: (ctx) => `You are TRAFFIC-ANALYST, the Store Traffic Intelligence agent for ${ctx.storeName}. You operate in data-only mode — your output is structured traffic data. Store: ${ctx.storeSlug}.`,
+    queryFn: trafficAnalystQuery,
     autonomyRules: {
       autonomous: ['analyze', 'report', 'monitor', 'detect'],
       needsChiefApproval: [],
@@ -39,6 +49,7 @@ export const PULSE_SUB_AGENTS: SubAgentDefinition[] = [
     description: 'Builds customer segments, RFM cohorts, and lifetime value profiles from order and behavioral data.',
     category: 'data-only',
     systemPrompt: (ctx) => `You are CUSTOMER-PROFILER, the Customer Segmentation Engine for ${ctx.storeName}. You operate in data-only mode — output structured customer segment data. Currency: ${ctx.currency}.`,
+    queryFn: customerProfilerQuery,
     autonomyRules: {
       autonomous: ['analyze', 'segment_customers', 'report', 'monitor'],
       needsChiefApproval: [],
@@ -54,6 +65,7 @@ export const PULSE_SUB_AGENTS: SubAgentDefinition[] = [
     description: 'Ranks products by revenue, velocity, margin, and return rates. Identifies top performers and slow movers.',
     category: 'data-only',
     systemPrompt: (ctx) => `You are PRODUCT-RANKER, the Product Performance Ranker for ${ctx.storeName}. You operate in data-only mode — output structured product performance rankings. Currency: ${ctx.currency}.`,
+    queryFn: productRankerQuery,
     autonomyRules: {
       autonomous: ['analyze', 'report', 'detect', 'monitor'],
       needsChiefApproval: [],
@@ -69,6 +81,7 @@ export const PULSE_SUB_AGENTS: SubAgentDefinition[] = [
     description: 'Tracks drop-off at each stage of the purchase funnel from product view through checkout completion.',
     category: 'data-only',
     systemPrompt: (ctx) => `You are FUNNEL-ANALYST, the Conversion Funnel Analyzer for ${ctx.storeName}. You operate in data-only mode — output structured funnel drop-off data at each stage.`,
+    queryFn: funnelAnalystQuery,
     autonomyRules: {
       autonomous: ['analyze', 'report', 'detect', 'monitor'],
       needsChiefApproval: [],
@@ -137,6 +150,7 @@ Guardrails:
     description: 'Detects unusual patterns in revenue, orders, traffic, and inventory that signal problems or opportunities requiring immediate attention.',
     category: 'data-only',
     systemPrompt: (ctx) => `You are ANOMALY-SENTINEL, the Business Anomaly Detector for ${ctx.storeName}. You operate in data-only mode — output structured anomaly alerts with severity and context. Currency: ${ctx.currency}.`,
+    queryFn: anomalySentinelQuery,
     autonomyRules: {
       autonomous: ['detect', 'monitor', 'analyze', 'report'],
       needsChiefApproval: [],
