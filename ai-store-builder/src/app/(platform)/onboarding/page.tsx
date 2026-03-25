@@ -47,22 +47,22 @@ const THEMES = [
   {
     id: 'modern',
     label: 'Modern',
-    description: 'Clean lines, bold typography',
+    description: 'Clean lines, bold typography. Best for tech, fashion, and contemporary brands.',
   },
   {
     id: 'classic',
     label: 'Classic',
-    description: 'Timeless, elegant design',
+    description: 'Timeless, elegant design. Ideal for luxury, jewelry, and artisan products.',
   },
   {
     id: 'playful',
     label: 'Playful',
-    description: 'Bright colors, rounded shapes',
+    description: 'Bright colors, rounded shapes. Perfect for kids, food, and lifestyle brands.',
   },
   {
     id: 'minimal',
     label: 'Minimal',
-    description: 'Stripped back, content-focused',
+    description: 'Stripped back, content-focused. Great for art, photography, and premium goods.',
   },
 ] as const
 
@@ -657,11 +657,19 @@ export default function OnboardingPage() {
                   className="border-zinc-800 bg-zinc-900 text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-zinc-500/30"
                 />
                 {formData.slug && (
-                  <p className="flex items-center gap-1.5 text-xs text-zinc-400">
-                    <ExternalLink className="h-3 w-3" />
-                    <span className="text-zinc-400">{formData.slug}</span>
-                    .storeforge.site
-                  </p>
+                  <div className="space-y-1">
+                    <p className="flex items-center gap-1.5 text-xs text-zinc-400">
+                      <ExternalLink className="h-3 w-3" />
+                      <span className="text-zinc-400">{formData.slug}</span>
+                      .storeforge.site
+                    </p>
+                    {formData.storeName.trim().length > 0 && formData.slug.length < formData.storeName.trim().replace(/\s+/g, '-').toLowerCase().length && (
+                      <p className="flex items-center gap-1 text-xs text-zinc-500">
+                        <span>ℹ️</span>
+                        <span>Special characters were removed from your store URL</span>
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
 
