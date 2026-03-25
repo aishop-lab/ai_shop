@@ -40,6 +40,7 @@ export interface AgentAction {
   id: string
   store_id: string
   agent_type: AgentType
+  sub_agent_type: string | null
   action_type: string
   action_category: ActionCategory
   summary: string
@@ -68,6 +69,7 @@ export interface AgentApproval {
   id: string
   store_id: string
   agent_type: AgentType
+  sub_agent_type: string | null
   action_type: string
   summary: string
   reasoning: string
