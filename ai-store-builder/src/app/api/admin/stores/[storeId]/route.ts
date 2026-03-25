@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/admin/auth'
 import { getStoreDetails, updateStoreStatus } from '@/lib/admin/queries'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { logAdminAction } from '@/lib/admin/audit-log'
 
 export async function GET(
   request: NextRequest,
@@ -70,18 +71,71 @@ export async function PATCH(
 
     const { storeId } = await params
     const body = await request.json()
-    const { status } = body
+    const { status, name } = body
 
-    if (!status || !['active', 'suspended', 'draft'].includes(status)) {
+    const supabase = getSupabaseAdmin()
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    const auditDetails: Record<string, unknown> = {}
+
+    // Handle status update
+    if (status) {
+      if (!['active', 'suspended', 'draft'].includes(status)) {
+        return NextResponse.json(
+          { error: 'Invalid status. Must be: active, suspended, or draft' },
+          { status: 400 }
+        )
+      }
+      updates.status = status
+      auditDetails.new_status = status
+    }
+
+    // Handle name update
+    if (name !== undefined) {
+      if (typeof name !== 'string' || name.trim().length < 1) {
+        return NextResponse.json(
+          { error: 'Store name must be a non-empty string' },
+          { status: 400 }
+        )
+      }
+      updates.name = name.trim()
+      auditDetails.new_name = name.trim()
+    }
+
+    if (Object.keys(updates).length <= 1) {
       return NextResponse.json(
-        { error: 'Invalid status. Must be: active, suspended, or draft' },
+        { error: 'No valid fields to update' },
         { status: 400 }
       )
     }
 
-    await updateStoreStatus(storeId, status)
+    // If only status changed, use the existing helper for backward compat
+    if (status && !name) {
+      await updateStoreStatus(storeId, status)
+    } else {
+      const { error } = await supabase
+        .from('stores')
+        .update(updates)
+        .eq('id', storeId)
 
-    return NextResponse.json({ success: true, status })
+      if (error) {
+        throw new Error(`Failed to update store: ${error.message}`)
+      }
+    }
+
+    // Determine the audit action
+    let action = 'store_updated'
+    if (status === 'suspended') action = 'store_suspended'
+    else if (status === 'active') action = 'store_activated'
+
+    await logAdminAction({
+      admin_user_id: admin.user.id,
+      action,
+      entity_type: 'store',
+      entity_id: storeId,
+      details: auditDetails,
+    })
+
+    return NextResponse.json({ success: true, ...auditDetails })
   } catch (error) {
     console.error('Admin store update error:', error)
     return NextResponse.json(
