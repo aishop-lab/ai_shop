@@ -9,6 +9,7 @@ import { unifiedAI, AUTO_APPLY_THRESHOLD as LEGACY_AUTO_APPLY_THRESHOLD } from '
 import { vercelAI, AUTO_APPLY_THRESHOLD } from '@/lib/ai/vercel-ai-service'
 import { USE_VERCEL_AI } from '@/lib/ai/provider'
 import { productExtractor } from '@/lib/ai/product-extractor'
+import { saveVariantOptions, bulkUpdateVariants, enableVariants } from '@/lib/products/variant-operations'
 import { emitTrigger } from '@/lib/agents/trigger-emitter'
 
 export const dynamic = 'force-dynamic'
@@ -296,6 +297,36 @@ export async function POST(request: Request) {
       status: productData.status === 'published' ? 'active' : (productData.status as 'draft' | 'active' || 'draft'),
       published_at: productData.published_at as string | null
     }))
+
+    // Handle variants if provided
+    const hasVariantsFlag = formData.get('has_variants') === 'true'
+    const variantOptionsRaw = formData.get('variant_options') as string | null
+    const variantsRaw = formData.get('variants') as string | null
+
+    if (hasVariantsFlag && variantOptionsRaw && variantsRaw) {
+      try {
+        const variantOptions = JSON.parse(variantOptionsRaw)
+        const variantInputs = JSON.parse(variantsRaw)
+
+        if (Array.isArray(variantOptions) && variantOptions.length > 0) {
+          // Enable variants flag on product
+          await enableVariants(tempProduct.id)
+
+          // Save variant options
+          await saveVariantOptions(tempProduct.id, variantOptions)
+
+          // Save variants if provided
+          if (Array.isArray(variantInputs) && variantInputs.length > 0) {
+            await bulkUpdateVariants(tempProduct.id, variantInputs)
+          }
+
+          console.log(`[Upload] Saved ${variantOptions.length} variant options and ${variantInputs.length} variants for product ${tempProduct.id}`)
+        }
+      } catch (variantError) {
+        console.error('[Upload] Failed to save variants (non-blocking):', variantError)
+        // Don't fail the entire upload - variants can be added/edited later
+      }
+    }
 
     // Emit agent trigger for new product
     emitTrigger({
