@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { RatingStars } from './rating-stars'
 import { RatingDistribution } from './rating-distribution'
 import { ReviewCard } from './review-card'
+import { ReviewForm } from './review-form'
+import { useCustomer } from '@/lib/contexts/customer-context'
+import { MessageSquarePlus } from 'lucide-react'
 import {
     Select,
     SelectContent,
@@ -42,6 +46,8 @@ export function ReviewsList({ productId, customerEmail }: ReviewsListProps) {
     const [stats, setStats] = useState<ReviewStats | null>(null)
     const [sortBy, setSortBy] = useState('recent')
     const [isLoading, setIsLoading] = useState(true)
+    const [showReviewForm, setShowReviewForm] = useState(false)
+    const { customer, isAuthenticated } = useCustomer()
 
     const fetchReviews = async () => {
         setIsLoading(true)
@@ -76,9 +82,34 @@ export function ReviewsList({ productId, customerEmail }: ReviewsListProps) {
 
     if (!stats || stats.total_reviews === 0) {
         return (
-            <Card className="p-8 text-center">
-                <p className="text-gray-500">No reviews yet. Be the first to review this product!</p>
-            </Card>
+            <div className="space-y-6">
+                <Card className="p-8 text-center">
+                    <p className="text-gray-500">No reviews yet. Be the first to review this product!</p>
+                </Card>
+                {isAuthenticated && customer && (
+                    <>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowReviewForm(!showReviewForm)}
+                            className="flex items-center gap-2"
+                        >
+                            <MessageSquarePlus className="h-4 w-4" />
+                            Write a Review
+                        </Button>
+                        {showReviewForm && (
+                            <ReviewForm
+                                productId={productId}
+                                customerEmail={customer.email}
+                                customerName={customer.full_name || customer.email}
+                                onSuccess={() => {
+                                    setShowReviewForm(false)
+                                    fetchReviews()
+                                }}
+                            />
+                        )}
+                    </>
+                )}
+            </div>
         )
     }
 
@@ -86,7 +117,20 @@ export function ReviewsList({ productId, customerEmail }: ReviewsListProps) {
         <div className="space-y-6">
             {/* Rating Summary */}
             <Card className="p-6">
-                <h3 className="text-xl font-semibold mb-4">Customer Reviews</h3>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-semibold">Customer Reviews</h3>
+                    {isAuthenticated && customer && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowReviewForm(!showReviewForm)}
+                            className="flex items-center gap-2"
+                        >
+                            <MessageSquarePlus className="h-4 w-4" />
+                            Write a Review
+                        </Button>
+                    )}
+                </div>
                 <div className="grid md:grid-cols-2 gap-6">
                     {/* Average Rating */}
                     <div className="text-center md:text-left">
