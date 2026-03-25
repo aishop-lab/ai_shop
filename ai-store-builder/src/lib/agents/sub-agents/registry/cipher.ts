@@ -1,5 +1,12 @@
 import type { SubAgentDefinition } from '../types'
 import { IMAGE_OPTIMIZER_TOOLS, BACKUP_MANAGER_TOOLS } from '../tools/cipher-tools'
+import {
+  SEO_ENGINEER_TOOLS,
+  SPEED_DEMON_TOOLS,
+  UPTIME_GUARDIAN_TOOLS,
+  SECURITY_SCANNER_TOOLS,
+  INTEGRATION_DOCTOR_TOOLS,
+} from '../tools/cipher-new-tools'
 
 export const CIPHER_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -43,6 +50,7 @@ Guardrails:
 - Do NOT mark pages for deindexing without merchant approval
 - Flag duplicate content issues without removing pages autonomously
 - Always validate structured data recommendations against schema.org`,
+    tools: SEO_ENGINEER_TOOLS,
     autonomyRules: {
       autonomous: ['audit_seo', 'analyze_structured_data', 'report_seo_metrics', 'detect_indexability_issues', 'monitor_search_console'],
       needsChiefApproval: ['update_meta_tags', 'generate_sitemap', 'update_structured_data'],
@@ -101,6 +109,7 @@ Guardrails:
 - Priority order: mobile performance first, then desktop
 - Flag Third-party script issues (chat widgets, analytics) — they're often the biggest culprits
 - Do NOT remove analytics or tracking scripts without explicit merchant approval`,
+    tools: SPEED_DEMON_TOOLS,
     autonomyRules: {
       autonomous: ['monitor', 'analyze_performance', 'detect', 'report_vitals', 'audit_page_speed'],
       needsChiefApproval: ['generate_performance_report', 'flag_critical_issue', 'suggest_optimizations'],
@@ -154,6 +163,7 @@ Guardrails:
 - Do NOT restart services autonomously — alert and recommend only
 - False positive tolerance: require 2 consecutive failed checks before raising alert
 - Do NOT expose internal service credentials in reports`,
+    tools: UPTIME_GUARDIAN_TOOLS,
     autonomyRules: {
       autonomous: ['monitor', 'detect', 'analyze', 'report_uptime', 'check_health'],
       needsChiefApproval: ['send_message', 'generate_incident_report', 'escalate_outage'],
@@ -202,6 +212,7 @@ Guardrails:
 - Treat security findings as confidential — do not log to public channels
 - Critical vulnerabilities require immediate merchant notification
 - Flag but do NOT exploit any vulnerabilities found`,
+    tools: SECURITY_SCANNER_TOOLS,
     autonomyRules: {
       autonomous: ['monitor', 'scan', 'detect', 'analyze', 'report_security_metrics'],
       needsChiefApproval: ['generate_security_report', 'flag_vulnerability', 'recommend_security_fix'],
@@ -312,6 +323,7 @@ Guardrails:
 - Alert merchant immediately for payment integration failures — revenue at risk
 - Do NOT attempt to fix credentials autonomously — alert and guide only
 - Distinguish between store-level and platform-level credential failures`,
+    tools: INTEGRATION_DOCTOR_TOOLS,
     autonomyRules: {
       autonomous: ['monitor', 'detect', 'analyze', 'report_integration_health', 'check_credentials'],
       needsChiefApproval: ['generate_integration_report', 'flag_integration_failure', 'send_message'],

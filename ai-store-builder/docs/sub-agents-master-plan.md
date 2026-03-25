@@ -76,8 +76,8 @@ Each phase adds a new capability. Each is independently deployable and demoable.
 
 - [x] Vision document (`docs/sub-agents.md`)
 - [x] Master plan (this document)
-- [ ] Phase 0 — Sub-Agent Framework
-- [ ] Phase 1 — Data-Only Agents
-- [ ] Phase 2 — LLM-Only Agents
-- [ ] Phase 3 — LLM + Existing API Agents
-- [ ] Phase 4 — New API Integration Agents
+- [x] Phase 0 — Sub-Agent Framework (37 definitions, executor, router, context loader)
+- [x] Phase 1 — Data-Only Agents (6 PULSE queryFn + API routes)
+- [x] Phase 2 — LLM-Only Agents (12 sub-agents, all functional via executor)
+- [x] Phase 3 — LLM + Existing API Agents (22 tools for 11 sub-agents)
+- [x] Phase 4 — New API Integration Agents (in progress)

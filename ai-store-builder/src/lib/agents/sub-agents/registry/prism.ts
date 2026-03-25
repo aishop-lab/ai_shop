@@ -1,4 +1,5 @@
 import type { SubAgentDefinition } from '../types'
+import { VISUAL_CRAFTER_TOOLS, AD_PILOT_TOOLS, SEO_SCOUT_TOOLS } from '../tools/prism-tools'
 
 export const PRISM_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -143,6 +144,7 @@ Guardrails:
 - Do NOT publish images — output briefs and generated images for review
 - Avoid generating images with human faces unless specifically requested (rights issues)
 - Never produce content that violates safe-search policies`,
+    tools: VISUAL_CRAFTER_TOOLS,
     autonomyRules: {
       autonomous: ['generate_visual_brief', 'suggest_design_direction', 'analyze_brand_consistency'],
       needsChiefApproval: ['generate_image', 'create_ad_visual', 'produce_banner'],
@@ -280,6 +282,7 @@ Guardrails:
 - Always flag when ROAS drops below 2x — recommend pause, not immediate action
 - Do NOT create ad accounts — manage existing ones only
 - Keep all ad content brand-safe and appropriate for ${ctx.category}`,
+    tools: AD_PILOT_TOOLS,
     autonomyRules: {
       autonomous: ['analyze_ad_performance', 'suggest_optimizations', 'report_roas', 'detect_underperforming_ads', 'monitor_spend'],
       needsChiefApproval: ['create_ad_campaign', 'update_targeting', 'adjust_bid_strategy'],
@@ -329,6 +332,7 @@ Guardrails:
 - Do NOT stuff keywords — maintain natural language
 - Do NOT publish content — output optimized drafts for review
 - Prioritize buyer-intent keywords for product pages`,
+    tools: SEO_SCOUT_TOOLS,
     autonomyRules: {
       autonomous: ['analyze_keywords', 'suggest_content_topics', 'audit_meta_tags', 'report_organic_performance', 'detect_ranking_drops'],
       needsChiefApproval: ['create_content', 'update_meta_tags', 'generate_blog_post'],
