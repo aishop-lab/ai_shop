@@ -20,7 +20,8 @@ export const productInputSchema = z.object({
   categories: z.array(z.string()).max(5, 'Maximum 5 categories').optional().default([]),
   tags: z.array(z.string()).max(20, 'Maximum 20 tags').optional().default([]),
   status: z.enum(['draft', 'active', 'published']).default('draft'),
-  featured: z.boolean().default(false)
+  featured: z.boolean().default(false),
+  published_at: z.string().datetime().optional().nullable()
 })
 
 /**
@@ -41,7 +42,8 @@ export const productUploadSchema = z.object({
   requires_shipping: z.boolean().optional().default(true),
   categories: z.array(z.string()).max(5).optional(),
   tags: z.array(z.string()).max(20).optional(),
-  status: z.enum(['draft', 'active', 'published']).optional().default('draft')
+  status: z.enum(['draft', 'active', 'published']).optional().default('draft'),
+  published_at: z.string().datetime().optional().nullable()
 })
 
 /**
@@ -62,7 +64,8 @@ export const productUpdateSchema = z.object({
   categories: z.array(z.string()).max(5).optional(),
   tags: z.array(z.string()).max(20).optional(),
   status: z.enum(['draft', 'active', 'published']).optional(),
-  featured: z.boolean().optional()
+  featured: z.boolean().optional(),
+  published_at: z.string().datetime().optional().nullable()
 })
 
 /**

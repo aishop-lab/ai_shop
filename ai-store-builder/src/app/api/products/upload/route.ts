@@ -132,7 +132,8 @@ export async function POST(request: Request) {
       requires_shipping: formData.get('requires_shipping') !== 'false',
       categories: formData.get('categories') ? JSON.parse(formData.get('categories') as string) : undefined,
       tags: formData.get('tags') ? JSON.parse(formData.get('tags') as string) : undefined,
-      status: (formData.get('status') as 'draft' | 'published') || 'draft'
+      status: (formData.get('status') as 'draft' | 'published') || 'draft',
+      published_at: formData.get('published_at') as string || null
     }
 
     // Log for debugging
@@ -292,7 +293,8 @@ export async function POST(request: Request) {
       price: productData.price as number || 0,
       categories: finalCategories,
       tags: finalTags,
-      status: productData.status === 'published' ? 'active' : (productData.status as 'draft' | 'active' || 'draft')
+      status: productData.status === 'published' ? 'active' : (productData.status as 'draft' | 'active' || 'draft'),
+      published_at: productData.published_at as string | null
     }))
 
     // Emit agent trigger for new product

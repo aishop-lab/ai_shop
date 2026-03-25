@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, Save, Send, Sparkles, Wand2, Image as ImageIcon, CheckCircle, ExternalLink, Eye, EyeOff, Trash2 } from 'lucide-react'
+import { Loader2, Save, Send, Sparkles, Wand2, Image as ImageIcon, CheckCircle, ExternalLink, Eye, EyeOff, Trash2, CalendarClock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -41,7 +41,8 @@ const productSchema = z.object({
   categories: z.array(z.string()).default([]),
   tags: z.array(z.string()).default([]),
   track_quantity: z.boolean().default(true),
-  requires_shipping: z.boolean().default(true)
+  requires_shipping: z.boolean().default(true),
+  published_at: z.string().optional().nullable()
 })
 
 type ProductFormData = z.infer<typeof productSchema>
@@ -129,7 +130,8 @@ export default function ProductForm({
       categories: initialData?.categories || [],
       tags: initialData?.tags || [],
       track_quantity: initialData?.track_quantity ?? true,
-      requires_shipping: initialData?.requires_shipping ?? true
+      requires_shipping: initialData?.requires_shipping ?? true,
+      published_at: (initialData as Record<string, unknown>)?.published_at as string || null
     }
   })
 
@@ -528,7 +530,8 @@ export default function ProductForm({
             requires_shipping: data.requires_shipping,
             categories: data.categories,
             tags: data.tags,
-            status
+            status,
+            published_at: data.published_at ? new Date(data.published_at).toISOString() : null
           })
         })
 
@@ -579,6 +582,9 @@ export default function ProductForm({
         }
         if (data.weight) {
           formData.append('weight', data.weight.toString())
+        }
+        if (data.published_at) {
+          formData.append('published_at', new Date(data.published_at).toISOString())
         }
         if (data.categories && data.categories.length > 0) {
           formData.append('categories', JSON.stringify(data.categories))
@@ -663,6 +669,12 @@ export default function ProductForm({
             <Badge variant={productStatus === 'active' ? 'default' : 'secondary'}>
               {productStatus === 'active' ? 'Published' : 'Draft'}
             </Badge>
+            {productStatus === 'draft' && form.watch('published_at') && (
+              <Badge variant="outline" className="text-xs">
+                <CalendarClock className="w-3 h-3 mr-1" />
+                Scheduled
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {storeSlug && (
@@ -1211,6 +1223,49 @@ export default function ProductForm({
               </form>
             </CardContent>
           </Card>
+
+          {/* Schedule Publication - only for draft products */}
+          {(mode === 'create' || productStatus === 'draft') && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CalendarClock className="w-4 h-4" />
+                  Schedule Publication
+                </CardTitle>
+                <CardDescription>
+                  Product will be automatically published at this time
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Input
+                    type="datetime-local"
+                    value={form.watch('published_at') || ''}
+                    onChange={(e) => form.setValue('published_at', e.target.value || null)}
+                    min={new Date().toISOString().slice(0, 16)}
+                    disabled={isLoading}
+                  />
+                  {form.watch('published_at') && (
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="text-xs">
+                        <CalendarClock className="w-3 h-3 mr-1" />
+                        Scheduled
+                      </Badge>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-muted-foreground"
+                        onClick={() => form.setValue('published_at', null)}
+                      >
+                        Clear schedule
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
