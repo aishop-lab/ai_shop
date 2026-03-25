@@ -14,6 +14,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import {
   ArrowLeft,
   User,
@@ -21,7 +23,8 @@ import {
   Loader2,
   Eye,
   EyeOff,
-  CheckCircle2
+  CheckCircle2,
+  Bell
 } from 'lucide-react'
 
 const profileSchema = z.object({
@@ -53,6 +56,14 @@ export default function CustomerSettingsPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [profileUpdated, setProfileUpdated] = useState(false)
+
+  // Notification preferences
+  const [notifPrefs, setNotifPrefs] = useState({
+    orderUpdates: true,
+    shippingNotifications: true,
+    promotionalEmails: false,
+    cartReminders: true
+  })
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -88,6 +99,33 @@ export default function CustomerSettingsPage() {
       })
     }
   }, [customer, profileForm])
+
+  // Load notification preferences from localStorage
+  useEffect(() => {
+    if (customer?.id) {
+      try {
+        const stored = localStorage.getItem(`notif-prefs-${customer.id}`)
+        if (stored) {
+          setNotifPrefs(JSON.parse(stored))
+        }
+      } catch {
+        // Ignore parse errors, use defaults
+      }
+    }
+  }, [customer?.id])
+
+  const updateNotifPref = (key: keyof typeof notifPrefs, value: boolean) => {
+    const updated = { ...notifPrefs, [key]: value }
+    setNotifPrefs(updated)
+    if (customer?.id) {
+      try {
+        localStorage.setItem(`notif-prefs-${customer.id}`, JSON.stringify(updated))
+      } catch {
+        // Ignore storage errors
+      }
+    }
+    toast.success('Notification preference updated')
+  }
 
   const onUpdateProfile = async (data: ProfileFormData) => {
     setIsUpdatingProfile(true)
@@ -385,6 +423,82 @@ export default function CustomerSettingsPage() {
                 </div>
               </form>
             </Form>
+          </CardContent>
+        </Card>
+
+        {/* Notification Preferences */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notification Preferences
+            </CardTitle>
+            <CardDescription>
+              Choose which notifications you would like to receive
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="notif-order-updates">Order updates</Label>
+                <p className="text-xs text-muted-foreground">
+                  Get notified about order confirmations and status changes
+                </p>
+              </div>
+              <Switch
+                id="notif-order-updates"
+                checked={notifPrefs.orderUpdates}
+                onCheckedChange={(checked) => updateNotifPref('orderUpdates', checked)}
+              />
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="notif-shipping">Shipping notifications</Label>
+                <p className="text-xs text-muted-foreground">
+                  Receive updates when your order is shipped or delivered
+                </p>
+              </div>
+              <Switch
+                id="notif-shipping"
+                checked={notifPrefs.shippingNotifications}
+                onCheckedChange={(checked) => updateNotifPref('shippingNotifications', checked)}
+              />
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="notif-promo">Promotional emails</Label>
+                <p className="text-xs text-muted-foreground">
+                  Receive offers, discounts, and product recommendations
+                </p>
+              </div>
+              <Switch
+                id="notif-promo"
+                checked={notifPrefs.promotionalEmails}
+                onCheckedChange={(checked) => updateNotifPref('promotionalEmails', checked)}
+              />
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="notif-cart">Cart reminders</Label>
+                <p className="text-xs text-muted-foreground">
+                  Get reminded about items left in your cart
+                </p>
+              </div>
+              <Switch
+                id="notif-cart"
+                checked={notifPrefs.cartReminders}
+                onCheckedChange={(checked) => updateNotifPref('cartReminders', checked)}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
