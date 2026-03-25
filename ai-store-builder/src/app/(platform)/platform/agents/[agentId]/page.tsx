@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { Send, Loader2 } from 'lucide-react'
+import { SubAgentGrid } from '@/components/platform/agents/sub-agent-grid'
 import { cn } from '@/lib/utils'
 import { StatusDot } from '@/components/platform/shared/status-dot'
 import { MetricCard } from '@/components/platform/shared/metric-card'
@@ -660,6 +661,9 @@ export default function AgentWorkspacePage() {
           </div>
         </div>
       </div>
+
+      {/* Sub-agent grid — shown below the main two-column section */}
+      {storeId && <SubAgentGrid agentType={agentType} storeId={storeId} />}
     </div>
   )
 }

@@ -5,7 +5,10 @@ import { getTextModel } from '@/lib/ai/provider'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { authenticateAgentRequest, jsonError } from '@/lib/agents/auth'
 import { AGENT_DISPLAY_NAMES, AGENT_DESCRIPTIONS } from '@/lib/agents/constants'
-import type { AgentType } from '@/lib/agents/types'
+import type { AgentType, AutonomyLevel } from '@/lib/agents/types'
+import { routeToSubAgent } from '@/lib/agents/sub-agents/router'
+import { getSubAgent } from '@/lib/agents/sub-agents/registry'
+import type { StoreContext } from '@/lib/agents/sub-agents/types'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -72,10 +75,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     return jsonError('Message too long. Keep messages under 4000 characters.', 400)
   }
 
-  // Fetch store name for context
+  // Fetch store info for context (blueprint needed for sub-agent system prompts)
   const { data: store } = await admin
     .from('stores')
-    .select('name')
+    .select('name, slug, blueprint')
     .eq('id', storeId)
     .single()
 
@@ -93,12 +96,97 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       ? `\n\nRelevant memories:\n${memories.map((m) => `- ${m.memory_key}: ${JSON.stringify(m.memory_value)}`).join('\n')}`
       : ''
 
-  const systemPrompt = `You are the ${AGENT_DISPLAY_NAMES[agentType]} for the store "${store?.name || 'Unknown'}".
+  // ---------------------------------------------------------------------------
+  // Sub-agent routing — determine which specialist handles this message
+  // ---------------------------------------------------------------------------
+  const lastUserMessage =
+    [...trimmedMessages].reverse().find((m) => m.role === 'user')?.content ?? ''
+
+  const subAgentId = routeToSubAgent(agentType, lastUserMessage)
+  const subAgent = getSubAgent(subAgentId)
+
+  // Build a minimal StoreContext so we can call the sub-agent's systemPrompt
+  const blueprint = ((store?.blueprint ?? {}) as Record<string, unknown>)
+  const storeContext: StoreContext = {
+    storeId,
+    storeName: store?.name ?? 'My Store',
+    storeSlug: (store?.slug as string) ?? '',
+    category:
+      (blueprint.business_type as string) ??
+      (blueprint.category as string) ??
+      'General',
+    description: (blueprint.description as string) ?? '',
+    brandVibe: (blueprint.brand_vibe as string) ?? 'modern',
+    primaryColor: (blueprint.primary_color as string) ?? '#6366f1',
+    currency:
+      ((blueprint.location as Record<string, unknown>)?.currency as string) ??
+      'INR',
+    autonomyLevel: (agent.autonomy_level as AutonomyLevel) ?? 3,
+    // Lazy-loaded data — stubs for chat context (not needed for system prompt)
+    products: async () => [],
+    orders: async () => [],
+    customers: async () => [],
+    recentActions: async () => [],
+  }
+
+  // Build the base system prompt
+  const baseSystemPrompt = `You are the ${AGENT_DISPLAY_NAMES[agentType]} for the store "${store?.name || 'Unknown'}".
 ${AGENT_DESCRIPTIONS[agentType]}.
 
 Your autonomy level is ${agent.autonomy_level}/5. You are having a conversation with the store merchant.
-Be concise, helpful, and action-oriented. When the merchant asks you to do something, explain what you would do and whether it requires approval.
+Be concise, helpful, and action-oriented. When the merchant asks you to do something, explain what you would do and whether it requires approval.`
+
+  // Enhance system prompt with sub-agent identity and specialized instructions
+  let systemPrompt = baseSystemPrompt
+  if (subAgent) {
+    const subAgentSystemPrompt = subAgent.systemPrompt(storeContext)
+    systemPrompt = `${baseSystemPrompt}
+
+---
+You are currently operating as ${subAgent.codename} (${subAgent.role}), a specialist within the ${AGENT_DISPLAY_NAMES[agentType]} department.
+
+${subAgentSystemPrompt}
+---
 ${memoryContext}`
+  } else {
+    systemPrompt = `${baseSystemPrompt}${memoryContext}`
+  }
+
+  // Collect sub-agent tools if defined
+  const subAgentTools =
+    subAgent?.tools && Object.keys(subAgent.tools).length > 0
+      ? (subAgent.tools as Parameters<typeof streamText>[0]['tools'])
+      : undefined
+
+  // Log the chat interaction (fire-and-forget — don't block streaming)
+  if (subAgent) {
+    admin
+      .from('agent_actions')
+      .insert({
+        store_id: storeId,
+        agent_type: agentType,
+        sub_agent_type: subAgentId,
+        action_type: 'chat_message',
+        action_category: 'communication',
+        summary: `${subAgent.codename}: Chat message routed from ${AGENT_DISPLAY_NAMES[agentType]}`,
+        details: {
+          message_preview: lastUserMessage.substring(0, 200),
+          sub_agent_id: subAgentId,
+          sub_agent_codename: subAgent.codename,
+        },
+        status: 'completed',
+        execution_mode: 'auto',
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        tokens_input: 0,
+        tokens_output: 0,
+        estimated_cost_usd: 0,
+        api_costs: {},
+      })
+      .then(undefined, () => {
+        // Non-critical — logging failure must not break streaming
+      })
+  }
 
   // Stream the response
   const result = streamText({
@@ -108,6 +196,7 @@ ${memoryContext}`
       role: m.role as 'user' | 'assistant',
       content: m.content,
     })),
+    ...(subAgentTools ? { tools: subAgentTools } : {}),
   })
 
   return result.toUIMessageStreamResponse()
