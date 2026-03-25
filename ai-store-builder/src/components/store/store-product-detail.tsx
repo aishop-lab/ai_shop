@@ -100,7 +100,7 @@ export default function StoreProductDetail({ product, relatedProducts }: StorePr
       title: product.title,
       price: product.price,
       image: product.images?.[0]?.url,
-      slug: product.slug,
+      slug: 'slug' in product ? (product as { slug?: string }).slug : undefined,
     })
   }, [product.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
