@@ -28,15 +28,15 @@
     },
     {
       "path": "/api/cron/publish-scheduled",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/cron/sub-agents?task=health-check",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 5 * * *"
     },
     {
       "path": "/api/cron/sub-agents?task=hourly",
-      "schedule": "0 * * * *"
+      "schedule": "0 12 * * *"
     },
     {
       "path": "/api/cron/sub-agents?task=daily",
