@@ -3,7 +3,7 @@
 
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { generateText } from 'ai'
-import { google } from '@ai-sdk/google'
+import { geminiFlash } from '@/lib/ai/provider'
 import { getSubAgent } from './registry'
 import { loadStoreContext } from './context'
 import type { SubAgentId, SubAgentTask, SubAgentResult, SubAgentDefinition, StoreContext } from './types'
@@ -158,10 +158,9 @@ async function executeLLM(
     userPrompt += `\n\nAdditional context:\n${JSON.stringify(task.context, null, 2)}`
   }
 
-  // Call the LLM using AI SDK directly with the existing Google provider
-  const model = google('gemini-2.0-flash')
+  // Call the LLM using AI SDK with the existing Gemini Flash provider
   const llmResult = await generateText({
-    model,
+    model: geminiFlash,
     system: systemPrompt,
     prompt: userPrompt,
   })
