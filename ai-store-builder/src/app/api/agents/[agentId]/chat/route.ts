@@ -1,13 +1,16 @@
 // src/app/api/agents/[agentId]/chat/route.ts
 import { NextRequest } from 'next/server'
-import { streamText } from 'ai'
+import { streamText, tool, stepCountIs } from 'ai'
+import { z } from 'zod'
 import { getTextModel } from '@/lib/ai/provider'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { authenticateAgentRequest, jsonError } from '@/lib/agents/auth'
 import { AGENT_DISPLAY_NAMES, AGENT_DESCRIPTIONS } from '@/lib/agents/constants'
 import type { AgentType, AutonomyLevel } from '@/lib/agents/types'
 import { routeToSubAgent } from '@/lib/agents/sub-agents/router'
-import { getSubAgent } from '@/lib/agents/sub-agents/registry'
+import { getSubAgent, getSubAgentsForChief } from '@/lib/agents/sub-agents/registry'
+import { executeSubAgent } from '@/lib/agents/sub-agents/executor'
+import { AGENT_INTROS } from '@/components/platform/onboarding/agent-intro-data'
 import type { StoreContext } from '@/lib/agents/sub-agents/types'
 
 export const runtime = 'nodejs'
@@ -129,12 +132,26 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     recentActions: async () => [],
   }
 
+  // Get all sub-agents for this Chief (used by delegation tools)
+  const chiefSubAgents = getSubAgentsForChief(agentType)
+  const chiefIntro = AGENT_INTROS[agentType]
+
+  // Build the delegation instructions block
+  const delegationInstructions = `
+You have a team of specialist sub-agents. When a request needs specialized work (e.g., writing copy, analyzing data, recovering carts), delegate to the appropriate sub-agent using the delegate_to_sub_agent tool. You can also list your team with list_my_sub_agents.
+
+Your sub-agents will execute the task and return results. Present their results to the merchant in a clear, conversational way.
+
+Your department: ${chiefIntro.codename} — ${chiefIntro.tagline}
+Available specialists: ${chiefSubAgents.map((s) => `${s.codename} (${s.id})`).join(', ')}`
+
   // Build the base system prompt
   const baseSystemPrompt = `You are the ${AGENT_DISPLAY_NAMES[agentType]} for the store "${store?.name || 'Unknown'}".
 ${AGENT_DESCRIPTIONS[agentType]}.
 
 Your autonomy level is ${agent.autonomy_level}/5. You are having a conversation with the store merchant.
-Be concise, helpful, and action-oriented. When the merchant asks you to do something, explain what you would do and whether it requires approval.`
+Be concise, helpful, and action-oriented. When the merchant asks you to do something, explain what you would do and whether it requires approval.
+${delegationInstructions}`
 
   // Enhance system prompt with sub-agent identity and specialized instructions
   let systemPrompt = baseSystemPrompt
@@ -157,6 +174,57 @@ ${memoryContext}`
     subAgent?.tools && Object.keys(subAgent.tools).length > 0
       ? (subAgent.tools as Parameters<typeof streamText>[0]['tools'])
       : undefined
+
+  // ---------------------------------------------------------------------------
+  // Delegation tools — allow the Chief to delegate to specialist sub-agents
+  // ---------------------------------------------------------------------------
+  const delegationTools = {
+    delegate_to_sub_agent: tool({
+      description:
+        'Delegate a specific task to one of your specialist sub-agents. Use this when the user\'s request requires specialized expertise.',
+      inputSchema: z.object({
+        sub_agent_id: z.string().describe('The sub-agent ID to delegate to (e.g. "cart-whisperer", "copysmith")'),
+        instruction: z.string().describe('What to ask the sub-agent to do — be specific and actionable'),
+      }),
+      execute: async ({ sub_agent_id, instruction }) => {
+        try {
+          const result = await executeSubAgent(
+            sub_agent_id as Parameters<typeof executeSubAgent>[0],
+            storeId,
+            { instruction }
+          )
+          return {
+            success: true,
+            sub_agent_id,
+            output: result.output,
+            requires_approval: result.requiresApproval,
+            approval_id: result.approvalId,
+            duration_ms: result.durationMs,
+          }
+        } catch (err) {
+          return {
+            success: false,
+            sub_agent_id,
+            error: err instanceof Error ? err.message : 'Unknown error during delegation',
+          }
+        }
+      },
+    }),
+
+    list_my_sub_agents: tool({
+      description: 'List all specialist sub-agents available in your department.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        return chiefSubAgents.map((s) => ({
+          id: s.id,
+          codename: s.codename,
+          role: s.role,
+          description: s.description,
+          category: s.category,
+        }))
+      },
+    }),
+  }
 
   // Log the chat interaction (fire-and-forget — don't block streaming)
   if (subAgent) {
@@ -188,6 +256,12 @@ ${memoryContext}`
       })
   }
 
+  // Merge sub-agent tools with delegation tools
+  const allTools = {
+    ...delegationTools,
+    ...(subAgentTools ?? {}),
+  }
+
   // Stream the response
   const result = streamText({
     model: getTextModel(),
@@ -196,7 +270,8 @@ ${memoryContext}`
       role: m.role as 'user' | 'assistant',
       content: m.content,
     })),
-    ...(subAgentTools ? { tools: subAgentTools } : {}),
+    tools: allTools,
+    stopWhen: stepCountIs(5),
   })
 
   return result.toUIMessageStreamResponse()
