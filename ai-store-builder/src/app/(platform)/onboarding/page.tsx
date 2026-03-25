@@ -48,37 +48,21 @@ const THEMES = [
     id: 'modern',
     label: 'Modern',
     description: 'Clean lines, bold typography',
-    previewBg: 'bg-zinc-900',
-    previewAccent: 'bg-blue-500',
-    previewText: 'text-white',
-    previewLayout: 'rounded-lg',
   },
   {
     id: 'classic',
     label: 'Classic',
     description: 'Timeless, elegant design',
-    previewBg: 'bg-stone-100',
-    previewAccent: 'bg-amber-700',
-    previewText: 'text-stone-900',
-    previewLayout: 'rounded-sm',
   },
   {
     id: 'playful',
     label: 'Playful',
     description: 'Bright colors, rounded shapes',
-    previewBg: 'bg-orange-50',
-    previewAccent: 'bg-orange-400',
-    previewText: 'text-orange-900',
-    previewLayout: 'rounded-2xl',
   },
   {
     id: 'minimal',
     label: 'Minimal',
     description: 'Stripped back, content-focused',
-    previewBg: 'bg-white',
-    previewAccent: 'bg-zinc-900',
-    previewText: 'text-zinc-900',
-    previewLayout: 'rounded-none',
   },
 ] as const
 
@@ -121,28 +105,131 @@ function generateSlug(name: string): string {
 
 const LOCALSTORAGE_KEY = 'onboarding-draft'
 
-// Mini theme preview component
+// Visually distinct mini theme previews — each layout, typography & shape language is unique
 function ThemePreview({ theme }: { theme: typeof THEMES[number] }) {
-  return (
-    <div className={cn('h-24 w-full overflow-hidden border border-zinc-700/50', theme.previewLayout)}>
-      <div className={cn('h-full w-full p-2', theme.previewBg)}>
-        {/* Mini nav */}
+  if (theme.id === 'modern') {
+    // Modern: Dark bg, large hero image, bold sans nav, asymmetric grid
+    return (
+      <div className="h-32 w-full overflow-hidden rounded-lg bg-zinc-900 p-2">
+        {/* Bold sans nav */}
         <div className="flex items-center justify-between mb-1.5">
-          <div className={cn('h-1.5 w-8 rounded-full', theme.previewAccent, 'opacity-80')} />
-          <div className="flex gap-1">
-            <div className={cn('h-1 w-4 rounded-full opacity-30', theme.previewAccent)} />
-            <div className={cn('h-1 w-4 rounded-full opacity-30', theme.previewAccent)} />
+          <div className="h-2 w-10 rounded-sm bg-white/90" />
+          <div className="flex gap-1.5">
+            <div className="h-1 w-5 rounded-sm bg-white/25" />
+            <div className="h-1 w-5 rounded-sm bg-white/25" />
+            <div className="h-1 w-5 rounded-sm bg-white/25" />
           </div>
         </div>
-        {/* Hero */}
-        <div className={cn('mb-1.5 h-2 w-16 rounded-sm', theme.previewAccent, 'opacity-20')} />
-        <div className={cn('mb-2 h-1 w-12 rounded-sm', theme.previewAccent, 'opacity-10')} />
-        {/* Product grid */}
-        <div className="grid grid-cols-3 gap-1">
+        {/* Full-width hero banner */}
+        <div className="mb-2 h-10 rounded-md bg-gradient-to-r from-blue-600 to-indigo-700 p-1.5">
+          <div className="h-1.5 w-14 rounded-sm bg-white/80" />
+          <div className="mt-1 h-1 w-10 rounded-sm bg-white/40" />
+          <div className="mt-1.5 h-2 w-8 rounded-sm bg-white/90" />
+        </div>
+        {/* Asymmetric product grid: 1 large + 2 small */}
+        <div className="flex gap-1">
+          <div className="h-10 w-1/2 rounded-md bg-zinc-700/60" />
+          <div className="flex w-1/2 flex-col gap-1">
+            <div className="h-[19px] rounded-md bg-zinc-700/40" />
+            <div className="h-[19px] rounded-md bg-zinc-700/40" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (theme.id === 'classic') {
+    // Classic: Cream bg, serif-style nav, centered hero text, bordered product cards
+    return (
+      <div className="h-32 w-full overflow-hidden rounded-sm bg-stone-50 p-2">
+        {/* Centered serif-style nav with decorative line */}
+        <div className="flex flex-col items-center mb-1">
+          <div className="h-2 w-12 rounded-sm bg-amber-800/70" />
+          <div className="mt-1 h-px w-full bg-amber-800/15" />
+          <div className="mt-0.5 flex gap-2">
+            <div className="h-0.5 w-4 rounded-full bg-amber-800/20" />
+            <div className="h-0.5 w-4 rounded-full bg-amber-800/20" />
+            <div className="h-0.5 w-4 rounded-full bg-amber-800/20" />
+          </div>
+        </div>
+        {/* Centered hero text block with decorative accents */}
+        <div className="mb-2 flex flex-col items-center">
+          <div className="h-0.5 w-4 rounded-full bg-amber-700/30" />
+          <div className="mt-1 h-2 w-20 rounded-sm bg-stone-800/60" />
+          <div className="mt-0.5 h-1 w-14 rounded-sm bg-stone-800/20" />
+          <div className="mt-1 h-0.5 w-4 rounded-full bg-amber-700/30" />
+        </div>
+        {/* 3-column product grid with borders */}
+        <div className="grid grid-cols-3 gap-1.5">
           {[1, 2, 3].map((i) => (
-            <div key={i} className={cn('aspect-square rounded-sm', theme.previewAccent, 'opacity-15')} />
+            <div key={i} className="flex flex-col items-center">
+              <div className="h-8 w-full rounded-sm border border-stone-200 bg-stone-100" />
+              <div className="mt-0.5 h-0.5 w-6 rounded-full bg-stone-400/40" />
+              <div className="mt-0.5 h-0.5 w-4 rounded-full bg-amber-700/30" />
+            </div>
           ))}
         </div>
+      </div>
+    )
+  }
+
+  if (theme.id === 'playful') {
+    // Playful: Warm bg, rounded nav pills, colorful hero with shapes, bubbly card grid
+    return (
+      <div className="h-32 w-full overflow-hidden rounded-2xl bg-orange-50 p-2">
+        {/* Rounded pill nav */}
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="h-2.5 w-10 rounded-full bg-orange-400/80" />
+          <div className="flex gap-1">
+            <div className="h-1.5 w-1.5 rounded-full bg-pink-400/60" />
+            <div className="h-1.5 w-1.5 rounded-full bg-yellow-400/60" />
+            <div className="h-1.5 w-1.5 rounded-full bg-green-400/60" />
+          </div>
+        </div>
+        {/* Colorful hero with floating shapes */}
+        <div className="relative mb-2 h-10 overflow-hidden rounded-xl bg-gradient-to-br from-orange-300 via-pink-300 to-yellow-200">
+          <div className="absolute right-1 top-1 h-4 w-4 rounded-full bg-yellow-400/50" />
+          <div className="absolute right-5 bottom-0.5 h-3 w-3 rounded-full bg-pink-400/40" />
+          <div className="p-1.5">
+            <div className="h-1.5 w-12 rounded-full bg-white/80" />
+            <div className="mt-1 h-1 w-8 rounded-full bg-white/50" />
+            <div className="mt-1.5 h-2.5 w-10 rounded-full bg-white/90" />
+          </div>
+        </div>
+        {/* Bubbly product grid with colored backgrounds */}
+        <div className="grid grid-cols-3 gap-1.5">
+          <div className="h-8 rounded-xl bg-pink-200/60" />
+          <div className="h-8 rounded-xl bg-yellow-200/60" />
+          <div className="h-8 rounded-xl bg-green-200/60" />
+        </div>
+      </div>
+    )
+  }
+
+  // Minimal: White bg, hairline borders, lots of whitespace, thin typography
+  return (
+    <div className="h-32 w-full overflow-hidden border border-zinc-200 bg-white p-3">
+      {/* Ultra-thin nav with spacing */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="h-1 w-8 bg-zinc-900" />
+        <div className="flex gap-3">
+          <div className="h-px w-4 bg-zinc-300" />
+          <div className="h-px w-4 bg-zinc-300" />
+        </div>
+      </div>
+      {/* Minimal hero: just text, lots of space */}
+      <div className="mb-3">
+        <div className="h-1.5 w-20 bg-zinc-800" />
+        <div className="mt-1.5 h-px w-14 bg-zinc-300" />
+      </div>
+      {/* Grid with thin borders only — no fills */}
+      <div className="grid grid-cols-4 gap-2">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="flex flex-col gap-0.5">
+            <div className="aspect-square border border-zinc-200" />
+            <div className="h-px w-full bg-zinc-200" />
+          </div>
+        ))}
       </div>
     </div>
   )

@@ -7,7 +7,7 @@ import { vercelAI, AUTO_APPLY_THRESHOLD } from '@/lib/ai/vercel-ai-service'
 import { USE_VERCEL_AI } from '@/lib/ai/provider'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 30
+export const maxDuration = 60
 
 export async function POST(request: Request) {
   try {

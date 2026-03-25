@@ -5,6 +5,7 @@ import { getDemoProducts } from '@/lib/products/demo-products'
 import { vercelAI } from '@/lib/ai/vercel-ai-service'
 import { sendWelcomeMerchantEmail } from '@/lib/email/merchant-notifications'
 import { generateStorePolicies } from '@/lib/store/policies'
+import { getStoreUrl } from '@/lib/store/queries'
 import { AGENT_TYPES, DEFAULT_AUTONOMY_LEVEL } from '@/lib/agents/constants'
 
 export async function POST(request: Request) {
@@ -291,16 +292,13 @@ export async function POST(request: Request) {
       // Don't fail the whole request - store is already active
     }
 
-    // Generate subdomain URL
-    const PRODUCTION_DOMAIN = process.env.NEXT_PUBLIC_PRODUCTION_DOMAIN || 'storeforge.site'
-    const subdomain = `${store.slug}.${PRODUCTION_DOMAIN}`
-    const storeUrl = `https://${subdomain}`
+    // Generate store URL (environment-aware: subdomain in prod, path in dev)
+    const storeUrl = getStoreUrl(store.slug)
 
     return NextResponse.json({
       success: true,
       message: 'Store activated successfully!',
       store_id: store_id,
-      subdomain: subdomain,
       store_url: storeUrl,
       redirect_url: '/platform'
     })

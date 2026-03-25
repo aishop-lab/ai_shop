@@ -12,7 +12,8 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 export const AI_PROVIDER = (process.env.AI_PROVIDER || 'google') as 'anthropic' | 'google'
 
 // Feature flag for gradual migration to Vercel AI SDK
-export const USE_VERCEL_AI = process.env.USE_VERCEL_AI === 'true'
+// Default to true — the Vercel AI SDK path is faster and more reliable
+export const USE_VERCEL_AI = process.env.USE_VERCEL_AI !== 'false'
 
 // ============================================
 // GOOGLE GEMINI PROVIDER
