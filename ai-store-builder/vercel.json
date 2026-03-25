@@ -29,6 +29,18 @@
     {
       "path": "/api/cron/publish-scheduled",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/sub-agents?task=health-check",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/sub-agents?task=hourly",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/sub-agents?task=daily",
+      "schedule": "0 3 * * *"
     }
   ],
   "headers": [

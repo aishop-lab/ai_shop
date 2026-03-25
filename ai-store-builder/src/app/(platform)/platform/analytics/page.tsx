@@ -417,7 +417,7 @@ export default function AnalyticsPage() {
     <div className="mx-auto max-w-6xl space-y-8">
       <PlatformBreadcrumb items={[{ label: 'Command Center', href: '/platform' }, { label: 'Analytics' }]} />
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-mono text-lg font-semibold text-[var(--platform-text-primary)]">
             Analytics
@@ -427,7 +427,7 @@ export default function AnalyticsPage() {
             {data ? '' : loading ? ' · Loading...' : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Period switcher */}
           <div className="flex rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)]">
             {(['7d', '30d', '90d'] as const).map((p) => (
@@ -451,7 +451,8 @@ export default function AnalyticsPage() {
           <button
             onClick={() => fetchData()}
             disabled={loading}
-            className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-2 text-[var(--platform-text-muted)] hover:text-[var(--platform-text-primary)] disabled:opacity-50"
+            className="flex h-[34px] w-[34px] items-center justify-center rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] text-[var(--platform-text-muted)] hover:text-[var(--platform-text-primary)] disabled:opacity-50"
+            aria-label="Refresh analytics"
           >
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
           </button>
@@ -466,7 +467,8 @@ export default function AnalyticsPage() {
             )}
           >
             {generatingReport ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
-            Generate Report
+            <span className="hidden sm:inline">Generate Report</span>
+            <span className="sm:hidden">Report</span>
           </button>
         </div>
       </div>
@@ -487,7 +489,7 @@ export default function AnalyticsPage() {
 
       {/* Charts — show skeletons while loading */}
       {loading && !data && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <ChartSkeleton />
           <ChartSkeleton />
         </div>
@@ -502,7 +504,7 @@ export default function AnalyticsPage() {
       )}
 
       {data && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Revenue Chart */}
           <div className="rounded-xl border border-[var(--platform-border)] bg-[var(--platform-surface)] p-5">
             <div className="mb-5">

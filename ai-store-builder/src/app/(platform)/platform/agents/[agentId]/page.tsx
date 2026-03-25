@@ -332,7 +332,7 @@ export default function AgentWorkspacePage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           {/* Agent color dot indicator */}
           <div className={cn('flex h-9 w-9 items-center justify-center rounded-lg border', colors.bg, colors.border)}>
@@ -381,7 +381,7 @@ export default function AgentWorkspacePage() {
       </div>
 
       {/* Two-column layout */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left column — 2/3 */}
         <div className="lg:col-span-2 space-y-0">
           {/* Tab bar */}
@@ -564,7 +564,8 @@ export default function AgentWorkspacePage() {
                     type="button"
                     onClick={handleSendMessage}
                     disabled={!enabled || isStreaming || !chatInput.trim()}
-                    className="flex h-5 w-5 items-center justify-center rounded text-[var(--platform-text-muted)] hover:text-[var(--platform-accent)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded text-[var(--platform-text-muted)] hover:text-[var(--platform-accent)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="Send message"
                   >
                     {isStreaming ? (
                       <Loader2 className="h-3 w-3 animate-spin" />

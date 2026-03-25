@@ -9,8 +9,14 @@ import { KeyboardHint } from '@/components/platform/shared/keyboard-hint'
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard'
 import { useApprovals } from '@/lib/hooks/use-approvals'
 import { formatTimeAgo } from '@/lib/agents/mock-data'
-import { AGENT_TYPES } from '@/lib/agents/constants'
+import { AGENT_TYPES, AGENT_COLORS } from '@/lib/agents/constants'
+import { AGENT_INTROS } from '@/components/platform/onboarding/agent-intro-data'
 import type { AgentApproval, AgentType, ApprovalPriority } from '@/lib/agents/types'
+
+/** Convert a sub-agent ID (e.g. "campaign-architect") into a display codename (e.g. "CAMPAIGN-ARCHITECT") */
+function formatSubAgentCodename(subAgentType: string): string {
+  return subAgentType.toUpperCase()
+}
 
 // --- Priority config (PL-11: colorblind-friendly with text labels and icons) ---
 const PRIORITY_CONFIG: Record<ApprovalPriority, { label: string; dotClass: string; textClass: string; order: number; icon: React.ReactNode }> = {
@@ -238,7 +244,7 @@ export default function ApprovalsPage() {
 
       {/* PL-13: Batch action bar */}
       {!isLoading && filteredApprovals.length > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 py-2.5">
           <label className="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
@@ -322,8 +328,8 @@ export default function ApprovalsPage() {
         </div>
       )}
 
-      {/* Keyboard help bar */}
-      <div className="flex items-center justify-center gap-4 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 py-2.5">
+      {/* Keyboard help bar — hidden on mobile (no physical keyboard) */}
+      <div className="hidden sm:flex items-center justify-center gap-4 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 py-2.5">
         <span className="text-[10px] text-[var(--platform-text-muted)]">Keyboard shortcuts</span>
         <div className="flex items-center gap-1">
           <KeyboardHint keys="j" />
@@ -440,7 +446,26 @@ function ApprovalCard({
               {priorityConfig.icon}
               {priorityConfig.label}
             </span>
+            {/* Chief agent badge */}
             <AgentBadge agentType={approval.agent_type} size="sm" />
+            {/* Sub-agent codename badge (only shown when sub_agent_type is set) */}
+            {approval.sub_agent_type && (() => {
+              const chiefColors = AGENT_COLORS[approval.agent_type]
+              const chiefCodename = AGENT_INTROS[approval.agent_type]?.codename ?? approval.agent_type.toUpperCase()
+              return (
+                <span
+                  title={`${chiefCodename} sub-agent: ${approval.sub_agent_type}`}
+                  className={cn(
+                    'inline-flex items-center rounded-full border px-1.5 py-0.5 font-mono text-[9px] font-medium',
+                    chiefColors.text,
+                    chiefColors.bg,
+                    chiefColors.border
+                  )}
+                >
+                  {formatSubAgentCodename(approval.sub_agent_type)}
+                </span>
+              )
+            })()}
           </div>
           <div className="flex items-center gap-1.5 text-[var(--platform-text-muted)]">
             <Clock className="h-3 w-3" />
@@ -483,7 +508,7 @@ function ApprovalCard({
         )}
 
         {/* Bottom row: expires + action buttons */}
-        <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             {approval.expires_at ? (
               <span className="font-mono text-[10px] text-[var(--platform-status-approval)]">

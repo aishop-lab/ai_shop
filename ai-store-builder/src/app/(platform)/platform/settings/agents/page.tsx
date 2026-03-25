@@ -171,9 +171,9 @@ function AgentConfigCard({
           {hints.map((hint) => (
             <div
               key={hint.label}
-              className="flex items-center justify-between gap-3 rounded-md border border-[var(--platform-border)] bg-[var(--platform-bg)] px-3 py-2.5"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--platform-border)] bg-[var(--platform-bg)] px-3 py-2.5"
             >
-              <span className="text-sm text-[var(--platform-text-secondary)]">{hint.label}</span>
+              <span className="min-w-0 text-sm text-[var(--platform-text-secondary)]">{hint.label}</span>
               {hint.options ? (
                 <select
                   defaultValue={hint.value}
@@ -317,7 +317,7 @@ export default function AgentConfigPage() {
       </div>
 
       {/* Agent cards */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {AGENT_TYPES.map((agentType) => (
           <AgentConfigCard
             key={agentType}

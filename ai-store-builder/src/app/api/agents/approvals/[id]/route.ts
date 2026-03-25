@@ -2,6 +2,8 @@
 import { NextRequest } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { authenticateRequest, jsonError, jsonSuccess } from '@/lib/agents/auth'
+import { executeSubAgent } from '@/lib/agents/sub-agents/executor'
+import type { SubAgentId } from '@/lib/agents/sub-agents/types'
 
 export const runtime = 'nodejs'
 
@@ -43,7 +45,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   // Fetch approval and verify ownership
   const { data: approval, error: fetchError } = await admin
     .from('agent_approvals')
-    .select('id, store_id, status')
+    .select('id, store_id, status, sub_agent_type, action_type, summary, details')
     .eq('id', id)
     .single()
 
@@ -111,6 +113,29 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       .update({ status: 'idle', updated_at: now })
       .eq('store_id', approval.store_id)
       .eq('status', 'waiting_approval')
+
+    // If this was a sub-agent action, re-execute with approval granted
+    if (approval.sub_agent_type) {
+      try {
+        await executeSubAgent(
+          approval.sub_agent_type as SubAgentId,
+          approval.store_id,
+          {
+            instruction: approval.summary,
+            context: {
+              ...(approval.details || {}),
+              approvedActionType: approval.action_type,
+              approvalId: id,
+              executingAfterApproval: true,
+            },
+            triggerType: 'manual',
+          }
+        )
+      } catch (execError) {
+        // Log but don't fail the approval response — the approval itself succeeded
+        console.error('[Agents API] Sub-agent post-approval execution failed:', execError)
+      }
+    }
   }
 
   return jsonSuccess(updated)
