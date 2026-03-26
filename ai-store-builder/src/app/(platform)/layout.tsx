@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { useRequireAuth } from '@/lib/hooks/use-require-auth'
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard'
 import { useAgentStates } from '@/lib/hooks/use-agents'
@@ -15,6 +16,8 @@ import { AgentIntroOverlay } from '@/components/platform/onboarding/agent-intro-
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   const { isLoading: authLoading } = useRequireAuth()
+  const pathname = usePathname()
+  const isOnboarding = pathname === '/onboarding'
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [storeId, setStoreId] = useState<string | null>(null)
@@ -27,17 +30,19 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
         const response = await fetch('/api/dashboard/stats')
         if (response.ok) {
           const data = await response.json()
-          if (data.storeId) {
-            setStoreId(data.storeId)
+          // API returns { store: { id, ... }, ... } — not a top-level storeId field
+          const resolvedStoreId = data.store?.id
+          if (resolvedStoreId) {
+            setStoreId(resolvedStoreId)
             // Lazily initialize agent_states if they don't exist yet
             fetch('/api/agents/initialize', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ store_id: data.storeId }),
+              body: JSON.stringify({ store_id: resolvedStoreId }),
             }).catch(() => {})
 
             // Check if user has completed the agent intro
-            const introKey = `agent-intro-${data.storeId}`
+            const introKey = `agent-intro-${resolvedStoreId}`
             if (!localStorage.getItem(introKey)) {
               setShowAgentIntro(true)
             }
@@ -86,6 +91,15 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   ])
 
   if (authLoading) return <FullPageLoader />
+
+  // Onboarding gets a clean full-screen experience without the sidebar/top-bar chrome
+  if (isOnboarding) {
+    return (
+      <div className="dark platform-theme min-h-screen bg-[var(--platform-bg)]">
+        {children}
+      </div>
+    )
+  }
 
   return (
     <div className="dark platform-theme flex min-h-screen overflow-x-hidden bg-[var(--platform-bg)]">

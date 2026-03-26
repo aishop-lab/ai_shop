@@ -1,14 +1,29 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { AGENT_COLORS } from '@/lib/agents/constants'
-import { getSubAgentsForChief } from '@/lib/agents/sub-agents/registry'
 import { AGENT_INTROS } from '@/components/platform/onboarding/agent-intro-data'
 import type { AgentType } from '@/lib/agents/types'
-import type { SubAgentDefinition, SubAgentCategory } from '@/lib/agents/sub-agents/types'
+import type { SubAgentCategory } from '@/lib/agents/sub-agents/types'
+
+// ---- Local type for API response (no server-only imports) ----
+
+interface SubAgentMeta {
+  id: string
+  codename: string
+  chief: AgentType
+  role: string
+  description: string
+  category: SubAgentCategory
+  autonomyRules: {
+    autonomous: string[]
+    needsChiefApproval: string[]
+    needsMerchantApproval: string[]
+  }
+}
 
 // ---- Category badge helpers ----
 
@@ -29,7 +44,7 @@ const CATEGORY_STYLES: Record<SubAgentCategory, string> = {
 // ---- Sub-agent card ----
 
 interface SubAgentCardProps {
-  subAgent: SubAgentDefinition
+  subAgent: SubAgentMeta
   agentType: AgentType
   storeId: string
 }
@@ -145,9 +160,61 @@ interface SubAgentGridProps {
 }
 
 export function SubAgentGrid({ agentType, storeId }: SubAgentGridProps) {
-  const subAgents = getSubAgentsForChief(agentType)
   const colors = AGENT_COLORS[agentType]
   const chiefCodename = AGENT_INTROS[agentType]?.codename ?? agentType.toUpperCase()
+
+  const [subAgents, setSubAgents] = useState<SubAgentMeta[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setIsLoading(true)
+    setError(null)
+
+    fetch(`/api/agents/sub-agents?chief=${agentType}`)
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data?.error || `Request failed: ${res.status}`)
+        }
+        return res.json()
+      })
+      .then((data) => {
+        if (!cancelled) {
+          setSubAgents(data.sub_agents ?? [])
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load sub-agents')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [agentType])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 py-4">
+        <Loader2 className="h-3 w-3 animate-spin text-[var(--platform-text-muted)]" />
+        <span className="text-xs text-[var(--platform-text-muted)]">Loading sub-agents…</span>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <p className="text-xs text-[var(--platform-status-error)] py-4">
+        Failed to load sub-agents: {error}
+      </p>
+    )
+  }
 
   if (subAgents.length === 0) return null
 

@@ -334,21 +334,58 @@ export default function OnboardingPage() {
             business_name: formData.storeName || undefined,
           }),
         })
+
+        if (!res.ok) {
+          console.warn('[AI Category] API returned', res.status, res.statusText)
+          return
+        }
+
         const json = await res.json()
+        console.log('[AI Category] Response:', JSON.stringify(json.data?.category))
+
         if (json.success && json.data) {
           const { category: detected } = json.data
           if (detected.confidence >= 0.5) {
-            // Map the AI business_type to our CATEGORIES (fuzzy match)
+            // Map the AI business_type to our CATEGORIES using expanded fuzzy matching.
+            // The AI may return short types like "Beauty", "Health", "Fashion" which need
+            // to match compound category names like "Health & Beauty", "Fashion & Apparel".
             const detectedType = detected.business_type.toLowerCase()
-            const matchedCategory = CATEGORIES.find(
-              (cat) => {
-                const catLower = cat.toLowerCase()
-                // Match on either the full name or the first word
-                return catLower === detectedType ||
-                  catLower.includes(detectedType) ||
-                  detectedType.includes(catLower.split(' ')[0])
-              }
-            )
+            // Also check business_category array for additional signals
+            const detectedCategories = (detected.business_category ?? []).map((c: string) => c.toLowerCase())
+
+            // Keyword aliases to help with common mismatches
+            const categoryAliases: Record<string, string[]> = {
+              'fashion & apparel': ['fashion', 'apparel', 'clothing', 'clothes', 'wear', 'textile'],
+              'electronics & gadgets': ['electronics', 'gadgets', 'tech', 'technology', 'devices'],
+              'health & beauty': ['health', 'beauty', 'skincare', 'cosmetics', 'wellness', 'personal care', 'organic', 'soap'],
+              'home & living': ['home', 'living', 'furniture', 'decor', 'household', 'interior'],
+              'food & beverages': ['food', 'beverages', 'grocery', 'drink', 'snack', 'meal'],
+              'jewelry & accessories': ['jewelry', 'accessories', 'jewellery', 'ornaments', 'watches'],
+              'art & crafts': ['art', 'crafts', 'handmade', 'craft', 'handcraft', 'artisan'],
+              'sports & fitness': ['sports', 'fitness', 'gym', 'athletic', 'exercise', 'outdoor'],
+              'books & stationery': ['books', 'stationery', 'education', 'office', 'writing', 'paper'],
+            }
+
+            const matchedCategory = CATEGORIES.find((cat) => {
+              const catLower = cat.toLowerCase()
+              const aliases = categoryAliases[catLower] ?? []
+
+              // Direct match
+              if (catLower === detectedType) return true
+              // Category contains detected type or vice versa
+              if (catLower.includes(detectedType) || detectedType.includes(catLower)) return true
+              // Alias match on business_type
+              if (aliases.some((alias) => detectedType.includes(alias) || alias.includes(detectedType))) return true
+              // Alias match on any business_category array item
+              if (detectedCategories.some((dc: string) =>
+                aliases.some((alias) => dc.includes(alias) || alias.includes(dc)) ||
+                catLower.includes(dc) || dc.includes(catLower)
+              )) return true
+              return false
+            })
+
+            console.log('[AI Category] Detected:', detected.business_type, '→ Matched:', matchedCategory ?? 'none')
+
             if (matchedCategory) {
               setAiSuggestedCategory(matchedCategory)
               // Only auto-set if user hasn't manually picked a different one
@@ -360,9 +397,12 @@ export default function OnboardingPage() {
               })
             }
           }
+        } else if (!json.success) {
+          console.warn('[AI Category] Detection failed:', json.error)
         }
-      } catch {
-        // Silently fail - AI detection is a nice-to-have
+      } catch (err) {
+        // Non-blocking — AI detection is a nice-to-have, but log for debugging
+        console.warn('[AI Category] Detection error:', err)
       } finally {
         setAiDetecting(false)
       }
