@@ -23,19 +23,36 @@ export default defineConfig({
   },
 
   projects: [
+    // Default: run all e2e tests
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    // Uncomment to test on more browsers
-    // {
-    //   name: 'firefox',
-    //   use: { ...devices['Desktop Firefox'] },
-    // },
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
+    // Smoke tests only (Phase I)
+    {
+      name: 'smoke',
+      testDir: './tests/e2e/smoke',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // Journey tests only (Phase II)
+    {
+      name: 'journeys',
+      testDir: './tests/e2e/journeys',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // API tests only (Phase III)
+    {
+      name: 'api',
+      testDir: './tests/api',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // Mobile responsive tests
+    {
+      name: 'mobile',
+      testDir: './tests/e2e/smoke',
+      testMatch: 'responsive.spec.ts',
+      use: { ...devices['Pixel 5'] },
+    },
   ],
 
   // Run local dev server before tests (optional)
