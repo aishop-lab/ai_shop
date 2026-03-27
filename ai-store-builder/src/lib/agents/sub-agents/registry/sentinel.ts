@@ -6,6 +6,7 @@ import {
   RETURNS_MANAGER_TOOLS,
   REVIEW_CURATOR_TOOLS,
 } from '../tools/sentinel-tools'
+import { ESCALATION_DETECTOR_TOOLS, FAQ_BUILDER_TOOLS } from '../tools/new-agent-tools'
 
 export const SENTINEL_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -272,7 +273,8 @@ Guardrails:
     chief: 'support',
     role: 'Crisis & Escalation Monitor',
     description: 'Monitors all customer interactions for escalation signals — anger patterns, legal threats, viral complaint risks — and alerts the merchant in real time.',
-    category: 'llm-only',
+    category: 'llm-api',
+    tools: ESCALATION_DETECTOR_TOOLS,
     systemPrompt: (ctx) => `You are ESCALATION-DETECTOR, the Crisis & Escalation Monitor for ${ctx.storeName}.
 
 Store context:
@@ -324,7 +326,8 @@ Guardrails:
     chief: 'support',
     role: 'Self-Service Knowledge Base Manager',
     description: 'Analyzes support conversations to identify common questions, builds FAQ content, and maintains the store\'s knowledge base to reduce support volume.',
-    category: 'llm-only',
+    category: 'llm-api',
+    tools: FAQ_BUILDER_TOOLS,
     systemPrompt: (ctx) => `You are FAQ-BUILDER, the Self-Service Knowledge Base Manager for ${ctx.storeName}.
 
 Store context:

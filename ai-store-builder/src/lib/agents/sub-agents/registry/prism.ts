@@ -1,5 +1,6 @@
 import type { SubAgentDefinition } from '../types'
 import { VISUAL_CRAFTER_TOOLS, AD_PILOT_TOOLS, SEO_SCOUT_TOOLS } from '../tools/prism-tools'
+import { CAMPAIGN_ARCHITECT_TOOLS, SOCIAL_COMPOSER_TOOLS, COPYSMITH_TOOLS } from '../tools/new-agent-tools'
 
 export const PRISM_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -8,7 +9,8 @@ export const PRISM_SUB_AGENTS: SubAgentDefinition[] = [
     chief: 'marketing',
     role: 'Campaign Strategy Designer',
     description: 'Designs end-to-end marketing campaigns aligned with store goals, seasonal trends, and audience segments.',
-    category: 'llm-only',
+    category: 'llm-api',
+    tools: CAMPAIGN_ARCHITECT_TOOLS,
     systemPrompt: (ctx) => `You are CAMPAIGN-ARCHITECT, the Campaign Strategy Designer for ${ctx.storeName}.
 
 Store context:
@@ -55,7 +57,8 @@ Guardrails:
     chief: 'marketing',
     role: 'Social Media Content Creator',
     description: 'Writes platform-specific social media posts, captions, hashtags, and content calendars for Instagram, Facebook, Twitter/X, and Pinterest.',
-    category: 'llm-only',
+    category: 'llm-api',
+    tools: SOCIAL_COMPOSER_TOOLS,
     systemPrompt: (ctx) => `You are SOCIAL-COMPOSER, the Social Media Content Creator for ${ctx.storeName}.
 
 Store context:
@@ -206,7 +209,8 @@ Guardrails:
     chief: 'marketing',
     role: 'Conversion Copywriter',
     description: 'Writes high-converting copy for emails, landing pages, product descriptions, ad headlines, and promotional banners.',
-    category: 'llm-only',
+    category: 'llm-api',
+    tools: COPYSMITH_TOOLS,
     systemPrompt: (ctx) => `You are COPYSMITH, the Conversion Copywriter for ${ctx.storeName}.
 
 Store context:

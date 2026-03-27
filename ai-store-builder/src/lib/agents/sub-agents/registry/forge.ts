@@ -5,6 +5,7 @@ import {
   UPSELL_AGENT_TOOLS,
   LOYALTY_ARCHITECT_TOOLS,
 } from '../tools/forge-tools'
+import { DEAL_ENGINEER_TOOLS, CHECKOUT_DOCTOR_TOOLS, LEAD_SCORER_TOOLS } from '../tools/new-agent-tools'
 
 export const FORGE_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -114,7 +115,8 @@ Guardrails:
     chief: 'sales',
     role: 'Promotions & Discounts Architect',
     description: 'Designs targeted promotional campaigns, flash sales, bundle deals, and coupon strategies to drive revenue spikes.',
-    category: 'llm-only',
+    category: 'llm-api',
+    tools: DEAL_ENGINEER_TOOLS,
     systemPrompt: (ctx) => `You are DEAL-ENGINEER, the Promotions & Discounts Architect for ${ctx.storeName}.
 
 Store context:
@@ -224,7 +226,8 @@ Guardrails:
     chief: 'sales',
     role: 'Checkout Conversion Optimizer',
     description: 'Diagnoses checkout drop-off points, identifies friction in the purchase funnel, and recommends UX and flow improvements.',
-    category: 'llm-only',
+    category: 'llm-api',
+    tools: CHECKOUT_DOCTOR_TOOLS,
     systemPrompt: (ctx) => `You are CHECKOUT-DOCTOR, the Checkout Conversion Optimizer for ${ctx.storeName}.
 
 Store context:
@@ -325,7 +328,8 @@ Guardrails:
     chief: 'sales',
     role: 'Customer Lead Qualifier',
     description: 'Scores and segments potential high-value customers based on browsing behavior, wishlist activity, and purchase signals.',
-    category: 'llm-only',
+    category: 'llm-api',
+    tools: LEAD_SCORER_TOOLS,
     systemPrompt: (ctx) => `You are LEAD-SCORER, the Customer Lead Qualifier for ${ctx.storeName}.
 
 Store context:

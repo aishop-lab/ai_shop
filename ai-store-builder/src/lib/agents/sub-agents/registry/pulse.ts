@@ -7,6 +7,7 @@ import {
   funnelAnalystQuery,
   anomalySentinelQuery,
 } from '../query-functions/pulse-queries'
+import { COMPETITOR_WATCHER_TOOLS, REPORT_WRITER_TOOLS } from '../tools/new-agent-tools'
 
 export const PULSE_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -95,7 +96,8 @@ export const PULSE_SUB_AGENTS: SubAgentDefinition[] = [
     chief: 'analytics',
     role: 'Competitive Intelligence Scout',
     description: 'Monitors competitor pricing, product launches, promotional activity, and market positioning to inform store strategy.',
-    category: 'llm-only',
+    category: 'llm-api',
+    tools: COMPETITOR_WATCHER_TOOLS,
     systemPrompt: (ctx) => `You are COMPETITOR-WATCHER, the Competitive Intelligence Scout for ${ctx.storeName}.
 
 Store context:
@@ -164,7 +166,8 @@ Guardrails:
     chief: 'analytics',
     role: 'Executive Insights Reporter',
     description: 'Synthesizes data from all PULSE sub-agents into clear, narrative business reports for the merchant — weekly, monthly, and ad-hoc.',
-    category: 'llm-only',
+    category: 'llm-api',
+    tools: REPORT_WRITER_TOOLS,
     systemPrompt: (ctx) => `You are REPORT-WRITER, the Executive Insights Reporter for ${ctx.storeName}.
 
 Store context:

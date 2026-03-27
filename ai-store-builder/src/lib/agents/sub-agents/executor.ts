@@ -2,12 +2,16 @@
 // Takes a sub-agent ID, store ID, and task → executes and logs the result
 
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
-import { generateText } from 'ai'
+import { generateText, type ToolSet } from 'ai'
 import { geminiFlash } from '@/lib/ai/provider'
 import { getSubAgent } from './registry'
 import { loadStoreContext } from './context'
 import type { SubAgentId, SubAgentTask, SubAgentResult, SubAgentDefinition, StoreContext } from './types'
 import type { AgentType, AutonomyLevel } from '@/lib/agents/types'
+
+// Cost per token (Gemini 2.0 Flash approximate pricing)
+const INPUT_COST_PER_TOKEN = 0.000000075  // $0.075 per 1M tokens
+const OUTPUT_COST_PER_TOKEN = 0.0000003   // $0.30 per 1M tokens
 
 // ---------------------------------------------------------------------------
 // Execute a sub-agent
@@ -148,7 +152,7 @@ async function executeLLM(
   context: StoreContext,
   task: SubAgentTask,
   startTime: number,
-  _useTools: boolean
+  useTools: boolean
 ): Promise<SubAgentResult> {
   const systemPrompt = subAgent.systemPrompt(context)
 
@@ -158,27 +162,105 @@ async function executeLLM(
     userPrompt += `\n\nAdditional context:\n${JSON.stringify(task.context, null, 2)}`
   }
 
-  // Call the LLM using AI SDK with the existing Gemini Flash provider
-  const llmResult = await generateText({
-    model: geminiFlash,
-    system: systemPrompt,
-    prompt: userPrompt,
-  })
-
-  // Determine if this action needs approval
+  // Determine if this action needs approval BEFORE execution
   const actionType = inferActionType(subAgent, task)
   const requiresApproval = checkApprovalNeeded(subAgent, actionType, context.autonomyLevel)
 
-  // Log the action
-  const actionStatus = requiresApproval ? 'requires_approval' as const : 'completed' as const
-  let approvalId: string | undefined
-
+  // If action requires approval, create approval request and DON'T execute tools
   if (requiresApproval) {
-    approvalId = await createApprovalRequest(context.storeId, subAgent, {
+    // Run LLM without tools to get the recommendation/plan only
+    const planResult = await generateText({
+      model: geminiFlash,
+      system: systemPrompt + '\n\nIMPORTANT: This action requires approval. Describe what you would do and why, but do NOT execute any actions. Present your plan for review.',
+      prompt: userPrompt,
+    })
+
+    const tokensIn = planResult.usage.inputTokens || 0
+    const tokensOut = planResult.usage.outputTokens || 0
+    const estimatedCost = (tokensIn * INPUT_COST_PER_TOKEN) + (tokensOut * OUTPUT_COST_PER_TOKEN)
+
+    const approvalId = await createApprovalRequest(context.storeId, subAgent, {
       actionType,
       summary: `${subAgent.codename}: ${task.instruction}`,
-      details: { output: llmResult.text, task: task.instruction },
+      details: { output: planResult.text, task: task.instruction },
     })
+
+    await logSubAgentAction(context.storeId, subAgent, {
+      actionType,
+      actionCategory: inferActionCategory(subAgent),
+      summary: `${subAgent.codename}: ${task.instruction}`,
+      details: {
+        output: planResult.text,
+        requiresApproval: true,
+        approvalId,
+      },
+      status: 'requires_approval',
+      tokensInput: tokensIn,
+      tokensOutput: tokensOut,
+      estimatedCost,
+    })
+
+    await updateChiefStats(context.storeId, subAgent.chief, true)
+
+    return {
+      subAgentId: subAgent.id,
+      chief: subAgent.chief,
+      output: planResult.text,
+      actions: [{
+        actionType,
+        actionCategory: inferActionCategory(subAgent),
+        summary: `${subAgent.codename}: ${task.instruction}`,
+        details: { output: planResult.text },
+        status: 'requires_approval',
+      }],
+      tokensInput: tokensIn,
+      tokensOutput: tokensOut,
+      durationMs: Date.now() - startTime,
+      requiresApproval: true,
+      approvalId,
+    }
+  }
+
+  // Build generateText options — with or without tools
+  const hasTools = useTools && subAgent.tools && Object.keys(subAgent.tools).length > 0
+  const toolCallActions: Array<{ tool: string; args: unknown; result: unknown }> = []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const generateOptions: any = {
+    model: geminiFlash,
+    system: systemPrompt,
+    prompt: userPrompt,
+  }
+
+  if (hasTools) {
+    generateOptions.tools = subAgent.tools as ToolSet
+    generateOptions.maxSteps = 5  // Allow up to 5 tool-calling steps
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    generateOptions.onStepFinish = (step: any) => {
+      // Track tool calls for logging
+      if (step.toolCalls) {
+        for (const tc of step.toolCalls) {
+          toolCallActions.push({
+            tool: tc.toolName,
+            args: tc.args ?? null,
+            result: step.toolResults?.find((r: { toolCallId: string }) => r.toolCallId === tc.toolCallId)?.output ?? null,
+          })
+        }
+      }
+    }
+  }
+
+  const llmResult = await generateText(generateOptions)
+
+  const tokensIn = llmResult.usage.inputTokens || 0
+  const tokensOut = llmResult.usage.outputTokens || 0
+  const estimatedCost = (tokensIn * INPUT_COST_PER_TOKEN) + (tokensOut * OUTPUT_COST_PER_TOKEN)
+
+  // Build detailed output including tool results
+  const output = {
+    text: llmResult.text,
+    toolCalls: toolCallActions.length > 0 ? toolCallActions : undefined,
+    stepsCompleted: llmResult.steps?.length ?? 1,
   }
 
   await logSubAgentAction(context.storeId, subAgent, {
@@ -187,31 +269,34 @@ async function executeLLM(
     summary: `${subAgent.codename}: ${task.instruction}`,
     details: {
       output: llmResult.text,
-      requiresApproval,
-      approvalId,
+      toolCalls: toolCallActions,
+      stepsCompleted: output.stepsCompleted,
+      requiresApproval: false,
     },
-    status: actionStatus,
+    status: 'completed',
+    tokensInput: tokensIn,
+    tokensOutput: tokensOut,
+    estimatedCost,
   })
 
   // Update Chief stats
-  await updateChiefStats(context.storeId, subAgent.chief, requiresApproval)
+  await updateChiefStats(context.storeId, subAgent.chief, false)
 
   return {
     subAgentId: subAgent.id,
     chief: subAgent.chief,
-    output: llmResult.text,
+    output,
     actions: [{
       actionType,
       actionCategory: inferActionCategory(subAgent),
       summary: `${subAgent.codename}: ${task.instruction}`,
-      details: { output: llmResult.text },
-      status: actionStatus,
+      details: { output: llmResult.text, toolCalls: toolCallActions },
+      status: 'completed',
     }],
-    tokensInput: llmResult.usage.inputTokens || 0,
-    tokensOutput: llmResult.usage.outputTokens || 0,
+    tokensInput: tokensIn,
+    tokensOutput: tokensOut,
     durationMs: Date.now() - startTime,
-    requiresApproval,
-    approvalId,
+    requiresApproval: false,
   }
 }
 
@@ -294,6 +379,9 @@ async function logSubAgentAction(
     summary: string
     details: Record<string, unknown>
     status: string
+    tokensInput?: number
+    tokensOutput?: number
+    estimatedCost?: number
   }
 ) {
   const supabase = getSupabaseAdmin()
@@ -309,9 +397,9 @@ async function logSubAgentAction(
     execution_mode: action.status === 'requires_approval' ? 'approved' : 'auto',
     started_at: new Date().toISOString(),
     completed_at: action.status === 'completed' ? new Date().toISOString() : null,
-    tokens_input: 0,
-    tokens_output: 0,
-    estimated_cost_usd: 0,
+    tokens_input: action.tokensInput ?? 0,
+    tokens_output: action.tokensOutput ?? 0,
+    estimated_cost_usd: action.estimatedCost ?? 0,
     api_costs: {},
   })
 }

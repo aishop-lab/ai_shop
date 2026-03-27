@@ -182,40 +182,67 @@ Return a single JSON object (no markdown fences):
   },
 })
 
-const get_campaign_performance = tool({
+const get_ad_spend_analysis = tool({
   description:
-    'Get performance data for a paid advertising campaign. ' +
-    'NOTE: Returns placeholder data — actual metrics require Meta Ads API integration.',
+    'Analyze store order and coupon data to estimate ad spend effectiveness. ' +
+    'Calculates revenue, order volume, and coupon-driven conversions to inform ad strategy. ' +
+    'NOTE: For live Meta/Google Ads metrics, connect ad accounts in Settings > Integrations.',
   inputSchema: z.object({
-    campaign_id: z
-      .string()
+    store_id: z.string().describe('The store ID'),
+    days: z
+      .number()
       .optional()
-      .describe('Campaign ID to fetch metrics for (optional — returns overview if omitted)'),
+      .describe('Number of past days to analyze (default: 30)'),
   }),
-  execute: async ({ campaign_id }) => {
+  execute: async ({ store_id, days = 30 }) => {
+    const supabase = getSupabaseAdmin()
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+
+    const [ordersResult, couponsResult] = await Promise.all([
+      supabase
+        .from('orders')
+        .select('id, total_amount, currency, payment_status, created_at')
+        .eq('store_id', store_id)
+        .gte('created_at', since),
+      supabase
+        .from('coupons')
+        .select('id, code, discount_type, discount_value, usage_count')
+        .eq('store_id', store_id)
+        .eq('is_active', true),
+    ])
+
+    const orders = ordersResult.data ?? []
+    const coupons = couponsResult.data ?? []
+    const paidOrders = orders.filter((o) => o.payment_status === 'paid')
+    const totalRevenue = paidOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0)
+    const totalCouponUses = coupons.reduce((sum, c) => sum + ((c.usage_count as number) || 0), 0)
+
     return {
       success: true,
-      integration_status: 'pending',
-      note: 'Meta Ads API integration is not yet configured. Connect your Meta Business account in Settings > Integrations to see live campaign metrics.',
-      placeholder_data: {
-        campaign_id: campaign_id ?? 'all',
-        impressions: null,
-        clicks: null,
-        spend: null,
-        roas: null,
-        ctr: null,
-        cpc: null,
-        conversions: null,
+      period_days: days,
+      revenue: {
+        total: Math.round(totalRevenue * 100) / 100,
+        order_count: paidOrders.length,
+        avg_order_value: paidOrders.length > 0 ? Math.round((totalRevenue / paidOrders.length) * 100) / 100 : 0,
+        currency: orders[0]?.currency ?? 'INR',
       },
-      action_required:
-        'Go to Dashboard > Settings > Integrations > Meta Ads and connect your ad account.',
+      promotions: {
+        active_coupons: coupons.length,
+        total_coupon_uses: totalCouponUses,
+        coupon_codes: coupons.map((c) => ({ code: c.code, uses: c.usage_count })),
+      },
+      ad_integration_status: {
+        meta_ads: 'not_connected',
+        google_ads: 'not_connected',
+        note: 'Connect Meta Ads and Google Ads in Settings > Integrations for live campaign metrics.',
+      },
     }
   },
 })
 
 export const AD_PILOT_TOOLS = {
   create_ad_campaign_plan,
-  get_campaign_performance,
+  get_ad_spend_analysis,
 }
 
 // ---------------------------------------------------------------------------
@@ -283,38 +310,125 @@ Focus on Indian market search behavior and buying patterns.`,
   },
 })
 
-const get_search_performance = tool({
+const audit_product_seo = tool({
   description:
-    'Get organic search performance metrics for the store. ' +
-    'NOTE: Returns placeholder data — actual metrics require Google Search Console API integration.',
+    'Audit all active products for SEO completeness — checks for missing/short meta descriptions, ' +
+    'missing SEO titles, short descriptions, and missing alt text on images. ' +
+    'Returns a prioritized list of products needing SEO attention.',
   inputSchema: z.object({
-    period: z
-      .string()
-      .optional()
-      .describe('Time period to analyze (e.g. "last_7_days", "last_30_days") — default: last_30_days'),
+    store_id: z.string().describe('The store ID to audit'),
+    limit: z.number().optional().describe('Max products to audit (default: 100)'),
   }),
-  execute: async ({ period = 'last_30_days' }) => {
+  execute: async ({ store_id, limit = 100 }) => {
+    const supabase = getSupabaseAdmin()
+
+    const { data: products, error } = await supabase
+      .from('products')
+      .select(`
+        id,
+        title,
+        description,
+        meta_description,
+        seo_title,
+        slug,
+        category,
+        tags,
+        product_images(id, alt_text)
+      `)
+      .eq('store_id', store_id)
+      .eq('status', 'active')
+      .eq('is_demo', false)
+      .limit(limit)
+
+    if (error) {
+      return { success: false, error: error.message, products: [] }
+    }
+
+    const audited = (products ?? []).map((p) => {
+      const issues: string[] = []
+      let score = 100
+
+      // Meta description checks
+      if (!p.meta_description) {
+        issues.push('missing_meta_description')
+        score -= 25
+      } else if ((p.meta_description as string).length < 50) {
+        issues.push('meta_description_too_short')
+        score -= 15
+      } else if ((p.meta_description as string).length > 160) {
+        issues.push('meta_description_too_long')
+        score -= 10
+      }
+
+      // SEO title checks
+      if (!p.seo_title) {
+        issues.push('missing_seo_title')
+        score -= 20
+      } else if ((p.seo_title as string).length > 60) {
+        issues.push('seo_title_too_long')
+        score -= 10
+      }
+
+      // Description checks
+      if (!p.description) {
+        issues.push('missing_description')
+        score -= 20
+      } else if ((p.description as string).length < 100) {
+        issues.push('description_too_short')
+        score -= 10
+      }
+
+      // Alt text checks
+      const images = (p.product_images as Array<{ id: string; alt_text: string | null }>) ?? []
+      const missingAlt = images.filter((img) => !img.alt_text).length
+      if (missingAlt > 0) {
+        issues.push(`${missingAlt}_images_missing_alt_text`)
+        score -= Math.min(missingAlt * 5, 15)
+      }
+
+      return {
+        id: p.id,
+        title: p.title,
+        slug: p.slug,
+        category: p.category,
+        seo_score: Math.max(score, 0),
+        issues,
+        meta_description_length: ((p.meta_description as string) ?? '').length,
+        seo_title_length: ((p.seo_title as string) ?? '').length,
+        description_length: ((p.description as string) ?? '').length,
+        image_count: images.length,
+        images_missing_alt: missingAlt,
+      }
+    })
+
+    // Sort by worst SEO score first
+    audited.sort((a, b) => a.seo_score - b.seo_score)
+
+    const avgScore = audited.length > 0
+      ? Math.round(audited.reduce((s, p) => s + p.seo_score, 0) / audited.length)
+      : 0
+
     return {
       success: true,
-      integration_status: 'pending',
-      period,
-      note: 'Google Search Console API integration is not yet configured. Verify store ownership in Google Search Console and connect via Settings > Integrations.',
-      placeholder_data: {
-        total_clicks: null,
-        total_impressions: null,
-        average_ctr: null,
-        average_position: null,
-        top_queries: null,
-        top_pages: null,
-        crawl_errors: null,
+      total_products: audited.length,
+      avg_seo_score: avgScore,
+      needs_attention: audited.filter((p) => p.seo_score < 70).length,
+      summary: {
+        missing_meta_description: audited.filter((p) => p.issues.includes('missing_meta_description')).length,
+        missing_seo_title: audited.filter((p) => p.issues.includes('missing_seo_title')).length,
+        missing_description: audited.filter((p) => p.issues.includes('missing_description')).length,
+        has_alt_text_gaps: audited.filter((p) => p.images_missing_alt > 0).length,
       },
-      action_required:
-        'Connect Google Search Console at search.google.com/search-console and add the store URL as a property.',
+      products: audited,
+      search_console_status: {
+        connected: false,
+        note: 'Connect Google Search Console in Settings > Integrations for live organic search metrics.',
+      },
     }
   },
 })
 
 export const SEO_SCOUT_TOOLS = {
   analyze_keywords,
-  get_search_performance,
+  audit_product_seo,
 }

@@ -123,7 +123,8 @@ Guardrails:
     chief: 'technical',
     role: 'Store Uptime & Availability Monitor',
     description: 'Monitors store uptime, API endpoint health, and error rates. Alerts immediately on outages and tracks service degradation patterns.',
-    category: 'llm-only',
+    category: 'llm-new-api',
+    tools: UPTIME_GUARDIAN_TOOLS,
     systemPrompt: (ctx) => `You are UPTIME-GUARDIAN, the Store Uptime & Availability Monitor for ${ctx.storeName}.
 
 Store context:
@@ -163,7 +164,6 @@ Guardrails:
 - Do NOT restart services autonomously — alert and recommend only
 - False positive tolerance: require 2 consecutive failed checks before raising alert
 - Do NOT expose internal service credentials in reports`,
-    tools: UPTIME_GUARDIAN_TOOLS,
     autonomyRules: {
       autonomous: ['monitor', 'detect', 'analyze', 'report_uptime', 'check_health'],
       needsChiefApproval: ['send_message', 'generate_incident_report', 'escalate_outage'],
@@ -177,7 +177,8 @@ Guardrails:
     chief: 'technical',
     role: 'Store Security Auditor',
     description: 'Scans for security vulnerabilities, checks SSL certificates, monitors for suspicious access patterns, and validates security headers.',
-    category: 'llm-only',
+    category: 'llm-new-api',
+    tools: SECURITY_SCANNER_TOOLS,
     systemPrompt: (ctx) => `You are SECURITY-SCANNER, the Store Security Auditor for ${ctx.storeName}.
 
 Store context:
@@ -212,7 +213,6 @@ Guardrails:
 - Treat security findings as confidential — do not log to public channels
 - Critical vulnerabilities require immediate merchant notification
 - Flag but do NOT exploit any vulnerabilities found`,
-    tools: SECURITY_SCANNER_TOOLS,
     autonomyRules: {
       autonomous: ['monitor', 'scan', 'detect', 'analyze', 'report_security_metrics'],
       needsChiefApproval: ['generate_security_report', 'flag_vulnerability', 'recommend_security_fix'],
@@ -282,7 +282,8 @@ Guardrails:
     chief: 'technical',
     role: 'Third-Party Integration Health Monitor',
     description: 'Monitors the health of all third-party integrations — Razorpay, Stripe, Shiprocket, Resend, MSG91 — and diagnoses connection failures.',
-    category: 'llm-only',
+    category: 'llm-new-api',
+    tools: INTEGRATION_DOCTOR_TOOLS,
     systemPrompt: (ctx) => `You are INTEGRATION-DOCTOR, the Third-Party Integration Health Monitor for ${ctx.storeName}.
 
 Store context:
@@ -323,7 +324,6 @@ Guardrails:
 - Alert merchant immediately for payment integration failures — revenue at risk
 - Do NOT attempt to fix credentials autonomously — alert and guide only
 - Distinguish between store-level and platform-level credential failures`,
-    tools: INTEGRATION_DOCTOR_TOOLS,
     autonomyRules: {
       autonomous: ['monitor', 'detect', 'analyze', 'report_integration_health', 'check_credentials'],
       needsChiefApproval: ['generate_integration_report', 'flag_integration_failure', 'send_message'],
