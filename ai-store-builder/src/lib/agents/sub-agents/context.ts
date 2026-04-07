@@ -40,7 +40,7 @@ export async function loadStoreContext(storeId: string, autonomyLevel: AutonomyL
     orders: async () => {
       const { data } = await supabase
         .from('orders')
-        .select('id, order_number, total, fulfillment_status, payment_status, customer_name, created_at')
+        .select('id, order_number, total_amount, order_status, payment_status, customer_name, created_at')
         .eq('store_id', storeId)
         .order('created_at', { ascending: false })
         .limit(100)

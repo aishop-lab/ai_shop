@@ -5,18 +5,18 @@ import type { DashboardAnalytics, AnalyticsPeriod, RevenueTrendItem } from '@/li
 
 interface OrderRow {
   id: string
-  total: number  // Database column is 'total', not 'total_amount'
+  total_amount: number
   payment_status: string
-  fulfillment_status: string  // Database column is 'fulfillment_status', not 'order_status'
+  order_status: string
   created_at: string
 }
 
 interface OrderItemRow {
   product_id: string
-  title: string  // Database column is 'title', not 'product_title'
-  image_url: string | null  // Database column is 'image_url', not 'product_image'
+  product_title: string
+  product_image: string | null
   quantity: number
-  total: number  // Database column is 'total', not 'total_price'
+  total_price: number
 }
 
 export async function GET(request: NextRequest) {
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     // 1. Revenue metrics - fetch orders
     const { data: orders } = await getSupabaseAdmin()
       .from('orders')
-      .select('id, total, payment_status, fulfillment_status, created_at')
+      .select('id, total_amount, payment_status, order_status, created_at')
       .eq('store_id', storeId)
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString())
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     const typedOrders = (orders || []) as OrderRow[]
 
     const paidOrders = typedOrders.filter(o => o.payment_status === 'paid')
-    const revenue = paidOrders.reduce((sum, o) => sum + Number(o.total), 0)
+    const revenue = paidOrders.reduce((sum, o) => sum + Number(o.total_amount), 0)
     const totalOrders = typedOrders.length
     const pendingOrders = typedOrders.filter(o => o.payment_status === 'pending').length
 
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
     if (paidOrderIds.length > 0) {
       const { data: orderItems } = await getSupabaseAdmin()
         .from('order_items')
-        .select('product_id, title, image_url, quantity, total')
+        .select('product_id, product_title, product_image, quantity, total_price')
         .in('order_id', paidOrderIds)
 
       const typedItems = (orderItems || []) as OrderItemRow[]
@@ -128,14 +128,14 @@ export async function GET(request: NextRequest) {
         const existing = productSalesMap.get(item.product_id)
         if (existing) {
           existing.quantity += item.quantity
-          existing.revenue += Number(item.total)
+          existing.revenue += Number(item.total_price)
         } else {
           productSalesMap.set(item.product_id, {
             product_id: item.product_id,
-            product_title: item.title,
-            product_image: item.image_url || undefined,
+            product_title: item.product_title,
+            product_image: item.product_image || undefined,
             quantity: item.quantity,
-            revenue: Number(item.total)
+            revenue: Number(item.total_price)
           })
         }
       })
@@ -203,7 +203,7 @@ function generateRevenueTrend(orders: OrderRow[], period: AnalyticsPeriod): Reve
       return orderDate >= date && orderDate < nextDate && o.payment_status === 'paid'
     })
 
-    const dayRevenue = dayOrders.reduce((sum, o) => sum + Number(o.total), 0)
+    const dayRevenue = dayOrders.reduce((sum, o) => sum + Number(o.total_amount), 0)
 
     trend.push({
       date: date.toISOString().split('T')[0],

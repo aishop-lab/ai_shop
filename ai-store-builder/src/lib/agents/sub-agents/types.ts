@@ -50,8 +50,8 @@ export interface ProductSummary {
 export interface OrderSummary {
   id: string
   order_number: string
-  total: number
-  fulfillment_status: string
+  total_amount: number
+  order_status: string
   payment_status: string
   customer_name: string | null
   created_at: string

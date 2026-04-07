@@ -128,11 +128,11 @@ export async function executeGetOrders(
     const supabase = getSupabaseAdmin()
     let query = supabase
       .from('orders')
-      .select('id, order_number, status, total, customer_name, customer_email, created_at', { count: 'exact' })
+      .select('id, order_number, order_status, total_amount, customer_name, customer_email, created_at', { count: 'exact' })
       .eq('store_id', ctx.storeId)
 
     if (args.status && args.status !== 'all') {
-      query = query.eq('status', args.status)
+      query = query.eq('order_status', args.status)
     }
 
     // Date range filtering

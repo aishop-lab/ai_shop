@@ -26,7 +26,7 @@ const lookupOrderTool: AgentToolConfig = {
       .select(`
         id,
         order_number,
-        status,
+        order_status,
         payment_status,
         total_amount,
         currency,
@@ -39,8 +39,8 @@ const lookupOrderTool: AgentToolConfig = {
           id,
           product_id,
           quantity,
-          price,
-          title
+          unit_price,
+          product_title
         )
       `)
       .eq('store_id', store_id)
@@ -57,7 +57,7 @@ const lookupOrderTool: AgentToolConfig = {
 
     return {
       success: true,
-      summary: `Found order ${order_number}: status=${order.status}, payment=${order.payment_status}`,
+      summary: `Found order ${order_number}: status=${order.order_status}, payment=${order.payment_status}`,
       data: order,
       relatedEntityType: 'order',
       relatedEntityId: order.id,
@@ -141,7 +141,7 @@ const checkShippingStatusTool: AgentToolConfig = {
 
     const { data: order, error } = await supabase
       .from('orders')
-      .select('id, order_number, status, tracking_number, courier_name, estimated_delivery, shipping_address')
+      .select('id, order_number, order_status, tracking_number, courier_name, estimated_delivery, shipping_address')
       .eq('id', order_id)
       .eq('store_id', store_id)
       .single()
@@ -157,10 +157,10 @@ const checkShippingStatusTool: AgentToolConfig = {
     if (!order.tracking_number) {
       return {
         success: true,
-        summary: `Order ${order.order_number} has no tracking number yet (status: ${order.status})`,
+        summary: `Order ${order.order_number} has no tracking number yet (status: ${order.order_status})`,
         data: {
           order_number: order.order_number,
-          status: order.status,
+          status: order.order_status,
           tracking_number: null,
           message: 'Shipment not yet dispatched',
         },
@@ -174,7 +174,7 @@ const checkShippingStatusTool: AgentToolConfig = {
       summary: `Order ${order.order_number}: shipped via ${order.courier_name ?? 'courier'}, tracking ${order.tracking_number}`,
       data: {
         order_number: order.order_number,
-        status: order.status,
+        status: order.order_status,
         tracking_number: order.tracking_number,
         courier_name: order.courier_name,
         estimated_delivery: order.estimated_delivery,
@@ -435,7 +435,7 @@ const createReturnRequestTool: AgentToolConfig = {
     // Verify the order belongs to this store
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, order_number, total_amount, currency, status')
+      .select('id, order_number, total_amount, currency, order_status')
       .eq('id', order_id)
       .eq('store_id', context.storeId)
       .single()
@@ -470,7 +470,7 @@ const createReturnRequestTool: AgentToolConfig = {
           customer_identifier,
           order_total: order.total_amount,
           currency: order.currency,
-          order_status: order.status,
+          order_status: order.order_status,
         },
         priority: 'high',
         expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
