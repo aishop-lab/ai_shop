@@ -115,7 +115,7 @@ export async function queryRevenue(
 
   const { data: orders, error } = await supabase
     .from('orders')
-    .select('total, created_at, fulfillment_status')
+    .select('total_amount, created_at, fulfillment_status')
     .eq('store_id', storeId)
     .gte('created_at', range.from)
     .lte('created_at', range.to)
@@ -123,7 +123,7 @@ export async function queryRevenue(
 
   if (error) throw new Error(`Revenue query failed: ${error.message}`)
 
-  const total = (orders || []).reduce((sum, o) => sum + (o.total || 0), 0)
+  const total = (orders || []).reduce((sum, o) => sum + (o.total_amount || 0), 0)
   const count = (orders || []).length
   const avgOrderValue = count > 0 ? total / count : 0
 
@@ -131,7 +131,7 @@ export async function queryRevenue(
   const byDay: Record<string, number> = {}
   for (const order of orders || []) {
     const day = new Date(order.created_at).toISOString().split('T')[0]
-    byDay[day] = (byDay[day] || 0) + (order.total || 0)
+    byDay[day] = (byDay[day] || 0) + (order.total_amount || 0)
   }
 
   return { total, count, avgOrderValue, byDay }
@@ -149,7 +149,7 @@ export async function queryOrders(
 
   const { data: orders, error } = await supabase
     .from('orders')
-    .select('id, fulfillment_status, total, created_at')
+    .select('id, fulfillment_status, total_amount, created_at')
     .eq('store_id', storeId)
     .gte('created_at', range.from)
     .lte('created_at', range.to)
@@ -178,7 +178,7 @@ export async function queryTopProducts(
 
   const { data: items, error } = await supabase
     .from('order_items')
-    .select('product_id, quantity, price, orders!inner(store_id, created_at, fulfillment_status)')
+    .select('product_id, quantity, unit_price, orders!inner(store_id, created_at, fulfillment_status)')
     .eq('orders.store_id', storeId)
     .gte('orders.created_at', range.from)
     .lte('orders.created_at', range.to)
@@ -192,7 +192,7 @@ export async function queryTopProducts(
     const pid = item.product_id
     if (!productMap[pid]) productMap[pid] = { units: 0, revenue: 0 }
     productMap[pid].units += item.quantity || 1
-    productMap[pid].revenue += (item.price || 0) * (item.quantity || 1)
+    productMap[pid].revenue += (item.unit_price || 0) * (item.quantity || 1)
   }
 
   // Fetch product names

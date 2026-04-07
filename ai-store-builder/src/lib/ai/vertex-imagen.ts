@@ -205,9 +205,20 @@ class VertexImagenService {
     imageBuffer: Buffer,
     prompt: string
   ): Promise<{ buffer: Buffer; mimeType: string } | null> {
+    // imageBuffer is accepted for API compatibility but not used —
+    // Imagen 3.0 generate endpoint is prompt-only.
+    return this.generateImageFromPrompt(prompt)
+  }
+
+  /**
+   * Generate an image purely from a text prompt using Imagen 3.0
+   * No source image required.
+   */
+  async generateImageFromPrompt(
+    prompt: string,
+    options: { aspectRatio?: string } = {}
+  ): Promise<{ buffer: Buffer; mimeType: string } | null> {
     try {
-      // For Imagen 3, we generate a new image based on a detailed prompt
-      // This won't preserve the exact product but creates a professional version
       const requestBody: Record<string, unknown> = {
         instances: [
           {
@@ -216,7 +227,7 @@ class VertexImagenService {
         ],
         parameters: {
           sampleCount: 1,
-          aspectRatio: '1:1',
+          aspectRatio: options.aspectRatio || '1:1',
           safetySetting: 'block_some'
         }
       }
@@ -235,7 +246,7 @@ class VertexImagenService {
 
       return null
     } catch (error) {
-      console.error('[VertexImagen] Generate enhanced image failed:', error)
+      console.error('[VertexImagen] Generate image from prompt failed:', error)
       return null
     }
   }

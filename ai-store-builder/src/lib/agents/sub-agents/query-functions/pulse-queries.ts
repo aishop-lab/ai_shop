@@ -139,7 +139,7 @@ export async function customerProfilerQuery(
     queryCustomerMetrics(ctx.storeId, range),
     supabase
       .from('orders')
-      .select('customer_id, total, customers!left(id, name, email)')
+      .select('customer_id, total_amount, customers!left(id, name, email)')
       .eq('store_id', ctx.storeId)
       .gte('created_at', range.from)
       .lte('created_at', range.to)
@@ -169,7 +169,7 @@ export async function customerProfilerQuery(
       }
     }
     customerMap[cid].orderCount += 1
-    customerMap[cid].totalSpent += order.total || 0
+    customerMap[cid].totalSpent += order.total_amount || 0
   }
 
   const topCustomers: TopCustomer[] = Object.entries(customerMap)
@@ -321,13 +321,13 @@ export async function anomalySentinelQuery(
   const [todayOrders, historicalOrders] = await Promise.all([
     supabase
       .from('orders')
-      .select('id, total, fulfillment_status')
+      .select('id, total_amount, fulfillment_status')
       .eq('store_id', ctx.storeId)
       .gte('created_at', todayRange.from)
       .lte('created_at', todayRange.to),
     supabase
       .from('orders')
-      .select('id, total, created_at, fulfillment_status')
+      .select('id, total_amount, created_at, fulfillment_status')
       .eq('store_id', ctx.storeId)
       .gte('created_at', historicalRange.from)
       .lte('created_at', historicalRange.to),
@@ -341,11 +341,11 @@ export async function anomalySentinelQuery(
 
   // Compute today's metrics
   const todayOrderCount = todayData.length
-  const todayRevenue = todayData.reduce((sum, o) => sum + (o.total || 0), 0)
+  const todayRevenue = todayData.reduce((sum, o) => sum + (o.total_amount || 0), 0)
 
   // Compute 7-day daily averages
   const avgOrderCount = historicalData.length / 7
-  const avgRevenue = historicalData.reduce((sum, o) => sum + (o.total || 0), 0) / 7
+  const avgRevenue = historicalData.reduce((sum, o) => sum + (o.total_amount || 0), 0) / 7
 
   const anomalies: Anomaly[] = []
 

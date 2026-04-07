@@ -48,9 +48,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .select('*, order_items(*)', { count: 'exact' })
       .eq('store_id', storeId)
 
-    // Filter by order status (database column is 'fulfillment_status')
+    // Filter by order status
     if (status && status !== 'all') {
-      query = query.eq('fulfillment_status', status)
+      query = query.eq('order_status', status)
     }
 
     // Filter by payment status
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (search) {
       const s = sanitizeSearchQuery(search)
       query = query.or(
-        `order_number.ilike.%${s}%,customer_name.ilike.%${s}%,email.ilike.%${s}%`
+        `order_number.ilike.%${s}%,customer_name.ilike.%${s}%,customer_email.ilike.%${s}%`
       )
     }
 
@@ -79,28 +79,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (error) throw error
 
-    // Map database column names to Order type expected by frontend
-    const mappedOrders = (orders || []).map((order: Record<string, unknown>) => ({
-      ...order,
-      // Map database columns to Order type names
-      customer_email: order.email,
-      customer_phone: order.phone,
-      shipping_cost: order.shipping_amount,
-      total_amount: order.total,
-      order_status: order.fulfillment_status,
-      // Map order_items columns if present
-      order_items: Array.isArray(order.order_items)
-        ? order.order_items.map((item: Record<string, unknown>) => ({
-            ...item,
-            product_title: item.title,
-            product_image: item.image_url,
-            total_price: item.total,
-          }))
-        : [],
-    }))
-
     return NextResponse.json({
-      orders: mappedOrders,
+      orders: orders || [],
       total: count || 0,
       page,
       totalPages: Math.ceil((count || 0) / limit)

@@ -307,7 +307,7 @@ export async function getCampaignROAS(
   // Get attributed revenue from orders with matching campaign tracking
   const { data: orders, error: orderError } = await supabase
     .from('orders')
-    .select('total, payment_status, metadata')
+    .select('total_amount, payment_status, metadata')
     .eq('store_id', storeId)
     .eq('payment_status', 'paid')
 
@@ -327,7 +327,7 @@ export async function getCampaignROAS(
       (metadata.utm_campaign === campaignId && metadata.utm_source === platform)
 
     if (matchesCampaign) {
-      totalRevenue += order.total || 0
+      totalRevenue += order.total_amount || 0
       conversions++
     }
   }
@@ -405,7 +405,7 @@ export async function getOverallROAS(
   // Get orders with marketing attribution in the period
   const { data: orders, error: orderError } = await supabase
     .from('orders')
-    .select('total, payment_status, metadata')
+    .select('total_amount, payment_status, metadata')
     .eq('store_id', storeId)
     .eq('payment_status', 'paid')
     .gte('created_at', periodStart)
@@ -428,7 +428,7 @@ export async function getOverallROAS(
 
     if (!utmSource && !campaignId) continue
 
-    const orderTotal = order.total || 0
+    const orderTotal = order.total_amount || 0
     totalRevenue += orderTotal
 
     // Attribute to platform

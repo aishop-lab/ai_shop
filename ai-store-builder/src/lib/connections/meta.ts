@@ -23,6 +23,8 @@ const REQUIRED_SCOPES = [
   'pages_manage_posts',
   'pages_read_engagement',
   'business_management',
+  'instagram_basic',
+  'instagram_content_publish',
 ]
 
 const log = logger.child({ traceId: `meta-oauth:${Date.now()}` })
@@ -147,10 +149,13 @@ export async function handleMetaCallback(params: {
 
     // Fetch pages for organic posting
     const pagesRes = await fetch(
-      `${META_GRAPH_BASE}/me/accounts?fields=id,name&access_token=${longLivedToken}`
+      `${META_GRAPH_BASE}/me/accounts?fields=id,name,instagram_business_account&access_token=${longLivedToken}`
     )
     const pagesData = await pagesRes.json()
     const firstPage = pagesData.data?.[0]
+
+    // Extract Instagram Business Account ID from the page (if connected)
+    const instagramBusinessId = firstPage?.instagram_business_account?.id || null
 
     // Step 4: Store encrypted credentials
     const supabase = getSupabaseAdmin()
@@ -180,6 +185,7 @@ export async function handleMetaCallback(params: {
             ad_account_name: adAccount?.name || null,
             page_id: firstPage?.id || null,
             page_name: firstPage?.name || null,
+            instagram_business_id: instagramBusinessId,
           },
           updated_at: new Date().toISOString(),
         },

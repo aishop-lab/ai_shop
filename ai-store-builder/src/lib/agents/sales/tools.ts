@@ -6,7 +6,10 @@ import type { AgentToolConfig, AgentExecutionContext } from '../base-agent'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { sendRecoveryEmail } from '@/lib/cart/abandoned-cart'
 import { getRecommendations } from '@/lib/ai/recommendations'
+import { Resend } from 'resend'
+import { decrypt } from '@/lib/encryption'
 import { segmentCustomers } from './segmentation'
+import type { SegmentedCustomer } from './segmentation'
 import { createCampaign, getCampaigns, updateCampaignStats } from './campaign-engine'
 import {
   analyzePricingOpportunities,
@@ -19,6 +22,136 @@ import {
   analyzeCompetitivePricing as runCompetitivePricingAnalysis,
   getPricingStrategy,
 } from './competitor-monitor'
+
+// ---------------------------------------------------------------------------
+// Email helpers for campaign dispatch
+// ---------------------------------------------------------------------------
+
+const PRODUCTION_DOMAIN = process.env.NEXT_PUBLIC_PRODUCTION_DOMAIN || 'storeforge.site'
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+const MAX_EMAILS_PER_CAMPAIGN = 100
+
+function getCampaignStoreUrl(slug: string): string {
+  if (IS_PRODUCTION) {
+    return `https://${slug}.${PRODUCTION_DOMAIN}`
+  }
+  return `${BASE_URL}/${slug}`
+}
+
+interface CampaignResendCredentials {
+  client: Resend
+  fromEmail: string
+  fromName: string
+}
+
+/**
+ * Get Resend credentials for campaign emails using admin Supabase (no request context needed).
+ * Tries per-store credentials first, then falls back to platform credentials.
+ */
+async function getCampaignResendCredentials(
+  storeId: string,
+  storeName: string
+): Promise<CampaignResendCredentials | null> {
+  const supabase = getSupabaseAdmin()
+
+  try {
+    const { data: store } = await supabase
+      .from('stores')
+      .select('resend_api_key_encrypted, resend_from_email, resend_from_name, resend_credentials_verified, email_notifications_enabled, name')
+      .eq('id', storeId)
+      .single()
+
+    // Use per-store credentials if verified
+    if (store?.resend_credentials_verified && store.resend_api_key_encrypted) {
+      const apiKey = decrypt(store.resend_api_key_encrypted)
+      return {
+        client: new Resend(apiKey),
+        fromEmail: store.resend_from_email || process.env.RESEND_FROM_EMAIL || 'noreply@storeforge.site',
+        fromName: store.resend_from_name || store.name || storeName,
+      }
+    }
+  } catch {
+    // Fall through to platform credentials
+  }
+
+  // Fallback to platform credentials
+  const platformKey = process.env.RESEND_API_KEY
+  if (!platformKey) return null
+
+  return {
+    client: new Resend(platformKey),
+    fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@storeforge.site',
+    fromName: storeName,
+  }
+}
+
+/**
+ * Build campaign email HTML with store branding, message, coupon, and unsubscribe link.
+ */
+function buildCampaignEmailHtml(opts: {
+  storeName: string
+  storeUrl: string
+  subject: string
+  message: string
+  customerName: string | null
+  couponCode?: string
+  discountPercent?: number
+  campaignType: string
+}): string {
+  const { storeName, storeUrl, subject, message, customerName, couponCode, discountPercent, campaignType } = opts
+  const greeting = customerName ? `Hi ${customerName},` : 'Hi there,'
+
+  const couponBlock = couponCode && discountPercent
+    ? `
+      <div style="margin:24px 0;padding:20px;background:#f0fdf4;border:2px dashed #22c55e;border-radius:12px;text-align:center;">
+        <p style="margin:0 0 8px;font-size:14px;color:#166534;">Your exclusive ${discountPercent}% discount</p>
+        <p style="margin:0;font-size:28px;font-weight:700;color:#15803d;letter-spacing:2px;">${couponCode}</p>
+        <p style="margin:8px 0 0;font-size:12px;color:#6b7280;">Apply at checkout &bull; Valid for 14 days</p>
+      </div>`
+    : ''
+
+  const ctaLabel = campaignType === 'win_back'
+    ? 'Come Back &amp; Shop'
+    : campaignType === 'flash_sale'
+      ? 'Shop the Sale'
+      : campaignType === 'upsell'
+        ? 'Discover More'
+        : 'Shop Now'
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    <div style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+      <!-- Header -->
+      <div style="background:#111827;padding:24px 32px;text-align:center;">
+        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:600;">${storeName}</h1>
+      </div>
+      <!-- Body -->
+      <div style="padding:32px;">
+        <p style="margin:0 0 16px;font-size:16px;color:#374151;">${greeting}</p>
+        <p style="margin:0 0 24px;font-size:15px;color:#4b5563;line-height:1.6;">${message}</p>
+        ${couponBlock}
+        <div style="text-align:center;margin:28px 0;">
+          <a href="${storeUrl}" style="display:inline-block;padding:14px 32px;background:#111827;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">${ctaLabel}</a>
+        </div>
+      </div>
+      <!-- Footer -->
+      <div style="padding:20px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
+        <p style="margin:0 0 8px;font-size:12px;color:#9ca3af;">&copy; ${new Date().getFullYear()} ${storeName}. All rights reserved.</p>
+        <p style="margin:0;font-size:12px;color:#9ca3af;">
+          <a href="${storeUrl}/unsubscribe" style="color:#6b7280;text-decoration:underline;">Unsubscribe</a>
+          &nbsp;&bull;&nbsp;
+          <a href="${storeUrl}" style="color:#6b7280;text-decoration:underline;">Visit Store</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`
+}
 
 // ---- Tool: getAbandonedCarts ----
 
@@ -357,11 +490,31 @@ async function executeSendTargetedCampaign(
       }
     }
 
+    // Fetch store info for branding
+    const supabase = getSupabaseAdmin()
+    const { data: store, error: storeError } = await supabase
+      .from('stores')
+      .select('id, name, slug')
+      .eq('id', storeId)
+      .single()
+
+    if (storeError || !store) {
+      return { success: false, summary: 'Store not found' }
+    }
+
+    // Get Resend credentials (per-store or platform fallback)
+    const credentials = await getCampaignResendCredentials(storeId, store.name)
+    if (!credentials) {
+      return {
+        success: false,
+        summary: 'Email service not configured — set RESEND_API_KEY or configure per-store Resend credentials',
+      }
+    }
+
     // Create a coupon code if discount is specified
     let couponCode: string | undefined
     if (discountPercent) {
       couponCode = `${campaignType.toUpperCase().replace('_', '')}-${discountPercent}-${Date.now().toString(36).toUpperCase()}`
-      const supabase = getSupabaseAdmin()
       await supabase.from('coupons').insert({
         store_id: storeId,
         code: couponCode,
@@ -384,10 +537,117 @@ async function executeSendTargetedCampaign(
       end_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
     })
 
-    // Update campaign stats with target count
+    // ---- Dispatch emails to segmented customers ----
+
+    const storeUrl = getCampaignStoreUrl(store.slug)
+    const from = `${credentials.fromName} <${credentials.fromEmail}>`
+
+    // Cap the number of recipients to MAX_EMAILS_PER_CAMPAIGN
+    const recipients: SegmentedCustomer[] = targetSegment.customers.slice(0, MAX_EMAILS_PER_CAMPAIGN)
+
+    // Filter out customers without a valid email
+    const validRecipients = recipients.filter(c => c.email && c.email.includes('@'))
+
+    let emailsSent = 0
+    let emailsFailed = 0
+    const errors: string[] = []
+
+    if (validRecipients.length === 0) {
+      await updateCampaignStats(storeId, campaign.id, { sent: 0 })
+      return {
+        success: true,
+        data: {
+          campaignId: campaign.id,
+          segment,
+          targetCount: targetSegment.count,
+          emailsSent: 0,
+          emailsFailed: 0,
+          campaignType,
+          discountPercent,
+          couponCode,
+          subject,
+          warning: 'No customers in segment have valid email addresses',
+        },
+        summary: `Created ${campaignType} campaign but no customers in "${segment}" segment have valid email addresses`,
+        relatedEntityType: 'campaign',
+        relatedEntityId: campaign.id,
+      }
+    }
+
+    // Build email payloads for batch sending (Resend batch supports up to 100 emails)
+    const emailPayloads = validRecipients.map(customer => ({
+      from,
+      to: customer.email,
+      subject,
+      html: buildCampaignEmailHtml({
+        storeName: store.name,
+        storeUrl,
+        subject,
+        message,
+        customerName: customer.full_name,
+        couponCode,
+        discountPercent,
+        campaignType,
+      }),
+    }))
+
+    // Send via Resend batch API (max 100 per call, already capped above)
+    try {
+      const batchResult = await credentials.client.batch.send(emailPayloads)
+
+      if (batchResult.error) {
+        // Entire batch failed
+        emailsFailed = validRecipients.length
+        errors.push(`Batch send failed: ${JSON.stringify(batchResult.error)}`)
+        console.error('Campaign batch send failed:', batchResult.error)
+      } else {
+        // Batch succeeded — count individual results
+        const sentIds = batchResult.data?.data ?? []
+        emailsSent = sentIds.length
+        emailsFailed = validRecipients.length - emailsSent
+        if (emailsFailed > 0) {
+          errors.push(`${emailsFailed} emails in batch did not return a send ID`)
+        }
+      }
+    } catch (batchError) {
+      // If batch API fails entirely, fall back to individual sends
+      console.warn('Batch send threw, falling back to individual sends:', batchError)
+
+      for (const payload of emailPayloads) {
+        try {
+          const { error: sendError } = await credentials.client.emails.send(payload)
+          if (sendError) {
+            emailsFailed++
+            errors.push(`Failed ${payload.to}: ${sendError.message}`)
+          } else {
+            emailsSent++
+          }
+        } catch (individualError) {
+          emailsFailed++
+          const errMsg = individualError instanceof Error ? individualError.message : 'Unknown error'
+          errors.push(`Failed ${payload.to}: ${errMsg}`)
+        }
+      }
+    }
+
+    // Update campaign stats with actual delivery numbers
     await updateCampaignStats(storeId, campaign.id, {
-      sent: targetSegment.count,
+      sent: emailsSent,
     })
+
+    const truncatedCount = targetSegment.count > MAX_EMAILS_PER_CAMPAIGN
+      ? ` (capped at ${MAX_EMAILS_PER_CAMPAIGN} of ${targetSegment.count} total)`
+      : ''
+
+    const summaryParts = [
+      `Sent ${campaignType} campaign to ${emailsSent}/${validRecipients.length} "${segment}" customers${truncatedCount}`,
+    ]
+    if (discountPercent && couponCode) {
+      summaryParts.push(`with ${discountPercent}% discount (code: ${couponCode})`)
+    }
+    if (emailsFailed > 0) {
+      summaryParts.push(`— ${emailsFailed} delivery failures`)
+    }
 
     return {
       success: true,
@@ -395,18 +655,21 @@ async function executeSendTargetedCampaign(
         campaignId: campaign.id,
         segment,
         targetCount: targetSegment.count,
+        emailsSent,
+        emailsFailed,
         campaignType,
         discountPercent,
         couponCode,
         subject,
+        ...(errors.length > 0 ? { errors: errors.slice(0, 10) } : {}),
       },
-      summary: `Created ${campaignType} campaign targeting ${targetSegment.count} "${segment}" customers${discountPercent ? ` with ${discountPercent}% discount (code: ${couponCode})` : ''}`,
+      summary: summaryParts.join(' '),
       relatedEntityType: 'campaign',
       relatedEntityId: campaign.id,
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, summary: `Failed to create campaign: ${msg}` }
+    return { success: false, summary: `Failed to create/send campaign: ${msg}` }
   }
 }
 

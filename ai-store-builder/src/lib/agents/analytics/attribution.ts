@@ -104,7 +104,7 @@ async function collectJourneys(
   // Fetch orders with source/medium data
   const { data: orders, error } = await supabase
     .from('orders')
-    .select('id, customer_id, total, created_at, source, medium, utm_source, utm_medium, utm_campaign, referrer')
+    .select('id, customer_id, total_amount, created_at, source, medium, utm_source, utm_medium, utm_campaign, referrer')
     .eq('store_id', storeId)
     .gte('created_at', range.from)
     .lte('created_at', range.to)
@@ -177,7 +177,7 @@ async function collectJourneys(
     journeys.push({
       customer_id: customerId,
       order_id: order.id,
-      order_total: order.total || 0,
+      order_total: order.total_amount || 0,
       touchpoints,
       conversion_date: order.created_at,
     })

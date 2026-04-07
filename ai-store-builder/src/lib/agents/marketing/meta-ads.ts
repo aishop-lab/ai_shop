@@ -369,6 +369,40 @@ export async function updateCampaignStatus(
   return res.success === true
 }
 
+/**
+ * Update the daily budget of a campaign.
+ * Budget value is in cents (the smallest currency unit).
+ */
+export async function updateCampaignBudget(
+  storeId: string,
+  campaignId: string,
+  dailyBudget: number
+): Promise<boolean> {
+  const { token } = await requireMetaToken(storeId)
+
+  const body = new URLSearchParams({
+    daily_budget: String(dailyBudget),
+    access_token: token,
+  })
+
+  try {
+    await metaFetch<{ success?: boolean }>(
+      `${META_API_BASE}/${campaignId}`,
+      { method: 'POST', body, headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    )
+
+    log.info('Updated Meta campaign budget', { storeId, campaignId, dailyBudget })
+    return true
+  } catch (err) {
+    log.error(
+      'Failed to update Meta campaign budget',
+      err instanceof Error ? err : new Error(String(err)),
+      { storeId, campaignId, dailyBudget }
+    )
+    return false
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Insights
 // ---------------------------------------------------------------------------

@@ -5,6 +5,8 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { sanitizeSearchQuery } from '@/lib/utils/sanitize'
 import { generateText } from 'ai'
 import { getTextModel } from '@/lib/ai/provider'
+import { refundPayment, getStoreRazorpayCredentials } from '@/lib/payment/razorpay'
+import { refundStripePayment, getStoreStripeCredentials } from '@/lib/payment/stripe'
 
 interface ToolContext {
   storeId: string
@@ -239,11 +241,11 @@ export async function executeGetAnalytics(
 
     const { data: revenueData } = await supabase
       .from('orders')
-      .select('total')
+      .select('total_amount')
       .eq('store_id', ctx.storeId)
       .in('status', ['confirmed', 'shipped', 'delivered'])
 
-    const totalRevenue = revenueData?.reduce((sum, o) => sum + (o.total || 0), 0) || 0
+    const totalRevenue = revenueData?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0
 
     const { count: lowStockCount } = await supabase
       .from('products')
@@ -1086,39 +1088,131 @@ export async function executeProcessRefund(
   try {
     const supabase = getSupabaseAdmin()
 
-    // Get order details
+    // Get order details including payment gateway info
     const { data: order, error: fetchError } = await supabase
       .from('orders')
-      .select('order_number, total, status')
+      .select('order_number, total_amount, payment_status, payment_method, razorpay_payment_id, stripe_payment_intent_id, store_id')
       .eq('id', args.orderId)
       .eq('store_id', ctx.storeId)
       .single()
 
-    if (fetchError) throw fetchError
+    if (fetchError || !order) {
+      return { success: false, error: 'Order not found' }
+    }
 
-    const refundAmount = args.amount || order.total
+    // Validate the order can be refunded
+    if (order.payment_status !== 'paid') {
+      return {
+        success: false,
+        error: `Cannot refund order #${order.order_number} — payment status is "${order.payment_status}", expected "paid"`,
+      }
+    }
 
-    // Update order status
-    const { error } = await supabase
+    const refundAmount = args.amount || order.total_amount
+
+    if (refundAmount > order.total_amount) {
+      return {
+        success: false,
+        error: `Refund amount (${refundAmount}) exceeds order total (${order.total_amount})`,
+      }
+    }
+
+    // Check for existing refunds to prevent over-refunding
+    const { data: existingRefunds } = await supabase
+      .from('refunds')
+      .select('amount, status')
+      .eq('order_id', args.orderId)
+      .in('status', ['pending', 'processed'])
+
+    const totalRefunded = existingRefunds?.reduce((sum, r) => sum + Number(r.amount), 0) || 0
+
+    if (totalRefunded + refundAmount > order.total_amount) {
+      return {
+        success: false,
+        error: `Total refund would exceed order total. Already refunded: ${totalRefunded}, requested: ${refundAmount}, order total: ${order.total_amount}`,
+      }
+    }
+
+    // Determine payment gateway and call the appropriate refund API
+    const paymentMethod = order.payment_method as 'razorpay' | 'stripe' | 'cod'
+    let gatewayRefundId: string | undefined
+
+    if (paymentMethod === 'razorpay') {
+      if (!order.razorpay_payment_id) {
+        return { success: false, error: 'No Razorpay payment ID found on this order. Cannot process refund.' }
+      }
+
+      // Fetch store-specific Razorpay credentials (falls back to platform creds)
+      const storeCredentials = await getStoreRazorpayCredentials(ctx.storeId, supabase)
+
+      const razorpayRefund = await refundPayment(
+        order.razorpay_payment_id,
+        refundAmount,
+        { reason: args.reason || 'Refund via AI agent', order_id: args.orderId },
+        storeCredentials || undefined
+      )
+      gatewayRefundId = razorpayRefund.id
+
+    } else if (paymentMethod === 'stripe') {
+      if (!order.stripe_payment_intent_id) {
+        return { success: false, error: 'No Stripe payment intent ID found on this order. Cannot process refund.' }
+      }
+
+      // Fetch store-specific Stripe credentials (falls back to platform creds)
+      const storeCredentials = await getStoreStripeCredentials(ctx.storeId, supabase)
+
+      const stripeRefund = await refundStripePayment(
+        order.stripe_payment_intent_id,
+        refundAmount,
+        'requested_by_customer',
+        storeCredentials || undefined
+      )
+      gatewayRefundId = stripeRefund.id
+
+    } else if (paymentMethod === 'cod') {
+      return { success: false, error: 'Cannot process automated refund for Cash on Delivery orders. Handle manually.' }
+
+    } else {
+      return { success: false, error: `Unknown payment method "${paymentMethod}" on order #${order.order_number}` }
+    }
+
+    // Payment gateway refund succeeded — now update the database
+    const isFullRefund = refundAmount >= order.total_amount - totalRefunded
+
+    // Create refund record
+    const refundInsert: Record<string, unknown> = {
+      order_id: args.orderId,
+      amount: refundAmount,
+      reason: args.reason || 'Refund via AI agent',
+      status: 'processed',
+      processed_at: new Date().toISOString(),
+    }
+    if (paymentMethod === 'razorpay' && gatewayRefundId) {
+      refundInsert.razorpay_refund_id = gatewayRefundId
+    }
+
+    await supabase.from('refunds').insert(refundInsert)
+
+    // Update order payment status
+    await supabase
       .from('orders')
       .update({
-        status: 'refunded',
-        refund_amount: refundAmount,
-        refund_reason: args.reason,
+        payment_status: isFullRefund ? 'refunded' : 'paid',
         refunded_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .eq('id', args.orderId)
 
-    if (error) throw error
-
+    const refundType = isFullRefund ? 'Full' : 'Partial'
     return {
       success: true,
-      message: `Processed ₹${refundAmount.toLocaleString('en-IN')} refund for order #${order.order_number}`,
+      message: `${refundType} refund of ₹${refundAmount.toLocaleString('en-IN')} processed for order #${order.order_number} via ${paymentMethod}. Gateway refund ID: ${gatewayRefundId}`,
     }
   } catch (error) {
+    console.error('executeProcessRefund error:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to process refund',
+      error: error instanceof Error ? error.message : 'Failed to process refund via payment gateway',
     }
   }
 }

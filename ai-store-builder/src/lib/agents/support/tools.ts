@@ -4,6 +4,7 @@ import type { AgentToolConfig } from '../base-agent'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { registerTools } from '../tool-registry'
+import { Resend } from 'resend'
 
 // ---- Tool: lookupOrder ----
 
@@ -208,7 +209,9 @@ const sendReplyTool: AgentToolConfig = {
       customer_identifier?: string
     }
 
-    // Log the reply — actual sending is implemented with the chat widget
+    const supabase = getSupabaseAdmin()
+
+    // Log the reply
     logger.info(`[SupportAgent] sendReply via ${channel}`, {
       storeId: context.storeId,
       channel,
@@ -217,21 +220,119 @@ const sendReplyTool: AgentToolConfig = {
       messageLength: message.length,
     })
 
+    // --- Actually send via email or WhatsApp ---
+
+    let sendResult: { sent: boolean; error?: string } = { sent: false }
+
+    if (channel === 'email' && customer_identifier) {
+      try {
+        // Fetch store name for the From display name
+        const { data: store } = await supabase
+          .from('stores')
+          .select('name')
+          .eq('id', context.storeId)
+          .single()
+        const storeName = store?.name || 'Store'
+
+        const resend = new Resend(process.env.RESEND_API_KEY)
+        const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@storeforge.site'
+
+        const { error } = await resend.emails.send({
+          from: `${storeName} Support <${fromEmail}>`,
+          to: customer_identifier,
+          subject: 'Support Reply',
+          html: message,
+        })
+
+        if (error) {
+          logger.error('[SupportAgent] Resend email failed', new Error(String(error)))
+          sendResult = { sent: false, error: String(error) }
+        } else {
+          sendResult = { sent: true }
+        }
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err)
+        logger.error('[SupportAgent] Email send error', new Error(errMsg))
+        sendResult = { sent: false, error: errMsg }
+      }
+    } else if (channel === 'whatsapp' && customer_identifier) {
+      try {
+        // Try to get MSG91 credentials (store-level or platform fallback)
+        let authKey = process.env.MSG91_AUTH_KEY
+        let integratedNumber = process.env.MSG91_WHATSAPP_INTEGRATED_NUMBER
+
+        const { data: store } = await supabase
+          .from('stores')
+          .select('msg91_credentials')
+          .eq('id', context.storeId)
+          .single()
+
+        if (store?.msg91_credentials) {
+          const creds = store.msg91_credentials as Record<string, string>
+          if (creds.auth_key) authKey = creds.auth_key
+          if (creds.whatsapp_number) integratedNumber = creds.whatsapp_number
+        }
+
+        if (!authKey || !integratedNumber) {
+          logger.warn('[SupportAgent] MSG91 not configured, WhatsApp message queued only')
+          sendResult = { sent: false, error: 'MSG91 credentials not configured' }
+        } else {
+          const payload = {
+            integrated_number: integratedNumber,
+            content_type: 'text',
+            payload: {
+              to: customer_identifier,
+              type: 'text',
+              text: { body: message },
+            },
+          }
+
+          const response = await fetch(
+            'https://api.msg91.com/api/v5/whatsapp/whatsapp/outbound/send',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                authkey: authKey,
+              },
+              body: JSON.stringify(payload),
+            }
+          )
+
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}))
+            const errMsg = `MSG91 API error: ${response.status} - ${JSON.stringify(errData)}`
+            logger.error('[SupportAgent] WhatsApp send failed', new Error(errMsg))
+            sendResult = { sent: false, error: errMsg }
+          } else {
+            sendResult = { sent: true }
+          }
+        }
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err)
+        logger.error('[SupportAgent] WhatsApp send error', new Error(errMsg))
+        sendResult = { sent: false, error: errMsg }
+      }
+    }
+
     // If a conversation_id is provided, persist the agent message to the DB
     if (conversation_id) {
-      const supabase = getSupabaseAdmin()
       await supabase.from('conversation_messages').insert({
         conversation_id,
         role: 'agent',
         content: message,
-        metadata: { channel, sent_by: 'support_agent' },
+        metadata: { channel, sent_by: 'support_agent', delivered: sendResult.sent },
         created_at: new Date().toISOString(),
       })
     }
 
     return {
       success: true,
-      summary: `Sent reply via ${channel} (${message.length} chars)`,
+      delivered: sendResult.sent,
+      deliveryError: sendResult.error,
+      summary: sendResult.sent
+        ? `Sent reply via ${channel} to ${customer_identifier} (${message.length} chars)`
+        : `Reply persisted via ${channel} (${message.length} chars)${sendResult.error ? ` — delivery failed: ${sendResult.error}` : ''}`,
       data: { channel, message, conversation_id, customer_identifier },
       relatedEntityType: conversation_id ? 'conversation' : undefined,
       relatedEntityId: conversation_id,

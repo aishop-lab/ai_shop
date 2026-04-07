@@ -120,7 +120,7 @@ async function fetchRevenue(
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('orders')
-    .select('total, created_at')
+    .select('total_amount, created_at')
     .eq('store_id', storeId)
     .in('status', VALID_ORDER_STATUSES)
     .gte('created_at', `${fromDate}T00:00:00Z`)
@@ -131,7 +131,7 @@ async function fetchRevenue(
   return aggregateByDay(
     (data ?? []).map((r) => ({
       date: r.created_at,
-      value: Number(r.total) || 0,
+      value: Number(r.total_amount) || 0,
     })),
     fromDate,
     toDate,
@@ -171,7 +171,7 @@ async function fetchAvgOrderValue(
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('orders')
-    .select('total, created_at')
+    .select('total_amount, created_at')
     .eq('store_id', storeId)
     .in('status', VALID_ORDER_STATUSES)
     .gte('created_at', `${fromDate}T00:00:00Z`)
@@ -182,7 +182,7 @@ async function fetchAvgOrderValue(
   return aggregateByDay(
     (data ?? []).map((r) => ({
       date: r.created_at,
-      value: Number(r.total) || 0,
+      value: Number(r.total_amount) || 0,
     })),
     fromDate,
     toDate,

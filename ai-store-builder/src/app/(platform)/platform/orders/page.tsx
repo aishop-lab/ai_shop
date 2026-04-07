@@ -18,9 +18,9 @@ interface OrderData {
   id: string
   order_number: string
   customer_name: string
-  email: string
-  total: number
-  status: OrderStatus
+  customer_email: string
+  total_amount: number
+  order_status: OrderStatus
   created_at: string
   payment_method: PaymentMethod
   order_items: { id: string }[]
@@ -79,7 +79,7 @@ type StatusFilter = 'all' | OrderStatus
 const PAGE_SIZE = 20
 
 // PL-05: Sort types
-type SortField = 'created_at' | 'total' | 'status'
+type SortField = 'created_at' | 'total_amount' | 'order_status'
 type SortDirection = 'asc' | 'desc'
 
 // ---------------------------------------------------------------------------
@@ -138,7 +138,7 @@ export default function OrdersPage() {
 
       const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, customer_name, email, total, status, created_at, payment_method, order_items(id)')
+        .select('id, order_number, customer_name, customer_email, total_amount, order_status, created_at, payment_method, order_items(id)')
         .eq('store_id', storeId)
         .order(sortField, { ascending: sortDirection === 'asc' })
         .range(from, to)
@@ -184,8 +184,8 @@ export default function OrdersPage() {
       const matchesSearch =
         (o.order_number?.toString() ?? '').includes(q) ||
         (o.customer_name ?? '').toLowerCase().includes(q) ||
-        (o.email ?? '').toLowerCase().includes(q)
-      const matchesStatus = statusFilter === 'all' || o.status === statusFilter
+        (o.customer_email ?? '').toLowerCase().includes(q)
+      const matchesStatus = statusFilter === 'all' || o.order_status === statusFilter
       return matchesSearch && matchesStatus
     })
   }, [search, statusFilter, orders])
@@ -278,9 +278,9 @@ export default function OrdersPage() {
               <tr className="border-b border-[var(--platform-border)] bg-[var(--platform-surface)]">
                 <Th>Order #</Th>
                 <Th>Customer</Th>
-                <SortableTh field="total" currentField={sortField} direction={sortDirection} onSort={handleSort} align="right">Total</SortableTh>
+                <SortableTh field="total_amount" currentField={sortField} direction={sortDirection} onSort={handleSort} align="right">Total</SortableTh>
                 <Th align="right">Items</Th>
-                <SortableTh field="status" currentField={sortField} direction={sortDirection} onSort={handleSort}>Status</SortableTh>
+                <SortableTh field="order_status" currentField={sortField} direction={sortDirection} onSort={handleSort}>Status</SortableTh>
                 <Th>Payment</Th>
                 <SortableTh field="created_at" currentField={sortField} direction={sortDirection} onSort={handleSort}>Date</SortableTh>
               </tr>
@@ -441,7 +441,7 @@ interface OrderRowProps {
 }
 
 function OrderRow({ order, currency, isSelected, onClick }: OrderRowProps) {
-  const sc = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.confirmed
+  const sc = STATUS_CONFIG[order.order_status] ?? STATUS_CONFIG.confirmed
 
   return (
     <tr
@@ -461,12 +461,12 @@ function OrderRow({ order, currency, isSelected, onClick }: OrderRowProps) {
       {/* Customer */}
       <td className="px-4 py-3">
         <p className="font-medium text-[var(--platform-text-primary)]">{order.customer_name}</p>
-        <p className="mt-0.5 font-mono text-[10px] text-[var(--platform-text-muted)]">{order.email}</p>
+        <p className="mt-0.5 font-mono text-[10px] text-[var(--platform-text-muted)]">{order.customer_email}</p>
       </td>
 
       {/* Total */}
       <td className="px-4 py-3 text-right">
-        <span className="font-mono text-[var(--platform-text-primary)]">{formatCurrency(order.total, currency)}</span>
+        <span className="font-mono text-[var(--platform-text-primary)]">{formatCurrency(order.total_amount, currency)}</span>
       </td>
 
       {/* Items */}
@@ -534,7 +534,7 @@ interface OrderDetailProps {
 }
 
 function OrderDetail({ order, currency, onClose }: OrderDetailProps) {
-  const sc = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.confirmed
+  const sc = STATUS_CONFIG[order.order_status] ?? STATUS_CONFIG.confirmed
 
   return (
     <>
@@ -566,13 +566,13 @@ function OrderDetail({ order, currency, onClose }: OrderDetailProps) {
         {/* Customer section */}
         <Section icon={<User className="h-3.5 w-3.5" />} title="Customer">
           <InfoRow label="Name" value={order.customer_name ?? '—'} mono />
-          <InfoRow label="Email" value={order.email ?? '—'} mono />
+          <InfoRow label="Email" value={order.customer_email ?? '—'} mono />
         </Section>
 
         {/* Items section */}
         <Section icon={<Package className="h-3.5 w-3.5" />} title="Items">
           <InfoRow label="Item count" value={String(order.order_items?.length ?? 0)} mono />
-          <InfoRow label="Order total" value={formatCurrency(order.total, currency)} mono />
+          <InfoRow label="Order total" value={formatCurrency(order.total_amount, currency)} mono />
         </Section>
 
         {/* Payment + Status section */}

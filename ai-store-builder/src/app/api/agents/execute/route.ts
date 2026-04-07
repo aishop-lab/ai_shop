@@ -2,6 +2,7 @@
 import { NextRequest } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { jsonError, jsonSuccess } from '@/lib/agents/auth'
+import { processAbandonedCarts } from '@/lib/cart/abandoned-cart'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300 // 5 min for fan-out
@@ -137,86 +138,88 @@ async function expireApprovals(admin: ReturnType<typeof getSupabaseAdmin>) {
 }
 
 /**
- * Scan for abandoned carts across all stores with the sales agent enabled.
- * Fans out to each store and triggers the sales agent's cart recovery logic.
+ * Scan for abandoned carts across all stores and send recovery emails.
+ * Uses processAbandonedCarts() from lib/cart/abandoned-cart.ts which handles:
+ * - Per-store Resend credentials with platform fallback
+ * - 3-email sequence with configurable delay per store
+ * - Proper recovery_emails_sent / last_email_sent_at tracking
+ * - Cart expiry and status management
  */
 async function abandonedCartScan(admin: ReturnType<typeof getSupabaseAdmin>) {
-  // Find all stores with the sales agent enabled
-  const { data: salesAgents, error: agentError } = await admin
-    .from('agent_states')
-    .select('store_id, id')
-    .eq('agent_type', 'sales')
-    .eq('is_enabled', true)
-    .neq('status', 'paused')
+  const startedAt = new Date().toISOString()
 
-  if (agentError) {
-    console.error('[Agent Cron] Failed to fetch sales agents:', agentError)
-    return jsonError('Failed to fetch sales agents', 500)
-  }
+  console.log('[Agent Cron] Starting abandoned cart recovery scan...')
 
-  if (!salesAgents || salesAgents.length === 0) {
-    console.log('[Agent Cron] No enabled sales agents found')
-    return jsonSuccess({ task: 'abandoned_cart_scan', storesScanned: 0, cartsFound: 0 })
-  }
+  try {
+    // processAbandonedCarts handles everything: finding eligible carts across all
+    // stores, determining the correct sequence step, sending emails via per-store
+    // Resend credentials, and updating cart records.
+    const result = await processAbandonedCarts()
 
-  let totalCartsFound = 0
-  const errors: string[] = []
+    const completedAt = new Date().toISOString()
 
-  for (const agent of salesAgents) {
-    try {
-      // Find abandoned carts for this store (carts older than 1 hour, no recovery email sent recently)
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-
-      const { data: carts, error: cartError } = await admin
-        .from('abandoned_carts')
-        .select('id')
-        .eq('store_id', agent.store_id)
-        .eq('recovered', false)
-        .lt('updated_at', oneHourAgo)
-        .gt('created_at', oneDayAgo)
-        .is('last_email_sent_at', null)
-
-      if (cartError) {
-        errors.push(`Store ${agent.store_id}: ${cartError.message}`)
-        continue
-      }
-
-      if (carts && carts.length > 0) {
-        totalCartsFound += carts.length
-
-        // Log the action
-        await admin.from('agent_actions').insert({
-          store_id: agent.store_id,
-          agent_type: 'sales',
-          action_type: 'abandoned_cart_scan',
-          action_category: 'campaign',
-          summary: `Found ${carts.length} abandoned cart(s) eligible for recovery`,
-          details: { cart_count: carts.length, cart_ids: carts.map((c) => c.id) },
-          status: 'completed',
-          execution_mode: 'auto',
-          tokens_input: 0,
-          tokens_output: 0,
-          estimated_cost_usd: 0,
-          api_costs: {},
-          started_at: new Date().toISOString(),
-          completed_at: new Date().toISOString(),
-          duration_ms: 0,
-        })
-      }
-    } catch (storeError) {
-      errors.push(
-        `Store ${agent.store_id}: ${storeError instanceof Error ? storeError.message : 'Unknown error'}`
-      )
+    // Log a summary agent_action for each store that had carts processed
+    // (processAbandonedCarts works across all stores internally, so we log one summary action)
+    if (result.processed > 0 || result.emailsSent > 0) {
+      await admin.from('agent_actions').insert({
+        store_id: null, // cross-store system action
+        agent_type: 'sales',
+        action_type: 'abandoned_cart_recovery',
+        action_category: 'campaign',
+        summary: `Processed ${result.processed} abandoned cart(s), sent ${result.emailsSent} recovery email(s)`,
+        details: {
+          carts_processed: result.processed,
+          emails_sent: result.emailsSent,
+          errors: result.errors.length > 0 ? result.errors : undefined,
+        },
+        status: 'completed',
+        execution_mode: 'auto',
+        tokens_input: 0,
+        tokens_output: 0,
+        estimated_cost_usd: 0,
+        api_costs: {},
+        started_at: startedAt,
+        completed_at: completedAt,
+        duration_ms: new Date(completedAt).getTime() - new Date(startedAt).getTime(),
+      })
     }
+
+    console.log(
+      `[Agent Cron] Cart recovery complete: ${result.processed} carts processed, ${result.emailsSent} emails sent` +
+        (result.errors.length > 0 ? `, ${result.errors.length} error(s)` : '')
+    )
+
+    return jsonSuccess({
+      task: 'abandoned_cart_scan',
+      cartsProcessed: result.processed,
+      emailsSent: result.emailsSent,
+      errors: result.errors.length > 0 ? result.errors : undefined,
+    })
+  } catch (error) {
+    console.error('[Agent Cron] Abandoned cart recovery failed:', error)
+
+    // Log the failure
+    await admin.from('agent_actions').insert({
+      store_id: null,
+      agent_type: 'sales',
+      action_type: 'abandoned_cart_recovery',
+      action_category: 'campaign',
+      summary: `Abandoned cart recovery failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      details: { error: error instanceof Error ? error.message : 'Unknown error' },
+      status: 'failed',
+      execution_mode: 'auto',
+      tokens_input: 0,
+      tokens_output: 0,
+      estimated_cost_usd: 0,
+      api_costs: {},
+      started_at: startedAt,
+      completed_at: new Date().toISOString(),
+      duration_ms: Date.now() - new Date(startedAt).getTime(),
+    })
+
+    return jsonError(
+      `Abandoned cart recovery failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      500
+    )
   }
-
-  console.log(`[Agent Cron] Scanned ${salesAgents.length} stores, found ${totalCartsFound} carts`)
-
-  return jsonSuccess({
-    task: 'abandoned_cart_scan',
-    storesScanned: salesAgents.length,
-    cartsFound: totalCartsFound,
-    errors: errors.length > 0 ? errors : undefined,
-  })
 }

@@ -50,7 +50,7 @@ export async function sendOrderConfirmationEmail(
     const customerEmail = (order.email || order.customer_email) as string
     const customerName = order.customer_name as string
     const shippingCost = (order.shipping_amount ?? order.shipping_cost ?? 0) as number
-    const totalAmount = (order.total ?? order.total_amount ?? 0) as number
+    const totalAmount = (order.total_amount ?? 0) as number
 
     // Check if we have credentials
     const credentials = await getResendCredentials(storeId)

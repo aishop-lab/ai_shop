@@ -105,7 +105,7 @@ export async function GET(
       customer_email: order.email,
       customer_phone: order.phone,
       shipping_cost: order.shipping_amount,
-      total_amount: order.total,
+      total_amount: order.total_amount,
       order_status: order.fulfillment_status,
       order_items: Array.isArray(order.order_items)
         ? order.order_items.map((item: Record<string, unknown>) => ({
@@ -258,7 +258,7 @@ export async function PATCH(
             order_id: orderId,
             store_id: order.store_id,
             razorpay_refund_id: refundResult.id,
-            amount: order.total,
+            amount: order.total_amount,
             reason: 'Order cancelled by seller',
             status: 'processed',
             refund_type: 'full',
@@ -303,7 +303,7 @@ export async function PATCH(
         trigger_type: 'order.cancelled',
         entity_type: 'order',
         entity_id: orderId,
-        payload: { order_number: order.order_number, total: order.total }
+        payload: { order_number: order.order_number, total: order.total_amount }
       }).catch(() => {})
     }
 
@@ -374,7 +374,7 @@ export async function DELETE(
           order_id: orderId,
           store_id: order.store_id,
           razorpay_refund_id: refundResult.id,
-          amount: order.total,
+          amount: order.total_amount,
           reason: 'Order cancelled by seller',
           status: 'processed',
           refund_type: 'full',

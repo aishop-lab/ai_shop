@@ -68,7 +68,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         shipping_cost: order.shipping_amount,
         tax_amount: order.tax_amount,
         discount_amount: order.discount_amount,
-        total_amount: order.total,
+        total_amount: order.total_amount,
         payment_method: order.payment_method,
         payment_status: order.payment_status,
         order_status: order.fulfillment_status,

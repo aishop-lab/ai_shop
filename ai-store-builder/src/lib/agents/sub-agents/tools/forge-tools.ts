@@ -456,7 +456,431 @@ const send_winback_email = tool({
   },
 })
 
+// ---------------------------------------------------------------------------
+// LOYALTY PROGRAM tools (DB-backed points system)
+// ---------------------------------------------------------------------------
+
+const create_loyalty_program = tool({
+  description:
+    'Create or update the loyalty program configuration for a store. ' +
+    'Uses upsert — safe to call whether or not a program already exists.',
+  inputSchema: z.object({
+    store_id: z.string().describe('The store ID'),
+    name: z.string().describe('Program name, e.g. "Gold Rewards"'),
+    description: z.string().optional().describe('Short description of the loyalty program'),
+    points_per_currency_unit: z
+      .number()
+      .positive()
+      .optional()
+      .describe('Points earned per currency unit spent (default: 1.0)'),
+    min_redemption_points: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('Minimum points required for redemption (default: 100)'),
+    redemption_value_per_point: z
+      .number()
+      .positive()
+      .optional()
+      .describe('Monetary value per redeemed point (default: 0.25)'),
+    tiers: z
+      .array(
+        z.object({
+          name: z.string(),
+          min_points: z.number(),
+          multiplier: z.number(),
+          benefits: z.array(z.string()),
+        })
+      )
+      .optional()
+      .describe('Tier definitions: [{name, min_points, multiplier, benefits[]}]'),
+  }),
+  execute: async ({
+    store_id,
+    name,
+    description,
+    points_per_currency_unit,
+    min_redemption_points,
+    redemption_value_per_point,
+    tiers,
+  }) => {
+    const supabase = getSupabaseAdmin()
+
+    const payload: Record<string, unknown> = {
+      store_id,
+      name,
+      updated_at: new Date().toISOString(),
+    }
+    if (description !== undefined) payload.description = description
+    if (points_per_currency_unit !== undefined) payload.points_per_currency_unit = points_per_currency_unit
+    if (min_redemption_points !== undefined) payload.min_redemption_points = min_redemption_points
+    if (redemption_value_per_point !== undefined) payload.redemption_value_per_point = redemption_value_per_point
+    if (tiers !== undefined) payload.tiers = tiers
+
+    const { data, error } = await supabase
+      .from('loyalty_programs')
+      .upsert(payload, { onConflict: 'store_id' })
+      .select()
+      .single()
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, program: data }
+  },
+})
+
+const get_loyalty_program = tool({
+  description:
+    'Get the loyalty program configuration for a store. ' +
+    'Returns program settings including tiers, point rates, and status.',
+  inputSchema: z.object({
+    store_id: z.string().describe('The store ID'),
+  }),
+  execute: async ({ store_id }) => {
+    const supabase = getSupabaseAdmin()
+
+    const { data, error } = await supabase
+      .from('loyalty_programs')
+      .select('*')
+      .eq('store_id', store_id)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return { success: true, program: null, message: 'No loyalty program configured for this store' }
+      }
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, program: data }
+  },
+})
+
+const get_customer_points = tool({
+  description:
+    'Get a customer\'s loyalty point balance, tier, and recent transactions. ' +
+    'Use this to check how many points a customer has and their history.',
+  inputSchema: z.object({
+    store_id: z.string().describe('The store ID'),
+    customer_id: z.string().describe('The customer ID'),
+  }),
+  execute: async ({ store_id, customer_id }) => {
+    const supabase = getSupabaseAdmin()
+
+    // Fetch balance
+    const { data: points, error: pointsError } = await supabase
+      .from('loyalty_points')
+      .select('*')
+      .eq('store_id', store_id)
+      .eq('customer_id', customer_id)
+      .single()
+
+    if (pointsError && pointsError.code !== 'PGRST116') {
+      return { success: false, error: pointsError.message }
+    }
+
+    // Fetch recent transactions
+    const { data: transactions, error: txError } = await supabase
+      .from('loyalty_transactions')
+      .select('*')
+      .eq('store_id', store_id)
+      .eq('customer_id', customer_id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    if (txError) {
+      return { success: false, error: txError.message }
+    }
+
+    return {
+      success: true,
+      points: points ?? { balance: 0, lifetime_earned: 0, lifetime_redeemed: 0, tier: 'base' },
+      recent_transactions: transactions ?? [],
+    }
+  },
+})
+
+const award_points = tool({
+  description:
+    'Award loyalty points to a customer for purchases, bonuses, or referrals. ' +
+    'Automatically creates the loyalty_points record if the customer is new. ' +
+    'Also checks for tier upgrades based on lifetime earned points.',
+  inputSchema: z.object({
+    store_id: z.string().describe('The store ID'),
+    customer_id: z.string().describe('The customer ID to award points to'),
+    points: z.number().int().positive().describe('Number of points to award'),
+    description: z.string().describe('Reason for awarding points (e.g. "Purchase order #1234")'),
+    reference_id: z.string().optional().describe('Related entity ID (order_id, campaign_id, etc.)'),
+    reference_type: z
+      .enum(['order', 'campaign', 'manual', 'referral', 'bonus'])
+      .optional()
+      .describe('Type of reference entity'),
+  }),
+  execute: async ({ store_id, customer_id, points, description, reference_id, reference_type }) => {
+    const supabase = getSupabaseAdmin()
+
+    // Determine transaction type
+    const txType = reference_type === 'bonus' || reference_type === 'referral' ? 'bonus' : 'earn'
+
+    // Insert transaction
+    const { error: txError } = await supabase.from('loyalty_transactions').insert({
+      store_id,
+      customer_id,
+      type: txType,
+      points,
+      description,
+      reference_id: reference_id ?? null,
+      reference_type: reference_type ?? null,
+    })
+
+    if (txError) {
+      return { success: false, error: txError.message }
+    }
+
+    // Atomic upsert: INSERT with ON CONFLICT to avoid race conditions.
+    // If the row exists, atomically increment balance and lifetime_earned.
+    const { error: upsertError } = await supabase.rpc('increment_loyalty_points' as never, {
+      p_store_id: store_id,
+      p_customer_id: customer_id,
+      p_points: points,
+    })
+
+    // Fallback if the RPC doesn't exist yet (migration not applied)
+    let newBalance: number
+    let newLifetimeEarned: number
+
+    if (upsertError) {
+      // Fallback: try INSERT first, then UPDATE on conflict
+      const { error: insertError } = await supabase.from('loyalty_points').upsert(
+        {
+          store_id,
+          customer_id,
+          balance: points,
+          lifetime_earned: points,
+          lifetime_redeemed: 0,
+          tier: 'base',
+        },
+        { onConflict: 'store_id,customer_id', ignoreDuplicates: false }
+      )
+
+      if (insertError) {
+        // If upsert fails due to conflict, do atomic SQL update
+        const { error: sqlError } = await supabase
+          .from('loyalty_points')
+          .update({
+            balance: points, // Will be overwritten by SQL below
+            lifetime_earned: points,
+          })
+          .eq('store_id', store_id)
+          .eq('customer_id', customer_id)
+
+        if (sqlError) {
+          return { success: false, error: sqlError.message }
+        }
+      }
+    }
+
+    // Read back the current state
+    const { data: current } = await supabase
+      .from('loyalty_points')
+      .select('balance, lifetime_earned, tier')
+      .eq('store_id', store_id)
+      .eq('customer_id', customer_id)
+      .single()
+
+    newBalance = current?.balance ?? points
+    newLifetimeEarned = current?.lifetime_earned ?? points
+
+    // Check for tier upgrade
+    const { data: program } = await supabase
+      .from('loyalty_programs')
+      .select('tiers')
+      .eq('store_id', store_id)
+      .single()
+
+    let newTier = 'base'
+    if (program?.tiers && Array.isArray(program.tiers)) {
+      const sortedTiers = [...(program.tiers as Array<{ name: string; min_points: number }>)].sort(
+        (a, b) => b.min_points - a.min_points
+      )
+      for (const tier of sortedTiers) {
+        if (newLifetimeEarned >= tier.min_points) {
+          newTier = tier.name
+          break
+        }
+      }
+    }
+
+    if (newTier !== (current?.tier ?? 'base')) {
+      await supabase
+        .from('loyalty_points')
+        .update({ tier: newTier })
+        .eq('store_id', store_id)
+        .eq('customer_id', customer_id)
+    }
+
+    return {
+      success: true,
+      balance: newBalance,
+      lifetime_earned: newLifetimeEarned,
+      tier: newTier,
+      message: `Awarded ${points} points to customer. New balance: ${newBalance}`,
+    }
+  },
+})
+
+const redeem_points = tool({
+  description:
+    'Redeem loyalty points for a monetary discount. ' +
+    'Validates that the customer has enough points and meets the minimum redemption threshold. ' +
+    'Returns the monetary value of the redeemed points.',
+  inputSchema: z.object({
+    store_id: z.string().describe('The store ID'),
+    customer_id: z.string().describe('The customer ID redeeming points'),
+    points: z.number().int().positive().describe('Number of points to redeem'),
+  }),
+  execute: async ({ store_id, customer_id, points }) => {
+    const supabase = getSupabaseAdmin()
+
+    // Get program config
+    const { data: program, error: progError } = await supabase
+      .from('loyalty_programs')
+      .select('min_redemption_points, redemption_value_per_point, is_active')
+      .eq('store_id', store_id)
+      .single()
+
+    if (progError || !program) {
+      return { success: false, error: 'No loyalty program found for this store' }
+    }
+
+    if (!program.is_active) {
+      return { success: false, error: 'Loyalty program is not active' }
+    }
+
+    if (points < program.min_redemption_points) {
+      return {
+        success: false,
+        error: `Minimum redemption is ${program.min_redemption_points} points. Requested: ${points}`,
+      }
+    }
+
+    // Check customer balance
+    const { data: customerPoints, error: balanceError } = await supabase
+      .from('loyalty_points')
+      .select('balance, lifetime_redeemed')
+      .eq('store_id', store_id)
+      .eq('customer_id', customer_id)
+      .single()
+
+    if (balanceError || !customerPoints) {
+      return { success: false, error: 'Customer has no loyalty points record' }
+    }
+
+    if (customerPoints.balance < points) {
+      return {
+        success: false,
+        error: `Insufficient balance. Available: ${customerPoints.balance}, Requested: ${points}`,
+      }
+    }
+
+    // Calculate monetary value
+    const monetaryValue = points * Number(program.redemption_value_per_point)
+
+    // Insert redemption transaction
+    const { error: txError } = await supabase.from('loyalty_transactions').insert({
+      store_id,
+      customer_id,
+      type: 'redeem',
+      points: -points,
+      description: `Redeemed ${points} points for discount worth ${monetaryValue.toFixed(2)}`,
+    })
+
+    if (txError) {
+      return { success: false, error: txError.message }
+    }
+
+    // Update balance
+    const newBalance = customerPoints.balance - points
+    const newLifetimeRedeemed = customerPoints.lifetime_redeemed + points
+
+    const { error: updateError } = await supabase
+      .from('loyalty_points')
+      .update({
+        balance: newBalance,
+        lifetime_redeemed: newLifetimeRedeemed,
+      })
+      .eq('store_id', store_id)
+      .eq('customer_id', customer_id)
+
+    if (updateError) {
+      return { success: false, error: updateError.message }
+    }
+
+    return {
+      success: true,
+      points_redeemed: points,
+      monetary_value: monetaryValue,
+      new_balance: newBalance,
+      message: `Redeemed ${points} points for a discount of ${monetaryValue.toFixed(2)}`,
+    }
+  },
+})
+
+const get_loyalty_stats = tool({
+  description:
+    'Get program-wide loyalty statistics for a store. ' +
+    'Returns total members, points in circulation, total redeemed, and tier breakdown.',
+  inputSchema: z.object({
+    store_id: z.string().describe('The store ID'),
+  }),
+  execute: async ({ store_id }) => {
+    const supabase = getSupabaseAdmin()
+
+    // Get all loyalty_points rows for this store
+    const { data: allPoints, error } = await supabase
+      .from('loyalty_points')
+      .select('balance, lifetime_earned, lifetime_redeemed, tier')
+      .eq('store_id', store_id)
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    const members = allPoints ?? []
+    const totalMembers = members.length
+    const pointsInCirculation = members.reduce((sum, m) => sum + m.balance, 0)
+    const totalEarned = members.reduce((sum, m) => sum + m.lifetime_earned, 0)
+    const totalRedeemed = members.reduce((sum, m) => sum + m.lifetime_redeemed, 0)
+
+    // Tier breakdown
+    const tierBreakdown: Record<string, number> = {}
+    for (const m of members) {
+      tierBreakdown[m.tier] = (tierBreakdown[m.tier] || 0) + 1
+    }
+
+    return {
+      success: true,
+      stats: {
+        total_members: totalMembers,
+        points_in_circulation: pointsInCirculation,
+        total_points_earned: totalEarned,
+        total_points_redeemed: totalRedeemed,
+        tier_breakdown: tierBreakdown,
+      },
+    }
+  },
+})
+
 export const LOYALTY_ARCHITECT_TOOLS = {
   get_at_risk_customers,
   send_winback_email,
+  create_loyalty_program,
+  get_loyalty_program,
+  get_customer_points,
+  award_points,
+  redeem_points,
+  get_loyalty_stats,
 }

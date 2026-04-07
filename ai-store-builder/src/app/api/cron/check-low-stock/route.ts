@@ -26,10 +26,7 @@ export async function GET(request: Request) {
         name,
         slug,
         owner_id,
-        settings,
-        profiles!stores_owner_id_fkey (
-          email:id
-        )
+        settings
       `)
       .eq('status', 'active')
 

@@ -154,7 +154,7 @@ const optimize_image = tool({
       return { success: false, error: fetchError.message }
     }
 
-    // Log optimization request to agent_actions for the processing pipeline
+    // Log optimization request to agent_actions for the cron processing pipeline
     await supabase.from('agent_actions').insert({
       store_id,
       agent_type: 'technical',
@@ -170,10 +170,9 @@ const optimize_image = tool({
         target_max_kb,
         status: 'queued',
       },
-      status: 'completed',
+      status: 'pending',
       execution_mode: 'auto',
       started_at: new Date().toISOString(),
-      completed_at: new Date().toISOString(),
       tokens_input: 0,
       tokens_output: 0,
       estimated_cost_usd: 0,
@@ -199,10 +198,12 @@ export const IMAGE_OPTIMIZER_TOOLS = {
 // BACKUP-MANAGER tools
 // ---------------------------------------------------------------------------
 
+const BACKUP_BUCKET = 'backups'
+
 const export_store_data = tool({
   description:
-    'Query all key store tables and return a summary snapshot as JSON. ' +
-    'Returns record counts and sample data for products, orders, customers, collections, and coupons.',
+    'Export all key store tables to a JSON backup file in Supabase Storage. ' +
+    'Returns a signed download URL (valid 7 days), file size, and record counts.',
   inputSchema: z.object({
     store_id: z.string().describe('The store ID to export data for'),
     include_full_data: z
@@ -261,8 +262,7 @@ const export_store_data = tool({
       .eq('id', store_id)
       .single()
 
-    return {
-      success: true,
+    const exportData = {
       export_timestamp: exportTimestamp,
       store: storeConfig,
       summary: {
@@ -275,6 +275,84 @@ const export_store_data = tool({
       data: include_full_data
         ? { products, orders, customers, collections, coupons }
         : null,
+    }
+
+    // -----------------------------------------------------------------------
+    // Persist backup to Supabase Storage
+    // -----------------------------------------------------------------------
+    const fileName = `${store_id}/${exportTimestamp.replace(/[:.]/g, '-')}.json`
+    const jsonData = JSON.stringify(exportData, null, 2)
+    const fileSizeBytes = new TextEncoder().encode(jsonData).byteLength
+
+    // Attempt upload – if the bucket doesn't exist yet, create it and retry
+    let uploadError: { message: string } | null = null
+    const attemptUpload = async () => {
+      const result = await supabase.storage
+        .from(BACKUP_BUCKET)
+        .upload(fileName, jsonData, {
+          contentType: 'application/json',
+          upsert: false,
+        })
+      return result
+    }
+
+    let uploadResult = await attemptUpload()
+    uploadError = uploadResult.error
+
+    if (uploadError && /bucket.*not found/i.test(uploadError.message)) {
+      // Try to create the bucket (private by default)
+      const { error: bucketError } = await supabase.storage.createBucket(BACKUP_BUCKET, {
+        public: false,
+      })
+      if (bucketError && !/already exists/i.test(bucketError.message)) {
+        return {
+          success: false,
+          error: `Failed to create backups bucket: ${bucketError.message}`,
+          export_timestamp: exportTimestamp,
+          summary: exportData.summary,
+        }
+      }
+      // Retry upload after bucket creation
+      uploadResult = await attemptUpload()
+      uploadError = uploadResult.error
+    }
+
+    if (uploadError) {
+      return {
+        success: false,
+        error: `Backup upload failed: ${uploadError.message}`,
+        export_timestamp: exportTimestamp,
+        summary: exportData.summary,
+      }
+    }
+
+    // Generate a signed URL valid for 7 days
+    const { data: urlData, error: urlError } = await supabase.storage
+      .from(BACKUP_BUCKET)
+      .createSignedUrl(fileName, 7 * 24 * 60 * 60) // 7 days in seconds
+
+    if (urlError) {
+      return {
+        success: false,
+        error: `Backup uploaded but signed URL generation failed: ${urlError.message}`,
+        export_timestamp: exportTimestamp,
+        storage_path: `${BACKUP_BUCKET}/${fileName}`,
+        summary: exportData.summary,
+      }
+    }
+
+    return {
+      success: true,
+      export_timestamp: exportTimestamp,
+      store: storeConfig,
+      backup: {
+        storage_path: `${BACKUP_BUCKET}/${fileName}`,
+        signed_url: urlData.signedUrl,
+        expires_in: '7 days',
+        file_size_bytes: fileSizeBytes,
+        file_size_kb: Math.round(fileSizeBytes / 1024),
+      },
+      summary: exportData.summary,
     }
   },
 })

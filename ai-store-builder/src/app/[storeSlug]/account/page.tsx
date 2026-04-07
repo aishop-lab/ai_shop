@@ -21,7 +21,8 @@ import {
   Settings,
   Pencil,
   Save,
-  X
+  X,
+  Star
 } from 'lucide-react'
 import { useStore } from '@/lib/contexts/store-context'
 import { toast } from 'sonner'
@@ -165,7 +166,7 @@ export default function CustomerAccountPage() {
       </div>
 
       {/* Navigation Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         <Link href={`/${storeSlug}/account/orders`}>
           <Card className="hover:border-primary transition-colors cursor-pointer">
             <CardContent className="pt-6">
@@ -201,6 +202,20 @@ export default function CustomerAccountPage() {
                 <div className="flex items-center gap-3">
                   <Heart className="h-5 w-5 text-muted-foreground" />
                   <span className="font-medium">Wishlist</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href={`/${storeSlug}/account/loyalty`}>
+          <Card className="hover:border-primary transition-colors cursor-pointer">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Star className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">Rewards</span>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </div>

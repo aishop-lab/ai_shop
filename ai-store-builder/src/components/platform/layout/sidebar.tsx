@@ -102,7 +102,6 @@ export function PlatformSidebar({ isOpen, onClose, agents = [], pendingApprovals
                     href={`/platform/agents/${type}`}
                     icon={Icon}
                     label={AGENT_DISPLAY_NAMES[type].replace(' Agent', '')}
-                    disabled={!agent?.enabled}
                     badge={
                       agent?.enabled ? (
                         <StatusDot status={agent.status} size="sm" />

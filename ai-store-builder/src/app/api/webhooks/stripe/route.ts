@@ -225,7 +225,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       phone: order.shipping_phone || order.phone,
       customerName: order.shipping_name || order.customer_name || 'Customer',
       orderNumber: order.order_number,
-      totalAmount: order.total || order.total_amount,
+      totalAmount: order.total_amount,
       storeName: store?.name || 'Store',
       items: orderItems.map((item) => ({
         title: ((item as unknown as Record<string, unknown>).product_title || (item as unknown as Record<string, unknown>).title || 'Product') as string,
@@ -255,9 +255,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
         total_price: (item as unknown as Record<string, unknown>).total_price as number,
         sku: ((item as unknown as Record<string, unknown>).sku || undefined) as string | undefined,
       })),
-      subtotal: order.subtotal || order.total || order.total_amount,
+      subtotal: order.subtotal || order.total_amount,
       shippingCost: order.shipping_cost || order.shipping_amount || 0,
-      totalAmount: order.total || order.total_amount,
+      totalAmount: order.total_amount,
       shippingAddress: shippingAddr,
       paymentMethod: 'stripe',
       paymentStatus: 'paid',
@@ -289,7 +289,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
         quantity: item.quantity,
         price: item.unit_price,
       })),
-      orderValue: order.total || order.total_amount,
+      orderValue: order.total_amount,
       paymentMode: 'prepaid',
     }
   )
@@ -422,7 +422,7 @@ async function handleChargeRefunded(charge: Stripe.Charge): Promise<void> {
   }
 
   const refundAmount = (charge.amount_refunded || 0) / 100
-  const isFullRefund = refundAmount >= (order.total || order.total_amount)
+  const isFullRefund = refundAmount >= (order.total_amount)
 
   // Create refund record
   await getSupabaseAdmin().from('refunds').insert({

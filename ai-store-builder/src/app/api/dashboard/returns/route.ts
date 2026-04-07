@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
         customer_name,
         email,
         phone,
-        total,
+        total_amount,
         fulfillment_status,
         awb_code,
         courier_name,
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
       rto_in_transit: orders?.filter((o) => o.fulfillment_status === 'rto_in_transit' || o.fulfillment_status === 'rto_initiated').length || 0,
       rto_delivered: orders?.filter((o) => o.fulfillment_status === 'rto_delivered' || o.fulfillment_status === 'returned').length || 0,
       rto_rate: totalOrders ? ((orders?.length || 0) / totalOrders) * 100 : 0,
-      total_rto_value: orders?.reduce((sum, o) => sum + (o.total || 0), 0) || 0,
+      total_rto_value: orders?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0,
     }
 
     // Transform orders for response
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
         customer_name: order.customer_name,
         customer_email: order.email,
         customer_phone: order.phone,
-        total: order.total,
+        total: order.total_amount,
         fulfillment_status: order.fulfillment_status,
         awb_code: order.awb_code,
         courier_name: order.courier_name,
