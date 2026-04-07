@@ -8,6 +8,7 @@ import { getSubAgent } from './registry'
 import { loadStoreContext } from './context'
 import type { SubAgentId, SubAgentTask, SubAgentResult, SubAgentDefinition, StoreContext } from './types'
 import type { AgentType, AutonomyLevel } from '@/lib/agents/types'
+import { getMemories } from '@/lib/agents/memory'
 
 // Cost per token (Gemini 2.0 Flash approximate pricing)
 const INPUT_COST_PER_TOKEN = 0.000000075  // $0.075 per 1M tokens
@@ -154,7 +155,30 @@ async function executeLLM(
   startTime: number,
   useTools: boolean
 ): Promise<SubAgentResult> {
-  const systemPrompt = subAgent.systemPrompt(context)
+  let systemPrompt = subAgent.systemPrompt(context)
+
+  // Inject agent memories (learned preferences, feedback, patterns)
+  try {
+    const memories = await getMemories({
+      store_id: context.storeId,
+      agent_type: subAgent.chief,
+      min_confidence: 0.5,
+      limit: 20,
+    })
+    if (memories.length > 0) {
+      const memoryBlock = memories
+        .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
+        .map((m) => {
+          const val = m.memory_value as Record<string, unknown>
+          const lesson = val?.lesson || val?.value || JSON.stringify(val)
+          return `- [${m.memory_type}] ${lesson}`
+        })
+        .join('\n')
+      systemPrompt += `\n\n## Learned Preferences & Feedback\nThe following are patterns learned from past merchant feedback, approvals, and rejections. Respect these when making decisions:\n${memoryBlock}`
+    }
+  } catch {
+    // Non-critical — proceed without memories
+  }
 
   // Build the prompt with task instruction + any additional context
   let userPrompt = task.instruction

@@ -122,6 +122,54 @@ export async function POST(req: NextRequest) {
         'approval_id',
         updated.map((a) => a.id)
       )
+
+    // --- Memory auto-learning from approval/rejection patterns ---
+    // When a merchant rejects (or approves) an action, store it as agent memory
+    // so the agent can learn from the pattern and avoid repeating rejected actions.
+    try {
+      // Fetch the full approval details to learn from
+      const { data: approvalDetails } = await admin
+        .from('agent_approvals')
+        .select('id, agent_type, sub_agent_type, action_type, summary, details, tool_name')
+        .in('id', updated.map((a) => a.id))
+
+      if (approvalDetails && approvalDetails.length > 0) {
+        const memories = approvalDetails.map((approval) => {
+          const memoryKey = `${body.action}_pattern:${approval.action_type}:${Date.now()}`
+          const memoryValue: Record<string, unknown> = {
+            action: body.action,
+            action_type: approval.action_type,
+            sub_agent_type: approval.sub_agent_type,
+            tool_name: approval.tool_name,
+            summary: approval.summary,
+          }
+
+          if (body.action === 'reject' && body.reason) {
+            memoryValue.rejection_reason = body.reason
+            memoryValue.lesson = `Merchant rejected "${approval.action_type}" — reason: ${body.reason}. Avoid similar actions unless conditions change.`
+          } else if (body.action === 'approve') {
+            memoryValue.lesson = `Merchant approved "${approval.action_type}" — this type of action is acceptable.`
+          }
+
+          return {
+            store_id: body.storeId,
+            agent_type: approval.agent_type,
+            memory_key: memoryKey,
+            memory_value: memoryValue,
+            memory_type: 'feedback',
+            source: 'approval_pattern',
+            confidence: body.action === 'reject' ? 0.9 : 0.7,
+          }
+        })
+
+        if (memories.length > 0) {
+          await admin.from('agent_memory').insert(memories)
+        }
+      }
+    } catch (memError) {
+      // Non-critical — don't fail the approval if memory logging fails
+      console.warn('[Agents API] Failed to store approval memory:', memError)
+    }
   }
 
   return jsonSuccess({
