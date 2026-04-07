@@ -8,6 +8,15 @@ import {
   anomalySentinelQuery,
 } from '../query-functions/pulse-queries'
 import { COMPETITOR_WATCHER_TOOLS, REPORT_WRITER_TOOLS } from '../tools/new-agent-tools'
+import {
+  get_products,
+  get_revenue_summary,
+  get_customer_segments,
+  get_funnel_data,
+  get_review_stats,
+  get_recovery_stats,
+  get_order_stats,
+} from '../tools/shared'
 
 export const PULSE_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -97,7 +106,7 @@ export const PULSE_SUB_AGENTS: SubAgentDefinition[] = [
     role: 'Competitive Intelligence Scout',
     description: 'Monitors competitor pricing, product launches, promotional activity, and market positioning to inform store strategy.',
     category: 'llm-api',
-    tools: COMPETITOR_WATCHER_TOOLS,
+    tools: { ...COMPETITOR_WATCHER_TOOLS, get_products, get_revenue_summary },
     systemPrompt: (ctx) => `You are COMPETITOR-WATCHER, the Competitive Intelligence Scout for ${ctx.storeName}.
 
 Store context:
@@ -167,7 +176,7 @@ Guardrails:
     role: 'Executive Insights Reporter',
     description: 'Synthesizes data from all PULSE sub-agents into clear, narrative business reports for the merchant — weekly, monthly, and ad-hoc.',
     category: 'llm-api',
-    tools: REPORT_WRITER_TOOLS,
+    tools: { ...REPORT_WRITER_TOOLS, get_revenue_summary, get_customer_segments, get_funnel_data, get_review_stats, get_recovery_stats, get_order_stats },
     systemPrompt: (ctx) => `You are REPORT-WRITER, the Executive Insights Reporter for ${ctx.storeName}.
 
 Store context:

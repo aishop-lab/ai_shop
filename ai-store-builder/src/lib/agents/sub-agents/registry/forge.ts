@@ -6,6 +6,23 @@ import {
   LOYALTY_ARCHITECT_TOOLS,
 } from '../tools/forge-tools'
 import { DEAL_ENGINEER_TOOLS, CHECKOUT_DOCTOR_TOOLS, LEAD_SCORER_TOOLS } from '../tools/new-agent-tools'
+import {
+  get_funnel_data,
+  get_payment_failures,
+  get_shipping_config,
+  get_store_config,
+  get_order_stats,
+  get_revenue_summary,
+  get_coupon_performance,
+  get_customer_segments,
+  get_customer_history,
+  get_product_details,
+  get_coupons,
+  get_trending_products,
+  get_products,
+  deactivate_coupon,
+  get_recovery_stats,
+} from '../tools/shared'
 
 export const FORGE_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -50,7 +67,7 @@ Guardrails:
 - Maximum 3 recovery touchpoints per cart — no spam
 - Respect opt-out flags immediately
 - Currency in messages is always ${ctx.currency}`,
-    tools: CART_WHISPERER_TOOLS,
+    tools: { ...CART_WHISPERER_TOOLS, get_product_details, get_recovery_stats, get_customer_history, get_coupons },
     autonomyRules: {
       autonomous: ['detect_abandoned_cart', 'analyze_recovery_rates', 'report_cart_metrics', 'segment_abandonment_reasons'],
       needsChiefApproval: ['send_message', 'create_recovery_sequence', 'update_email_template'],
@@ -101,7 +118,7 @@ Guardrails:
 - Flag any recommendation that increases price by more than 20% as high-risk
 - Do NOT recommend prices below cost (if cost data is available)
 - Always include rollback plan for price changes`,
-    tools: PRICE_STRATEGIST_TOOLS,
+    tools: { ...PRICE_STRATEGIST_TOOLS, get_order_stats, get_revenue_summary, get_coupon_performance },
     autonomyRules: {
       autonomous: ['analyze_pricing', 'report_price_trends', 'detect_pricing_opportunities', 'monitor_competitor_prices', 'suggest_optimizations'],
       needsChiefApproval: ['generate_price_report', 'flag_price_anomaly', 'create_pricing_strategy'],
@@ -116,7 +133,7 @@ Guardrails:
     role: 'Promotions & Discounts Architect',
     description: 'Designs targeted promotional campaigns, flash sales, bundle deals, and coupon strategies to drive revenue spikes.',
     category: 'llm-api',
-    tools: DEAL_ENGINEER_TOOLS,
+    tools: { ...DEAL_ENGINEER_TOOLS, get_coupon_performance, deactivate_coupon, get_revenue_summary, get_order_stats, get_trending_products },
     systemPrompt: (ctx) => `You are DEAL-ENGINEER, the Promotions & Discounts Architect for ${ctx.storeName}.
 
 Store context:
@@ -212,7 +229,7 @@ Guardrails:
 - Do NOT create pricing changes — recommendations only
 - Validate product IDs exist before recommending
 - Currency is always ${ctx.currency}`,
-    tools: UPSELL_AGENT_TOOLS,
+    tools: { ...UPSELL_AGENT_TOOLS, get_order_stats, get_customer_segments },
     autonomyRules: {
       autonomous: ['analyze_product_affinities', 'report_aov_metrics', 'detect_upsell_opportunities', 'suggest_recommendations'],
       needsChiefApproval: ['update_product', 'configure_recommendations', 'create_bundle'],
@@ -227,7 +244,7 @@ Guardrails:
     role: 'Checkout Conversion Optimizer',
     description: 'Diagnoses checkout drop-off points, identifies friction in the purchase funnel, and recommends UX and flow improvements.',
     category: 'llm-api',
-    tools: CHECKOUT_DOCTOR_TOOLS,
+    tools: { ...CHECKOUT_DOCTOR_TOOLS, get_funnel_data, get_payment_failures, get_shipping_config, get_store_config },
     systemPrompt: (ctx) => `You are CHECKOUT-DOCTOR, the Checkout Conversion Optimizer for ${ctx.storeName}.
 
 Store context:
@@ -314,7 +331,7 @@ Guardrails:
 - Do NOT issue points or rewards directly — design only
 - Ensure reward economics are sustainable (redemption cost < LTV gain)
 - Currency in all monetary values is ${ctx.currency}`,
-    tools: LOYALTY_ARCHITECT_TOOLS,
+    tools: { ...LOYALTY_ARCHITECT_TOOLS, get_customer_segments },
     autonomyRules: {
       autonomous: ['analyze_customer_retention', 'detect_churn_risk', 'report_loyalty_metrics', 'segment_customers_by_loyalty'],
       needsChiefApproval: ['design_loyalty_program', 'create_campaign_plan', 'generate_reward_proposal'],
@@ -329,7 +346,7 @@ Guardrails:
     role: 'Customer Lead Qualifier',
     description: 'Scores and segments potential high-value customers based on browsing behavior, wishlist activity, and purchase signals.',
     category: 'llm-api',
-    tools: LEAD_SCORER_TOOLS,
+    tools: { ...LEAD_SCORER_TOOLS, get_customer_history, get_products },
     systemPrompt: (ctx) => `You are LEAD-SCORER, the Customer Lead Qualifier for ${ctx.storeName}.
 
 Store context:

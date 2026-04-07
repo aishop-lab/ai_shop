@@ -7,6 +7,19 @@ import {
   REVIEW_CURATOR_TOOLS,
 } from '../tools/sentinel-tools'
 import { ESCALATION_DETECTOR_TOOLS, FAQ_BUILDER_TOOLS } from '../tools/new-agent-tools'
+import {
+  get_coupons,
+  get_shipping_config,
+  get_customer_history,
+  get_store_policies as shared_get_store_policies,
+  get_orders,
+  get_order_details as shared_get_order_details,
+  get_reviews,
+  get_review_stats,
+  get_payment_failures,
+  get_products,
+  get_store_config,
+} from '../tools/shared'
 
 export const SENTINEL_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -49,7 +62,7 @@ Guardrails:
 - Do NOT provide inaccurate product specifications — say "let me check" when uncertain
 - Escalate immediately for any mention of legal action, fraud, or physical harm
 - Keep responses under 150 words for chat — concise wins`,
-    tools: CHAT_RESPONDER_TOOLS,
+    tools: { ...CHAT_RESPONDER_TOOLS, get_coupons, get_shipping_config, get_customer_history },
     autonomyRules: {
       autonomous: ['respond_to_query', 'detect_sentiment', 'answer_faq', 'check_order_status', 'analyze_chat_metrics'],
       needsChiefApproval: ['send_message', 'escalate_conversation', 'update_faq'],
@@ -102,7 +115,7 @@ Guardrails:
 - Do NOT promise specific delivery dates without checking shipping data
 - Mark phishing/fraud attempts immediately — do not engage
 - Maintain ${ctx.brandVibe} tone in every response`,
-    tools: EMAIL_HANDLER_TOOLS,
+    tools: { ...EMAIL_HANDLER_TOOLS, get_customer_history, get_orders, shared_get_store_policies },
     autonomyRules: {
       autonomous: ['categorize_email', 'analyze_email_volume', 'detect_sentiment', 'draft_response', 'report_support_metrics'],
       needsChiefApproval: ['send_message', 'update_email_template', 'escalate_conversation'],
@@ -274,7 +287,7 @@ Guardrails:
     role: 'Crisis & Escalation Monitor',
     description: 'Monitors all customer interactions for escalation signals — anger patterns, legal threats, viral complaint risks — and alerts the merchant in real time.',
     category: 'llm-api',
-    tools: ESCALATION_DETECTOR_TOOLS,
+    tools: { ...ESCALATION_DETECTOR_TOOLS, get_customer_history, get_orders, get_review_stats, get_payment_failures },
     systemPrompt: (ctx) => `You are ESCALATION-DETECTOR, the Crisis & Escalation Monitor for ${ctx.storeName}.
 
 Store context:
@@ -327,7 +340,7 @@ Guardrails:
     role: 'Self-Service Knowledge Base Manager',
     description: 'Analyzes support conversations to identify common questions, builds FAQ content, and maintains the store\'s knowledge base to reduce support volume.',
     category: 'llm-api',
-    tools: FAQ_BUILDER_TOOLS,
+    tools: { ...FAQ_BUILDER_TOOLS, get_store_policies: shared_get_store_policies, get_products, get_shipping_config, get_store_config },
     systemPrompt: (ctx) => `You are FAQ-BUILDER, the Self-Service Knowledge Base Manager for ${ctx.storeName}.
 
 Store context:

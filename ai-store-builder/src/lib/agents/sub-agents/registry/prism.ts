@@ -1,6 +1,7 @@
 import type { SubAgentDefinition } from '../types'
 import { VISUAL_CRAFTER_TOOLS, AD_PILOT_TOOLS, SEO_SCOUT_TOOLS } from '../tools/prism-tools'
 import { CAMPAIGN_ARCHITECT_TOOLS, SOCIAL_COMPOSER_TOOLS, COPYSMITH_TOOLS, INFLUENCER_FINDER_TOOLS } from '../tools/new-agent-tools'
+import { get_trending_products, get_product_details, get_brand_guidelines, get_customer_segments, get_revenue_summary, get_product_categories, get_review_stats, get_products } from '../tools/shared'
 
 export const PRISM_SUB_AGENTS: SubAgentDefinition[] = [
   {
@@ -10,7 +11,7 @@ export const PRISM_SUB_AGENTS: SubAgentDefinition[] = [
     role: 'Campaign Strategy Designer',
     description: 'Designs end-to-end marketing campaigns aligned with store goals, seasonal trends, and audience segments.',
     category: 'llm-api',
-    tools: CAMPAIGN_ARCHITECT_TOOLS,
+    tools: { ...CAMPAIGN_ARCHITECT_TOOLS, get_customer_segments, get_revenue_summary, get_product_categories },
     systemPrompt: (ctx) => `You are CAMPAIGN-ARCHITECT, the Campaign Strategy Designer for ${ctx.storeName}.
 
 Store context:
@@ -168,7 +169,8 @@ Guardrails:
     chief: 'marketing',
     role: 'Short-Form Video Strategist',
     description: 'Scripts, storyboards, and directs short-form video content for Instagram Reels, YouTube Shorts, and TikTok.',
-    category: 'llm-only',
+    category: 'llm-api',
+    tools: { get_trending_products, get_product_details, get_brand_guidelines },
     systemPrompt: (ctx) => `You are REEL-DIRECTOR, the Short-Form Video Strategist for ${ctx.storeName}.
 
 Store context:
@@ -217,7 +219,7 @@ Guardrails:
     role: 'Conversion Copywriter',
     description: 'Writes high-converting copy for emails, landing pages, product descriptions, ad headlines, and promotional banners.',
     category: 'llm-api',
-    tools: COPYSMITH_TOOLS,
+    tools: { ...COPYSMITH_TOOLS, get_product_details, get_brand_guidelines, get_review_stats },
     systemPrompt: (ctx) => `You are COPYSMITH, the Conversion Copywriter for ${ctx.storeName}.
 
 Store context:
@@ -350,7 +352,7 @@ Guardrails:
 - Do NOT stuff keywords — maintain natural language
 - Do NOT publish content — output optimized drafts for review
 - Prioritize buyer-intent keywords for product pages`,
-    tools: SEO_SCOUT_TOOLS,
+    tools: { ...SEO_SCOUT_TOOLS, get_products, get_product_categories },
     autonomyRules: {
       autonomous: ['analyze_keywords', 'suggest_content_topics', 'audit_meta_tags', 'report_organic_performance', 'detect_ranking_drops'],
       needsChiefApproval: ['create_content', 'update_meta_tags', 'generate_blog_post'],
@@ -365,7 +367,7 @@ Guardrails:
     role: 'Influencer Discovery & Outreach Specialist',
     description: 'Manages a real influencer CRM — saves contacts, tracks pipeline status, drafts & sends outreach messages, and reports on influencer partnerships.',
     category: 'llm-api',
-    tools: INFLUENCER_FINDER_TOOLS,
+    tools: { ...INFLUENCER_FINDER_TOOLS, get_trending_products },
     systemPrompt: (ctx) => `You are INFLUENCER-FINDER, the Influencer Discovery & Outreach Specialist for ${ctx.storeName}.
 
 Store context:
