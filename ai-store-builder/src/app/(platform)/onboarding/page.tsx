@@ -22,6 +22,7 @@ import {
   ImagePlus,
   ExternalLink,
   Loader2,
+  RefreshCw,
 } from 'lucide-react'
 
 const STEPS = [
@@ -256,6 +257,8 @@ export default function OnboardingPage() {
   const [aiDetecting, setAiDetecting] = useState(false)
   const [aiSuggestedCategory, setAiSuggestedCategory] = useState<Category | null>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [lastAnalyzedDescription, setLastAnalyzedDescription] = useState<string>('')
+  const [descriptionError, setDescriptionError] = useState<string | null>(null)
 
   // Store creation state
   const [isCreating, setIsCreating] = useState(false)
@@ -314,7 +317,7 @@ export default function OnboardingPage() {
 
   // AI category auto-detection
   useEffect(() => {
-    if (formData.description.trim().length < 15) {
+    if (formData.description.trim().length < 20) {
       return
     }
 
@@ -344,6 +347,7 @@ export default function OnboardingPage() {
         console.log('[AI Category] Response:', JSON.stringify(json.data?.category))
 
         if (json.success && json.data) {
+          setLastAnalyzedDescription(formData.description.trim())
           const { category: detected } = json.data
           if (detected.confidence >= 0.5) {
             // Map the AI business_type to our CATEGORIES using expanded fuzzy matching.
@@ -416,6 +420,77 @@ export default function OnboardingPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.description, formData.storeName])
 
+  // Manual re-analyse handler
+  const handleReanalyse = useCallback(async () => {
+    if (formData.description.trim().length < 20 || aiDetecting) return
+    setAiDetecting(true)
+    try {
+      const res = await fetch('/api/onboarding/analyze-brand', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          brand_description: formData.description,
+          business_name: formData.storeName || undefined,
+          force_reanalyze: true,
+        }),
+      })
+
+      if (!res.ok) {
+        console.warn('[AI Category] Re-analyse API returned', res.status, res.statusText)
+        return
+      }
+
+      const json = await res.json()
+      console.log('[AI Category] Re-analyse response:', JSON.stringify(json.data?.category))
+
+      if (json.success && json.data) {
+        setLastAnalyzedDescription(formData.description.trim())
+        const { category: detected } = json.data
+        if (detected.confidence >= 0.5) {
+          const detectedType = detected.business_type.toLowerCase()
+          const detectedCategories = (detected.business_category ?? []).map((c: string) => c.toLowerCase())
+
+          const categoryAliases: Record<string, string[]> = {
+            'fashion & apparel': ['fashion', 'apparel', 'clothing', 'clothes', 'wear', 'textile'],
+            'electronics & gadgets': ['electronics', 'gadgets', 'tech', 'technology', 'devices'],
+            'health & beauty': ['health', 'beauty', 'skincare', 'cosmetics', 'wellness', 'personal care', 'organic', 'soap'],
+            'home & living': ['home', 'living', 'furniture', 'decor', 'household', 'interior'],
+            'food & beverages': ['food', 'beverages', 'grocery', 'drink', 'snack', 'meal'],
+            'jewelry & accessories': ['jewelry', 'accessories', 'jewellery', 'ornaments', 'watches'],
+            'art & crafts': ['art', 'crafts', 'handmade', 'craft', 'handcraft', 'artisan'],
+            'sports & fitness': ['sports', 'fitness', 'gym', 'athletic', 'exercise', 'outdoor'],
+            'books & stationery': ['books', 'stationery', 'education', 'office', 'writing', 'paper'],
+          }
+
+          const matchedCategory = CATEGORIES.find((cat) => {
+            const catLower = cat.toLowerCase()
+            const aliases = categoryAliases[catLower] ?? []
+            if (catLower === detectedType) return true
+            if (catLower.includes(detectedType) || detectedType.includes(catLower)) return true
+            if (aliases.some((alias) => detectedType.includes(alias) || alias.includes(detectedType))) return true
+            if (detectedCategories.some((dc: string) =>
+              aliases.some((alias) => dc.includes(alias) || alias.includes(dc)) ||
+              catLower.includes(dc) || dc.includes(catLower)
+            )) return true
+            return false
+          })
+
+          console.log('[AI Category] Re-analyse detected:', detected.business_type, '-> Matched:', matchedCategory ?? 'none')
+
+          if (matchedCategory) {
+            setAiSuggestedCategory(matchedCategory)
+            setFormData((prev) => ({ ...prev, category: matchedCategory }))
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[AI Category] Re-analyse error:', err)
+    } finally {
+      setAiDetecting(false)
+    }
+  }, [formData.description, formData.storeName, aiDetecting])
+
   // Restore from localStorage on mount
   useEffect(() => {
     try {
@@ -467,7 +542,7 @@ export default function OnboardingPage() {
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 0:
-        return formData.storeName.trim().length >= 2 && formData.description.trim().length >= 10 && formData.category !== ''
+        return formData.storeName.trim().length >= 2 && formData.description.trim().length >= 20 && formData.category !== ''
       case 1:
         return true // theme and color have defaults
       case 2:
@@ -480,6 +555,12 @@ export default function OnboardingPage() {
   }
 
   const handleNext = async () => {
+    // Show specific error for short description on step 0
+    if (currentStep === 0 && formData.description.trim().length < 20) {
+      setDescriptionError('Please describe your business in at least 20 characters for accurate AI detection')
+      return
+    }
+    setDescriptionError(null)
     if (!canProceed()) return
 
     // Wire step 2 ("Launch Store") to API
@@ -721,10 +802,19 @@ export default function OnboardingPage() {
                   id="description"
                   placeholder="What do you sell? Who are your customers? What makes you unique?"
                   value={formData.description}
-                  onChange={(e) => updateField('description', e.target.value)}
+                  onChange={(e) => {
+                    updateField('description', e.target.value)
+                    if (descriptionError) setDescriptionError(null)
+                  }}
                   rows={3}
-                  className="flex w-full resize-none rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:outline-none focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500/30"
+                  className={cn(
+                    'flex w-full resize-none rounded-md border bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:outline-none focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500/30',
+                    descriptionError ? 'border-red-500/60' : 'border-zinc-800'
+                  )}
                 />
+                {descriptionError && (
+                  <p className="text-xs text-red-400 mt-1">{descriptionError}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -739,9 +829,21 @@ export default function OnboardingPage() {
                     </span>
                   )}
                   {!aiDetecting && aiSuggestedCategory && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400">
-                      <Sparkles className="h-3 w-3" />
-                      AI suggested: {aiSuggestedCategory}
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400">
+                        <Sparkles className="h-3 w-3" />
+                        AI suggested: {aiSuggestedCategory}
+                      </span>
+                      {formData.description.trim() !== lastAnalyzedDescription && formData.description.trim().length >= 20 && (
+                        <button
+                          type="button"
+                          onClick={handleReanalyse}
+                          className="inline-flex items-center gap-1 rounded-full border border-zinc-700 px-2 py-1 text-[11px] font-medium text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-300"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Re-analyse
+                        </button>
+                      )}
                     </span>
                   )}
                 </div>

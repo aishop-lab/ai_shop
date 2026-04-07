@@ -7,6 +7,7 @@ import {
   BarChart3,
   Megaphone,
   Settings,
+  ChevronLeft,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -92,6 +93,8 @@ export interface AgentIntroCardProps {
   onAutonomyChange: (level: AutonomyLevel) => void
   onNext: () => void
   onSkip: () => void
+  onBack?: () => void
+  canGoBack?: boolean
   stepIndex: number   // 0-based
   totalSteps: number
 }
@@ -108,6 +111,8 @@ export function AgentIntroCard({
   onAutonomyChange,
   onNext,
   onSkip,
+  onBack,
+  canGoBack = false,
   stepIndex,
   totalSteps,
 }: AgentIntroCardProps) {
@@ -246,8 +251,8 @@ export function AgentIntroCard({
             />
           </div>
 
-          {/* Autonomy level selector — always visible, muted when disabled */}
-          <div className={cn('flex flex-col gap-3 transition-opacity', !isEnabled && 'opacity-50')}>
+          {/* Autonomy level selector — always interactive; selecting a level auto-enables */}
+          <div className={cn('flex flex-col gap-3 transition-opacity', !isEnabled && 'opacity-70')}>
               <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
                 Autonomy Level
               </p>
@@ -281,12 +286,23 @@ export function AgentIntroCard({
 
         {/* ── Actions ── */}
         <div className="flex flex-col items-center gap-3">
-          <button
-            onClick={onNext}
-            className="w-full py-3 px-6 rounded-xl bg-white text-zinc-900 text-sm font-semibold hover:bg-zinc-100 active:bg-zinc-200 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-          >
-            {isLast ? 'View Your Team' : 'Meet Next Agent →'}
-          </button>
+          <div className="flex w-full gap-2">
+            {canGoBack && (
+              <button
+                onClick={onBack}
+                aria-label="Go back to previous agent"
+                className="flex items-center justify-center py-3 px-3 rounded-xl border border-zinc-700 text-zinc-400 text-sm font-medium hover:text-zinc-200 hover:border-zinc-500 active:bg-zinc-800 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={onNext}
+              className="flex-1 py-3 px-6 rounded-xl bg-white text-zinc-900 text-sm font-semibold hover:bg-zinc-100 active:bg-zinc-200 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            >
+              {isLast ? 'View Your Team' : 'Meet Next Agent →'}
+            </button>
+          </div>
           <button
             onClick={onSkip}
             className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors duration-150 focus:outline-none focus-visible:underline"

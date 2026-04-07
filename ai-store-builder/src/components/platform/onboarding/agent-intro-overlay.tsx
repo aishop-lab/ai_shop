@@ -99,6 +99,26 @@ export function AgentIntroOverlay({ storeId, onComplete }: AgentIntroOverlayProp
     }, 300)
   }
 
+  // ── Go back to previous card ──────────────────────────────────────────────
+  const goBack = () => {
+    if (isTransitioning || currentIndex === 0) return
+
+    if (reducedMotion.current) {
+      setCurrentIndex((prev) => prev - 1)
+      return
+    }
+
+    // Same fade-out/fade-in animation as advance
+    setIsTransitioning(true)
+    setCardVisible(false)
+
+    setTimeout(() => {
+      setCurrentIndex((prev) => prev - 1)
+      setCardVisible(true)
+      setIsTransitioning(false)
+    }, 300)
+  }
+
   // ── Toggle agent enabled ───────────────────────────────────────────────────
   const handleToggle = (agentType: AgentType, enabled: boolean) => {
     setAgentStates((prev) => ({
@@ -113,12 +133,13 @@ export function AgentIntroOverlay({ storeId, onComplete }: AgentIntroOverlayProp
 
   // ── Change autonomy level ──────────────────────────────────────────────────
   const handleAutonomyChange = (agentType: AgentType, level: AutonomyLevel) => {
+    // Auto-enable the agent when the user picks any autonomy level
     setAgentStates((prev) => ({
       ...prev,
-      [agentType]: { ...prev[agentType], autonomy: level },
+      [agentType]: { ...prev[agentType], autonomy: level, enabled: true },
     }))
 
-    updateAgent(storeId, agentType, { autonomy_level: level }).catch(() => {
+    updateAgent(storeId, agentType, { autonomy_level: level, is_enabled: true }).catch(() => {
       toast.error(`Failed to update ${agentType} autonomy`)
     })
   }
@@ -186,6 +207,8 @@ export function AgentIntroOverlay({ storeId, onComplete }: AgentIntroOverlayProp
               onAutonomyChange={(level) => handleAutonomyChange(currentAgentType, level)}
               onNext={advance}
               onSkip={advance}
+              onBack={goBack}
+              canGoBack={currentIndex > 0}
               stepIndex={currentIndex}
               totalSteps={AGENT_INTRO_ORDER.length}
             />
