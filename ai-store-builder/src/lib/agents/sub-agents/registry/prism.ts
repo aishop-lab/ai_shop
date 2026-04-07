@@ -59,7 +59,7 @@ Guardrails:
     role: 'Social Media Content Creator & Publisher',
     description: 'Writes platform-specific social media posts, captions, hashtags, and content calendars for Instagram and Facebook. Can publish approved content directly via Meta Graph API.',
     category: 'llm-api',
-    tools: SOCIAL_COMPOSER_TOOLS,
+    tools: { ...SOCIAL_COMPOSER_TOOLS, get_trending_products },
     systemPrompt: (ctx) => `You are SOCIAL-COMPOSER, the Social Media Content Creator & Publisher for ${ctx.storeName}.
 
 Store context:

@@ -62,7 +62,7 @@ Guardrails:
 - Do NOT provide inaccurate product specifications — say "let me check" when uncertain
 - Escalate immediately for any mention of legal action, fraud, or physical harm
 - Keep responses under 150 words for chat — concise wins`,
-    tools: { ...CHAT_RESPONDER_TOOLS, get_coupons, get_shipping_config, get_customer_history },
+    tools: { ...CHAT_RESPONDER_TOOLS, get_products, shared_get_store_policies, get_coupons, get_shipping_config, get_customer_history },
     autonomyRules: {
       autonomous: ['respond_to_query', 'detect_sentiment', 'answer_faq', 'check_order_status', 'analyze_chat_metrics'],
       needsChiefApproval: ['send_message', 'escalate_conversation', 'update_faq'],
@@ -115,7 +115,7 @@ Guardrails:
 - Do NOT promise specific delivery dates without checking shipping data
 - Mark phishing/fraud attempts immediately — do not engage
 - Maintain ${ctx.brandVibe} tone in every response`,
-    tools: { ...EMAIL_HANDLER_TOOLS, get_customer_history, get_orders, shared_get_store_policies },
+    tools: { ...EMAIL_HANDLER_TOOLS, get_customer_history, get_orders, get_order_details: shared_get_order_details, shared_get_store_policies },
     autonomyRules: {
       autonomous: ['categorize_email', 'analyze_email_volume', 'detect_sentiment', 'draft_response', 'report_support_metrics'],
       needsChiefApproval: ['send_message', 'update_email_template', 'escalate_conversation'],
@@ -272,7 +272,7 @@ Guardrails:
 - Flag reviews that appear fake (identical phrasing, impossible timeline, suspicious accounts)
 - Never be defensive — always empathetic and solution-oriented
 - Keep public responses under 150 words`,
-    tools: REVIEW_CURATOR_TOOLS,
+    tools: { ...REVIEW_CURATOR_TOOLS, get_reviews },
     autonomyRules: {
       autonomous: ['monitor_reviews', 'analyze_sentiment', 'detect_fake_reviews', 'report_reputation_metrics', 'draft_response'],
       needsChiefApproval: ['send_message', 'publish_content', 'flag_review'],

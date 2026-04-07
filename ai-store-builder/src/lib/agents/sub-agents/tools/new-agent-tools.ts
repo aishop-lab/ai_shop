@@ -55,29 +55,7 @@ const create_coupon = tool({
   },
 })
 
-const get_active_coupons = tool({
-  description: 'List active coupons for a store.',
-  inputSchema: z.object({
-    store_id: z.string(),
-    limit: z.number().optional(),
-  }),
-  execute: async ({ store_id, limit = 50 }) => {
-    const supabase = getSupabaseAdmin()
-    const { data, error } = await supabase
-      .from('coupons')
-      .select(
-        'id, code, discount_type, discount_value, min_order_amount, max_uses, uses_count, is_active, expires_at, created_at'
-      )
-      .eq('store_id', store_id)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(limit)
-    if (error) return { success: false, error: error.message, coupons: [] }
-    return { success: true, count: data?.length ?? 0, coupons: data ?? [] }
-  },
-})
-
-export const DEAL_ENGINEER_TOOLS = { create_coupon, get_active_coupons }
+export const DEAL_ENGINEER_TOOLS = { create_coupon }
 
 // ---------------------------------------------------------------------------
 // CHECKOUT-DOCTOR tools (checkout funnel analysis)
@@ -543,105 +521,11 @@ export const REPORT_WRITER_TOOLS = { get_report_data, send_report_email }
 // CAMPAIGN-ARCHITECT tools (analytics for campaign planning)
 // ---------------------------------------------------------------------------
 
-const get_store_analytics_summary = tool({
-  description:
-    'Get a summary of store performance data to inform campaign planning.',
-  inputSchema: z.object({
-    store_id: z.string(),
-    days: z.number().optional(),
-  }),
-  execute: async ({ store_id, days = 30 }) => {
-    const supabase = getSupabaseAdmin()
-    const since = new Date(
-      Date.now() - days * 24 * 60 * 60 * 1000
-    ).toISOString()
-
-    const { data: orders } = await supabase
-      .from('orders')
-      .select('total_amount, payment_status, created_at')
-      .eq('store_id', store_id)
-      .gte('created_at', since)
-
-    const { data: products } = await supabase
-      .from('products')
-      .select('id, title, category, price, status')
-      .eq('store_id', store_id)
-      .eq('is_demo', false)
-      .eq('status', 'active')
-
-    const { count: customerCount } = await supabase
-      .from('customers')
-      .select('id', { count: 'exact', head: true })
-      .eq('store_id', store_id)
-
-    const revenue = (orders ?? [])
-      .filter((o) => o.payment_status === 'paid')
-      .reduce((s, o) => s + (o.total_amount || 0), 0)
-
-    const categories = [
-      ...new Set((products ?? []).map((p) => p.category).filter(Boolean)),
-    ]
-
-    return {
-      success: true,
-      period_days: days,
-      summary: {
-        revenue,
-        order_count: orders?.length ?? 0,
-        product_count: products?.length ?? 0,
-        customer_count: customerCount ?? 0,
-        categories,
-        avg_order_value:
-          (orders?.length ?? 0) > 0
-            ? Math.round(revenue / (orders?.length ?? 1))
-            : 0,
-      },
-    }
-  },
-})
-
-export const CAMPAIGN_ARCHITECT_TOOLS = { get_store_analytics_summary }
+export const CAMPAIGN_ARCHITECT_TOOLS = {}
 
 // ---------------------------------------------------------------------------
 // SOCIAL-COMPOSER tools (get products for social content)
 // ---------------------------------------------------------------------------
-
-const get_trending_products = tool({
-  description:
-    'Get top-selling and newest products to create social media content about.',
-  inputSchema: z.object({
-    store_id: z.string(),
-    limit: z.number().optional(),
-  }),
-  execute: async ({ store_id, limit = 10 }) => {
-    const supabase = getSupabaseAdmin()
-
-    // Best sellers by order count
-    const { data: topItems } = await supabase
-      .from('order_items')
-      .select('product_id, title, quantity')
-      .limit(500)
-
-    // Get products with images
-    const { data: products } = await supabase
-      .from('products')
-      .select(
-        'id, title, description, price, category, product_images(original_url, alt_text)'
-      )
-      .eq('store_id', store_id)
-      .eq('status', 'active')
-      .eq('is_demo', false)
-      .order('created_at', { ascending: false })
-      .limit(limit)
-
-    return {
-      success: true,
-      products: products ?? [],
-      trending_note:
-        'Sorted by recency — use with sales data for content prioritization',
-    }
-  },
-})
 
 // ---------------------------------------------------------------------------
 // Meta Graph API helper for sub-agent publishing tools
@@ -885,7 +769,6 @@ const publish_instagram_post = tool({
 })
 
 export const SOCIAL_COMPOSER_TOOLS = {
-  get_trending_products,
   publish_social_post,
   publish_instagram_post,
 }

@@ -229,7 +229,7 @@ Guardrails:
 - Do NOT create pricing changes — recommendations only
 - Validate product IDs exist before recommending
 - Currency is always ${ctx.currency}`,
-    tools: { ...UPSELL_AGENT_TOOLS, get_order_stats, get_customer_segments },
+    tools: { ...UPSELL_AGENT_TOOLS, get_products, get_order_stats, get_customer_segments },
     autonomyRules: {
       autonomous: ['analyze_product_affinities', 'report_aov_metrics', 'detect_upsell_opportunities', 'suggest_recommendations'],
       needsChiefApproval: ['update_product', 'configure_recommendations', 'create_bundle'],

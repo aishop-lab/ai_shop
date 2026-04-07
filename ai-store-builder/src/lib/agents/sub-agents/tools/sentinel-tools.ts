@@ -10,56 +10,6 @@ import { Resend } from 'resend'
 // CHAT-RESPONDER tools
 // ---------------------------------------------------------------------------
 
-const get_store_products = tool({
-  description:
-    'Query products for a store to answer customer product questions. ' +
-    'Returns titles, descriptions, prices, and stock status.',
-  inputSchema: z.object({
-    store_id: z.string().describe('The store ID'),
-    search: z.string().optional().describe('Optional keyword to search product titles/descriptions'),
-    limit: z.number().optional().describe('Max products to return (default: 50)'),
-  }),
-  execute: async ({ store_id, search, limit = 50 }) => {
-    const supabase = getSupabaseAdmin()
-
-    let query = supabase
-      .from('products')
-      .select(
-        `
-        id,
-        title,
-        description,
-        price,
-        compare_at_price,
-        inventory_quantity,
-        status,
-        category,
-        tags
-      `
-      )
-      .eq('store_id', store_id)
-      .eq('status', 'active')
-      .eq('is_demo', false)
-      .limit(limit)
-
-    if (search) {
-      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`)
-    }
-
-    const { data, error } = await query
-
-    if (error) {
-      return { success: false, error: error.message, products: [] }
-    }
-
-    return {
-      success: true,
-      count: data?.length ?? 0,
-      products: data ?? [],
-    }
-  },
-})
-
 const get_order_status = tool({
   description:
     'Look up an order by order number or customer email. ' +
@@ -124,45 +74,8 @@ const get_order_status = tool({
   },
 })
 
-const get_store_policies = tool({
-  description:
-    'Retrieve store policies including return policy, shipping policy, and privacy policy. ' +
-    'Use this to answer customer questions about returns and shipping.',
-  inputSchema: z.object({
-    store_id: z.string().describe('The store ID'),
-  }),
-  execute: async ({ store_id }) => {
-    const supabase = getSupabaseAdmin()
-
-    const { data, error } = await supabase
-      .from('stores')
-      .select(
-        `
-        name,
-        policies,
-        blueprint
-      `
-      )
-      .eq('id', store_id)
-      .single()
-
-    if (error) {
-      return { success: false, error: error.message, policies: null }
-    }
-
-    return {
-      success: true,
-      store_name: data?.name,
-      policies: data?.policies ?? {},
-      shipping_info: (data?.blueprint as Record<string, unknown>)?.shipping ?? null,
-    }
-  },
-})
-
 export const CHAT_RESPONDER_TOOLS = {
-  get_store_products,
   get_order_status,
-  get_store_policies,
 }
 
 // ---------------------------------------------------------------------------
@@ -204,61 +117,8 @@ const send_email_reply = tool({
   },
 })
 
-const get_order_details = tool({
-  description:
-    'Look up full order details by order ID for support context — items, payment, shipping, and customer info.',
-  inputSchema: z.object({
-    store_id: z.string().describe('The store ID'),
-    order_id: z.string().describe('The order UUID to fetch details for'),
-  }),
-  execute: async ({ store_id, order_id }) => {
-    const supabase = getSupabaseAdmin()
-
-    const { data, error } = await supabase
-      .from('orders')
-      .select(
-        `
-        id,
-        order_number,
-        status,
-        fulfillment_status,
-        payment_status,
-        payment_method,
-        subtotal,
-        total_amount,
-        currency,
-        shipping_address,
-        billing_address,
-        tracking_number,
-        courier_name,
-        estimated_delivery,
-        notes,
-        created_at,
-        order_items (
-          id,
-          product_id,
-          title,
-          quantity,
-          price,
-          variant_title
-        )
-      `
-      )
-      .eq('id', order_id)
-      .eq('store_id', store_id)
-      .single()
-
-    if (error) {
-      return { success: false, error: error.message, order: null }
-    }
-
-    return { success: true, order: data }
-  },
-})
-
 export const EMAIL_HANDLER_TOOLS = {
   send_email_reply,
-  get_order_details,
 }
 
 // ---------------------------------------------------------------------------
@@ -639,56 +499,6 @@ export const RETURNS_MANAGER_TOOLS = {
 // REVIEW-CURATOR tools
 // ---------------------------------------------------------------------------
 
-const get_pending_reviews = tool({
-  description:
-    'Query product reviews that have not yet received a merchant response. ' +
-    'Returns reviews sorted by rating (lowest first, as they need urgent attention).',
-  inputSchema: z.object({
-    store_id: z.string().describe('The store ID'),
-    min_rating: z.number().min(1).max(5).optional().describe('Minimum star rating filter (default: 1)'),
-    max_rating: z.number().min(1).max(5).optional().describe('Maximum star rating filter (default: 5)'),
-    limit: z.number().optional().describe('Max reviews to return (default: 50)'),
-  }),
-  execute: async ({ store_id, min_rating = 1, max_rating = 5, limit = 50 }) => {
-    const supabase = getSupabaseAdmin()
-
-    const { data, error } = await supabase
-      .from('product_reviews')
-      .select(
-        `
-        id,
-        product_id,
-        customer_name,
-        rating,
-        title,
-        body,
-        merchant_reply,
-        created_at,
-        products (
-          title
-        )
-      `
-      )
-      .eq('store_id', store_id)
-      .is('merchant_reply', null)
-      .gte('rating', min_rating)
-      .lte('rating', max_rating)
-      .order('rating', { ascending: true })
-      .order('created_at', { ascending: false })
-      .limit(limit)
-
-    if (error) {
-      return { success: false, error: error.message, reviews: [] }
-    }
-
-    return {
-      success: true,
-      count: data?.length ?? 0,
-      reviews: data ?? [],
-    }
-  },
-})
-
 const post_review_response = tool({
   description:
     'Insert a merchant response to a product review. ' +
@@ -725,6 +535,5 @@ const post_review_response = tool({
 })
 
 export const REVIEW_CURATOR_TOOLS = {
-  get_pending_reviews,
   post_review_response,
 }

@@ -309,61 +309,8 @@ const get_frequently_bought_together = tool({
   },
 })
 
-const get_product_catalog = tool({
-  description:
-    'List products with their categories, prices, and inventory for recommendation logic. ' +
-    'Returns a compact catalog suitable for cross-sell/upsell analysis.',
-  inputSchema: z.object({
-    store_id: z.string().describe('The store ID'),
-    status: z
-      .enum(['active', 'draft', 'archived', 'all'])
-      .optional()
-      .describe('Filter by product status (default: active)'),
-    limit: z.number().optional().describe('Max products to return (default: 200)'),
-  }),
-  execute: async ({ store_id, status = 'active', limit = 200 }) => {
-    const supabase = getSupabaseAdmin()
-
-    let query = supabase
-      .from('products')
-      .select(
-        `
-        id,
-        title,
-        category,
-        tags,
-        price,
-        inventory_quantity,
-        status,
-        has_variants
-      `
-      )
-      .eq('store_id', store_id)
-      .eq('is_demo', false)
-      .order('title')
-      .limit(limit)
-
-    if (status !== 'all') {
-      query = query.eq('status', status)
-    }
-
-    const { data, error } = await query
-
-    if (error) {
-      return { success: false, error: error.message, products: [] }
-    }
-
-    return {
-      success: true,
-      count: data?.length ?? 0,
-      products: data ?? [],
-    }
-  },
-})
-
 export const UPSELL_AGENT_TOOLS = {
   get_frequently_bought_together,
-  get_product_catalog,
 }
 
 // ---------------------------------------------------------------------------
