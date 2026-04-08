@@ -69,7 +69,7 @@ export default function AgentWorkspacePage() {
         const response = await fetch('/api/dashboard/stats')
         if (response.ok) {
           const data = await response.json()
-          if (data.storeId) setStoreId(data.storeId)
+          if (data.store?.id) setStoreId(data.store.id)
         }
       } catch {
         console.error('[AgentWorkspace] Failed to fetch store ID')
