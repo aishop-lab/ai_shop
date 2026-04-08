@@ -212,7 +212,7 @@ export default function ShippingSettingsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <Link
-            href="/dashboard/settings"
+            href="/platform/settings"
             className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />

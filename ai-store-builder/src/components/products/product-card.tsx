@@ -47,7 +47,7 @@ export default function ProductCard({
   return (
     <div className="group relative border rounded-lg overflow-hidden bg-card hover:shadow-lg transition-shadow">
       {/* Image */}
-      <Link href={`/dashboard/products/${product.id}`}>
+      <Link href={`/platform/products/${product.id}`}>
         <div className="aspect-square relative bg-muted">
           {primaryImage ? (
             <Image
@@ -104,7 +104,7 @@ export default function ProductCard({
       {/* Content */}
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
-          <Link href={`/dashboard/products/${product.id}`} className="flex-1 min-w-0">
+          <Link href={`/platform/products/${product.id}`} className="flex-1 min-w-0">
             <h3 className="font-semibold line-clamp-2 hover:text-primary transition-colors">
               {product.title}
             </h3>
@@ -127,7 +127,7 @@ export default function ProductCard({
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem asChild>
-                <Link href={`/dashboard/products/${product.id}`}>
+                <Link href={`/platform/products/${product.id}`}>
                   <Edit className="w-4 h-4 mr-2" />
                   Edit
                 </Link>

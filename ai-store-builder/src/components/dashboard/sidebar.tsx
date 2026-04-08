@@ -114,7 +114,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
               </div>
             </>
           ) : (
-            <Link href="/dashboard" className="flex items-center gap-2">
+            <Link href="/platform" className="flex items-center gap-2">
               <StoreIcon className="h-6 w-6 text-primary" />
               <span className="font-bold">AI Store</span>
             </Link>
@@ -136,7 +136,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
           <NavSection
             label="Home"
             icon={Home}
-            href="/dashboard"
+            href="/platform"
             onNavigate={onClose}
           />
 
@@ -147,8 +147,8 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
             storageKey="products"
             defaultExpanded={true}
             items={[
-              { label: 'All Products', href: '/dashboard/products' },
-              { label: 'Add Product', href: '/dashboard/products/new', icon: Plus },
+              { label: 'All Products', href: '/platform/products' },
+              { label: 'Add Product', href: '/platform/products/new', icon: Plus },
               { label: 'Import Products', href: '/dashboard/migrate', icon: Import },
               { label: 'Collections', href: '/dashboard/collections', icon: Folder },
             ]}
@@ -159,7 +159,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
           <NavSection
             label="Orders"
             icon={ShoppingCart}
-            href="/dashboard/orders"
+            href="/platform/orders"
             onNavigate={onClose}
           />
 
@@ -207,7 +207,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
           <NavSection
             label="Analytics"
             icon={BarChart3}
-            href="/dashboard/analytics"
+            href="/platform/analytics"
             onNavigate={onClose}
           />
 
@@ -223,7 +223,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
           <NavSection
             label="Marketing"
             icon={Megaphone}
-            href="/dashboard/settings/marketing"
+            href="/platform/settings"
             onNavigate={onClose}
           />
 
@@ -268,7 +268,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
             <NavSection
               label="Settings"
               icon={Settings}
-              href="/dashboard/settings"
+              href="/platform/settings"
               onNavigate={onClose}
             />
           </div>

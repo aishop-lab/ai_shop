@@ -185,7 +185,7 @@ export function MigrationResults({ progress, onRetry, onImportAnother }: Migrati
 
         {/* Actions */}
         <div className="flex gap-3">
-          <Link href="/dashboard/products" className="flex-1">
+          <Link href="/platform/products" className="flex-1">
             <Button className="w-full">
               <Package className="h-4 w-4 mr-2" />
               View Products

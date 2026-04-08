@@ -113,7 +113,7 @@ export function TrafficWidget({ storeSlug, ga4Connected = false, className }: Tr
             <p className="text-sm text-muted-foreground mb-4">
               Add your Google Analytics 4 Measurement ID in Marketing settings to track visitor data.
             </p>
-            <Link href="/dashboard/settings/marketing">
+            <Link href="/platform/settings">
               <Button variant="outline" size="sm">
                 Connect GA4
                 <ExternalLink className="h-3 w-3 ml-2" />
@@ -217,7 +217,7 @@ export function TrafficWidget({ storeSlug, ga4Connected = false, className }: Tr
         </div>
 
         {/* View Full Analytics */}
-        <Link href="/dashboard/analytics">
+        <Link href="/platform/analytics">
           <Button variant="outline" size="sm" className="w-full">
             View Full Analytics
             <ExternalLink className="h-3 w-3 ml-2" />

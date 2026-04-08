@@ -97,7 +97,7 @@ export const get_product_details = tool({
       .select(
         `id, title, description, price, compare_at_price, cost_per_item,
          category, tags, inventory_quantity, status, has_variants,
-         meta_description, seo_title, slug, created_at, updated_at`
+         seo_description, seo_title, handle, created_at, updated_at`
       )
       .eq('id', product_id)
       .eq('store_id', store_id)

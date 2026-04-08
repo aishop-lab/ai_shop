@@ -66,7 +66,7 @@ export function StoreStatusCard({ store }: StoreStatusCardProps) {
               <ExternalLink className="h-3.5 w-3.5" />
             </Button>
           </Link>
-          <Link href="/dashboard/settings">
+          <Link href="/platform/settings">
             <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Store settings">
               <Settings className="h-4 w-4" />
             </Button>

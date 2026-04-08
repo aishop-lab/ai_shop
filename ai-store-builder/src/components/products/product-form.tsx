@@ -391,7 +391,7 @@ export default function ProductForm({
       const res = await fetch(`/api/products/${productId}`, { method: 'DELETE' })
       if (res.ok) {
         toast({ title: 'Deleted', description: 'Product has been deleted' })
-        router.push('/dashboard/products')
+        router.push('/platform/products')
       } else {
         throw new Error('Failed to delete')
       }
@@ -632,7 +632,7 @@ export default function ProductForm({
         description: mode === 'edit' ? 'Product updated successfully' : 'Product created successfully'
       })
 
-      router.push('/dashboard/products')
+      router.push('/platform/products')
       router.refresh()
 
     } catch (error) {

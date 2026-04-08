@@ -185,9 +185,28 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // Redirect old /dashboard root to /platform (keep sub-pages accessible)
-    if (user && pathname === '/dashboard') {
-      return NextResponse.redirect(new URL('/platform', request.url))
+    // Redirect old /dashboard routes to /platform equivalents
+    if (user && pathname.startsWith('/dashboard')) {
+      const dashboardToplatformMap: Record<string, string> = {
+        '/dashboard': '/platform',
+        '/dashboard/products': '/platform/products',
+        '/dashboard/products/new': '/platform/products/new',
+        '/dashboard/orders': '/platform/orders',
+        '/dashboard/analytics': '/platform/analytics',
+        '/dashboard/settings': '/platform/settings',
+      }
+
+      // Exact match redirects
+      const platformPath = dashboardToplatformMap[pathname]
+      if (platformPath) {
+        return NextResponse.redirect(new URL(platformPath, request.url))
+      }
+
+      // Pattern match: /dashboard/products/:id -> /platform/products/:id
+      const productEditMatch = pathname.match(/^\/dashboard\/products\/([^/]+)$/)
+      if (productEditMatch && productEditMatch[1] !== 'new') {
+        return NextResponse.redirect(new URL(`/platform/products/${productEditMatch[1]}`, request.url))
+      }
     }
 
     // Redirect to platform if accessing auth routes while logged in

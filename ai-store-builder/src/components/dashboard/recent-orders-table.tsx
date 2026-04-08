@@ -26,7 +26,7 @@ export default function RecentOrdersTable({ orders }: RecentOrdersTableProps) {
       {orders.slice(0, 5).map((order) => (
         <Link
           key={order.id}
-          href={`/dashboard/orders/${order.id}`}
+          href={`/platform/orders/${order.id}`}
           className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
         >
           <div className="flex-1 min-w-0">
@@ -50,7 +50,7 @@ export default function RecentOrdersTable({ orders }: RecentOrdersTableProps) {
 
       {orders.length > 5 && (
         <Link
-          href="/dashboard/orders"
+          href="/platform/orders"
           className="flex items-center justify-center gap-2 text-sm text-primary hover:underline pt-2"
         >
           View all orders

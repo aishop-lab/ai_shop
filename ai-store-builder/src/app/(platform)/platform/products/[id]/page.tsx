@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Loader2, Package } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
 import { useToast } from '@/lib/hooks/use-toast'
 import ProductForm from '@/components/products/product-form'
 import type { VariantOptionInput, VariantInput } from '@/lib/types/variant'
@@ -76,7 +76,7 @@ export default function ProductDetailPage() {
     try {
       const [productRes, settingsRes] = await Promise.all([
         fetch(`/api/products/${productId}`),
-        fetch('/api/dashboard/settings')
+        fetch('/api/dashboard/settings'),
       ])
 
       const productData = await productRes.json()
@@ -89,7 +89,7 @@ export default function ProductDetailPage() {
         toast({
           title: 'Error',
           description: 'Product not found',
-          variant: 'destructive'
+          variant: 'destructive',
         })
         router.push('/platform/products')
         return
@@ -103,7 +103,7 @@ export default function ProductDetailPage() {
       toast({
         title: 'Error',
         description: 'Failed to load product',
-        variant: 'destructive'
+        variant: 'destructive',
       })
     } finally {
       setLoading(false)
@@ -116,63 +116,100 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="mx-auto max-w-5xl space-y-6">
+        <PlatformBreadcrumb
+          items={[
+            { label: 'Command Center', href: '/platform' },
+            { label: 'Products', href: '/platform/products' },
+            { label: 'Loading...' },
+          ]}
+        />
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-[var(--platform-text-muted)]" />
+        </div>
       </div>
     )
   }
 
   if (!product) {
     return (
-      <div className="text-center py-12">
-        <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Product not found</h2>
-        <Link href="/platform/products">
-          <Button variant="outline">Back to Products</Button>
-        </Link>
+      <div className="mx-auto max-w-5xl space-y-6">
+        <PlatformBreadcrumb
+          items={[
+            { label: 'Command Center', href: '/platform' },
+            { label: 'Products', href: '/platform/products' },
+            { label: 'Not Found' },
+          ]}
+        />
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <Package className="mb-3 h-10 w-10 text-[var(--platform-text-muted)]" />
+          <h2 className="font-mono text-lg font-semibold text-[var(--platform-text-primary)]">
+            Product not found
+          </h2>
+          <Link
+            href="/platform/products"
+            className="mt-4 rounded-lg border border-[var(--platform-border)] px-4 py-2 text-xs font-medium text-[var(--platform-text-secondary)] hover:border-[var(--platform-border-hover)] transition-colors"
+          >
+            Back to Products
+          </Link>
+        </div>
       </div>
     )
   }
 
   // Transform variant options for ProductForm
-  const initialVariantOptions: VariantOptionInput[] | undefined = product.variant_options?.map(opt => ({
-    id: opt.id,
-    name: opt.name,
-    position: opt.position,
-    values: opt.values.map(val => ({
-      id: val.id,
-      value: val.value,
-      color_code: val.color_code,
-      position: val.position
+  const initialVariantOptions: VariantOptionInput[] | undefined =
+    product.variant_options?.map((opt) => ({
+      id: opt.id,
+      name: opt.name,
+      position: opt.position,
+      values: opt.values.map((val) => ({
+        id: val.id,
+        value: val.value,
+        color_code: val.color_code,
+        position: val.position,
+      })),
     }))
-  }))
 
   // Transform variants for ProductForm
-  const initialVariants: VariantInput[] | undefined = product.variants?.map(v => ({
-    id: v.id,
-    attributes: v.attributes,
-    price: v.price,
-    compare_at_price: v.compare_at_price,
-    sku: v.sku,
-    barcode: v.barcode,
-    quantity: v.quantity,
-    track_quantity: v.track_quantity,
-    weight: v.weight,
-    image_id: v.image_id,
-    is_default: v.is_default,
-    status: v.status
-  }))
+  const initialVariants: VariantInput[] | undefined = product.variants?.map(
+    (v) => ({
+      id: v.id,
+      attributes: v.attributes,
+      price: v.price,
+      compare_at_price: v.compare_at_price,
+      sku: v.sku,
+      barcode: v.barcode,
+      quantity: v.quantity,
+      track_quantity: v.track_quantity,
+      weight: v.weight,
+      image_id: v.image_id,
+      is_default: v.is_default,
+      status: v.status,
+    })
+  )
 
   return (
-    <div className="space-y-6">
-      {/* Back button + title */}
-      <div className="flex items-center gap-4">
-        <Link href="/platform/products">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PlatformBreadcrumb
+        items={[
+          { label: 'Command Center', href: '/platform' },
+          { label: 'Products', href: '/platform/products' },
+          { label: product.title },
+        ]}
+      />
+
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Link
+          href="/platform/products"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--platform-border)] text-[var(--platform-text-muted)] transition-colors hover:border-[var(--platform-border-hover)] hover:text-[var(--platform-text-primary)]"
+        >
+          <ArrowLeft className="h-4 w-4" />
         </Link>
-        <h1 className="text-2xl font-bold">{product.title}</h1>
+        <h1 className="font-mono text-lg font-semibold text-[var(--platform-text-primary)]">
+          {product.title}
+        </h1>
       </div>
 
       <ProductForm
@@ -194,7 +231,7 @@ export default function ProductDetailPage() {
           weight: product.weight || null,
           requires_shipping: product.requires_shipping ?? true,
           categories: product.categories || [],
-          tags: product.tags || []
+          tags: product.tags || [],
         }}
         initialImages={product.images}
         initialVariantOptions={initialVariantOptions}

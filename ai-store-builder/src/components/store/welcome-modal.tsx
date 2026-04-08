@@ -47,11 +47,11 @@ export function WelcomeModal({ storeName }: WelcomeModalProps) {
   }
 
   const handleAddProduct = () => {
-    router.push('/dashboard/products/new')
+    router.push('/platform/products/new')
   }
 
   const handleGoToDashboard = () => {
-    router.push('/dashboard/products')
+    router.push('/platform/products')
   }
 
   return (

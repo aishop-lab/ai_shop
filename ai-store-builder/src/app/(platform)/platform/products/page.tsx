@@ -71,8 +71,8 @@ export default function ProductsPage() {
         const response = await fetch('/api/dashboard/stats')
         if (response.ok) {
           const data = await response.json()
-          if (data.storeId) setStoreId(data.storeId)
-          if (data.storeSlug) setStoreSlug(data.storeSlug)
+          if (data.store?.id) setStoreId(data.store.id)
+          if (data.store?.slug) setStoreSlug(data.store.slug)
         }
       } catch {
         console.error('[Products] Failed to fetch store ID')
@@ -176,7 +176,7 @@ export default function ProductsPage() {
           </p>
         </div>
         <Link
-          href="/dashboard/products/new"
+          href="/platform/products/new"
           className={cn(
             'flex items-center gap-1.5 rounded-lg px-3 py-1.5',
             'bg-[var(--platform-accent)] text-white text-xs font-medium',
@@ -304,7 +304,7 @@ function ProductRow({ product, currency, storeSlug }: ProductRowProps) {
   const primaryImage = sortedImages[0]?.thumbnail_url || sortedImages[0]?.original_url || null
 
   return (
-    <Link href={`/dashboard/products/${product.id}`} className="contents">
+    <Link href={`/platform/products/${product.id}`} className="contents">
       <tr
         className={cn(
           'cursor-pointer transition-colors',
