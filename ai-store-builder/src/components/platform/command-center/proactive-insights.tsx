@@ -186,25 +186,30 @@ export function ProactiveInsights({ currency }: ProactiveInsightsProps) {
         const data = await response.json()
 
         // Build insights from the real analytics data
+        // API shape: { revenue: { total, count, avgOrderValue, byDay }, orders: { total, byStatus },
+        //   topProducts: [{ title, revenue, quantity }], customers: { total, new, returning },
+        //   carts: { total, recovered, totalValue, recoveryRate },
+        //   comparison: { current, previous, changes: { revenue, orders, aov } },
+        //   anomalies: [{ metric, message, severity }] }
         const insightData: InsightData = {
           revenue: {
-            current: data.revenue?.current?.total ?? 0,
-            previous: data.revenue?.previous?.total ?? 0,
-            changePercent: data.comparison?.revenue?.changePercent ?? 0,
+            current: data.revenue?.total ?? 0,
+            previous: data.comparison?.previous?.revenue ?? 0,
+            changePercent: data.comparison?.changes?.revenue ?? 0,
           },
           orders: {
-            current: data.orders?.current?.count ?? 0,
-            previous: data.orders?.previous?.count ?? 0,
-            changePercent: data.comparison?.orders?.changePercent ?? 0,
+            current: data.orders?.total ?? 0,
+            previous: data.comparison?.previous?.orders ?? 0,
+            changePercent: data.comparison?.changes?.orders ?? 0,
           },
           topProducts: (data.topProducts ?? []).slice(0, 3),
           abandonedCarts: {
-            rate: data.abandonedCarts?.rate ?? 0,
-            count: data.abandonedCarts?.total ?? 0,
-            value: data.abandonedCarts?.value ?? 0,
+            rate: data.carts?.recoveryRate ?? 0,
+            count: data.carts?.total ?? 0,
+            value: data.carts?.totalValue ?? 0,
           },
-          lowStockProducts: data.lowStockCount ?? 0,
-          newCustomers: data.customers?.newThisPeriod ?? 0,
+          lowStockProducts: 0, // Not in analytics API — would need separate query
+          newCustomers: data.customers?.new ?? 0,
           anomalies: data.anomalies ?? [],
         }
 

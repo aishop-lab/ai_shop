@@ -220,15 +220,9 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL(`/platform/products/${productEditMatch[1]}`, request.url))
       }
 
-      // Pattern match: /dashboard/collections/:id -> /platform/collections
-      if (pathname.startsWith('/dashboard/collections/')) {
-        return NextResponse.redirect(new URL('/platform/collections', request.url))
-      }
-
-      // Pattern match: /dashboard/coupons/:id -> /platform/coupons
-      if (pathname.startsWith('/dashboard/coupons/')) {
-        return NextResponse.redirect(new URL('/platform/coupons', request.url))
-      }
+      // Note: /dashboard/collections/create and /dashboard/coupons/create
+      // are NOT redirected because no platform equivalents exist yet.
+      // Only the list pages redirect.
 
       // Catch-all: any remaining /dashboard/* routes redirect to /platform
       if (!dashboardToplatformMap[pathname]) {

@@ -16,11 +16,6 @@ import {
 } from '@/lib/agents/constants'
 import type { AgentType, AutonomyLevel } from '@/lib/agents/types'
 
-interface AgentConfigHints {
-  label: string
-  value: string
-}
-
 interface ConfigOption {
   label: string
   value: string
