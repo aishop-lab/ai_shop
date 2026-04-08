@@ -1,17 +1,19 @@
 'use client'
 
-import { Menu, Bell } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { KeyboardHint } from '@/components/platform/shared/keyboard-hint'
 import { UserMenu } from './user-menu'
+import { NotificationDropdown } from './notification-dropdown'
 
 interface TopBarProps {
   onMenuClick: () => void
   onSearchClick: () => void
   pendingApprovals?: number
+  storeId?: string | null
 }
 
-export function TopBar({ onMenuClick, onSearchClick, pendingApprovals = 0 }: TopBarProps) {
+export function TopBar({ onMenuClick, onSearchClick, pendingApprovals = 0, storeId }: TopBarProps) {
   return (
     <header className="flex h-14 shrink-0 items-center gap-4 border-b border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 lg:px-6">
       {/* Mobile menu button — min 44px tap target */}
@@ -41,15 +43,8 @@ export function TopBar({ onMenuClick, onSearchClick, pendingApprovals = 0 }: Top
 
       {/* Right side */}
       <div className="flex items-center gap-3">
-        {/* Notification bell — min 44px tap target */}
-        <button aria-label="Notifications" className="relative flex h-[44px] w-[44px] items-center justify-center rounded-md text-[var(--platform-text-muted)] hover:text-[var(--platform-text-primary)]">
-          <Bell className="h-4 w-4" />
-          {pendingApprovals > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-black">
-              {pendingApprovals > 9 ? '9+' : pendingApprovals}
-            </span>
-          )}
-        </button>
+        {/* Notifications */}
+        <NotificationDropdown storeId={storeId ?? null} pendingApprovals={pendingApprovals} />
 
         {/* User menu */}
         <UserMenu />

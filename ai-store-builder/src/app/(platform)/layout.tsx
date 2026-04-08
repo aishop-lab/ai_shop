@@ -129,6 +129,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
           onMenuClick={() => setSidebarOpen(true)}
           onSearchClick={() => setCommandPaletteOpen(true)}
           pendingApprovals={pendingCount}
+          storeId={storeId}
         />
 
         <main className="flex-1 overflow-y-auto p-4 pb-20 lg:p-6 lg:pb-6">{children}</main>
