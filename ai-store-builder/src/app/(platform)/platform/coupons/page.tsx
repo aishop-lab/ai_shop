@@ -158,7 +158,7 @@ export default function CouponsPage() {
           </p>
         </div>
         <Link
-          href="/dashboard/coupons/create"
+          href="/platform/coupons/create"
           className={cn(
             'flex items-center gap-1.5 rounded-lg px-3 py-1.5',
             'bg-[var(--platform-accent)] text-white text-xs font-medium',
@@ -439,7 +439,7 @@ function EmptyState({ hasFilters, totalCoupons }: EmptyStateProps) {
       </p>
       {!hasFilters && totalCoupons === 0 && (
         <Link
-          href="/dashboard/coupons/create"
+          href="/platform/coupons/create"
           className={cn(
             'mt-4 flex items-center gap-1.5 rounded-lg px-3 py-1.5',
             'bg-[var(--platform-accent)] text-white text-xs font-medium',
