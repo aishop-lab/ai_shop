@@ -97,6 +97,8 @@ export default function OrdersPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [sortField, setSortField] = useState<SortField>('created_at')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkUpdating, setBulkUpdating] = useState(false)
   const { currency } = useStoreCurrency()
 
   // Fetch the merchant's store ID
@@ -190,6 +192,55 @@ export default function OrdersPage() {
     })
   }, [search, statusFilter, orders])
 
+  // Status counts for tab badges
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: orders.length }
+    for (const o of orders) {
+      counts[o.order_status] = (counts[o.order_status] || 0) + 1
+    }
+    return counts
+  }, [orders])
+
+  // Bulk selection helpers
+  function toggleSelectAll() {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filtered.map((o) => o.id)))
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  // Bulk status update
+  async function handleBulkStatusUpdate(newStatus: OrderStatus) {
+    if (selectedIds.size === 0 || !storeId) return
+    setBulkUpdating(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('orders')
+        .update({ order_status: newStatus })
+        .in('id', Array.from(selectedIds))
+        .eq('store_id', storeId)
+      if (!error) {
+        setSelectedIds(new Set())
+        fetchOrders()
+      }
+    } catch {
+      console.error('[Orders] Bulk update failed')
+    } finally {
+      setBulkUpdating(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-6xl space-y-6">
@@ -227,10 +278,47 @@ export default function OrdersPage() {
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Filter bar                                                           */}
+      {/* Status tab bar                                                       */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="flex gap-0 border-b border-[var(--platform-border)] overflow-x-auto">
+        {([
+          { value: 'all', label: 'All' },
+          { value: 'confirmed', label: 'Confirmed' },
+          { value: 'processing', label: 'Processing' },
+          { value: 'shipped', label: 'Shipped' },
+          { value: 'delivered', label: 'Delivered' },
+          { value: 'cancelled', label: 'Cancelled' },
+        ] as const).map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => { setStatusFilter(tab.value); setPage(0); setSelectedIds(new Set()) }}
+            className={cn(
+              'flex items-center gap-1.5 whitespace-nowrap px-4 py-2.5 text-xs font-medium transition-colors border-b-2 -mb-px',
+              statusFilter === tab.value
+                ? 'border-[var(--platform-accent)] text-[var(--platform-text-primary)]'
+                : 'border-transparent text-[var(--platform-text-muted)] hover:text-[var(--platform-text-secondary)]'
+            )}
+          >
+            {tab.label}
+            {(statusCounts[tab.value] ?? 0) > 0 && (
+              <span className={cn(
+                'rounded-full px-1.5 py-px font-mono text-[9px]',
+                statusFilter === tab.value
+                  ? 'bg-[var(--platform-accent)]/15 text-[var(--platform-accent)]'
+                  : 'bg-[var(--platform-surface-hover)] text-[var(--platform-text-muted)]'
+              )}>
+                {statusCounts[tab.value]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Search + Bulk actions bar                                            */}
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* Search */}
         <div className="relative min-w-48 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--platform-text-muted)]" />
           <input
@@ -250,20 +338,45 @@ export default function OrdersPage() {
           />
         </div>
 
-        {/* Status filter */}
-        <FilterSelect
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          aria-label="Filter by order status"
-          options={[
-            { value: 'all', label: 'All status' },
-            { value: 'confirmed', label: 'Confirmed' },
-            { value: 'processing', label: 'Processing' },
-            { value: 'shipped', label: 'Shipped' },
-            { value: 'delivered', label: 'Delivered' },
-            { value: 'cancelled', label: 'Cancelled' },
-          ]}
-        />
+        {/* Bulk actions — shown when orders are selected */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] text-[var(--platform-text-muted)]">
+              {selectedIds.size} selected
+            </span>
+            <button
+              type="button"
+              disabled={bulkUpdating}
+              onClick={() => handleBulkStatusUpdate('processing')}
+              className="rounded border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] font-medium text-amber-400 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
+            >
+              Mark Processing
+            </button>
+            <button
+              type="button"
+              disabled={bulkUpdating}
+              onClick={() => handleBulkStatusUpdate('shipped')}
+              className="rounded border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[10px] font-medium text-purple-400 transition-colors hover:bg-purple-500/20 disabled:opacity-50"
+            >
+              Mark Shipped
+            </button>
+            <button
+              type="button"
+              disabled={bulkUpdating}
+              onClick={() => handleBulkStatusUpdate('delivered')}
+              className="rounded border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-[10px] font-medium text-green-400 transition-colors hover:bg-green-500/20 disabled:opacity-50"
+            >
+              Mark Delivered
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              className="rounded border border-[var(--platform-border)] px-2.5 py-1 text-[10px] font-medium text-[var(--platform-text-muted)] transition-colors hover:text-[var(--platform-text-secondary)]"
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ------------------------------------------------------------------ */}
@@ -276,6 +389,15 @@ export default function OrdersPage() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[var(--platform-border)] bg-[var(--platform-surface)]">
+                <th className="w-10 px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onChange={toggleSelectAll}
+                    className="h-3.5 w-3.5 rounded border-[var(--platform-border)] accent-[var(--platform-accent)] cursor-pointer"
+                    aria-label="Select all orders"
+                  />
+                </th>
                 <Th>Order #</Th>
                 <Th>Customer</Th>
                 <SortableTh field="total_amount" currentField={sortField} direction={sortDirection} onSort={handleSort} align="right">Total</SortableTh>
@@ -292,6 +414,8 @@ export default function OrdersPage() {
                   order={order}
                   currency={currency}
                   isSelected={selectedOrder?.id === order.id}
+                  isChecked={selectedIds.has(order.id)}
+                  onCheck={() => toggleSelect(order.id)}
                   onClick={() =>
                     setSelectedOrder((prev) => (prev?.id === order.id ? null : order))
                   }
@@ -437,10 +561,12 @@ interface OrderRowProps {
   order: OrderData
   currency: string
   isSelected: boolean
+  isChecked: boolean
+  onCheck: () => void
   onClick: () => void
 }
 
-function OrderRow({ order, currency, isSelected, onClick }: OrderRowProps) {
+function OrderRow({ order, currency, isSelected, isChecked, onCheck, onClick }: OrderRowProps) {
   const sc = STATUS_CONFIG[order.order_status] ?? STATUS_CONFIG.confirmed
 
   return (
@@ -450,9 +576,21 @@ function OrderRow({ order, currency, isSelected, onClick }: OrderRowProps) {
         'cursor-pointer transition-colors',
         isSelected
           ? 'bg-[var(--platform-surface-active)]'
-          : 'hover:bg-[var(--platform-surface-hover)]',
+          : isChecked
+            ? 'bg-[var(--platform-accent)]/5'
+            : 'hover:bg-[var(--platform-surface-hover)]',
       )}
     >
+      {/* Checkbox */}
+      <td className="w-10 px-3 py-3" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          checked={isChecked}
+          onChange={onCheck}
+          className="h-3.5 w-3.5 rounded border-[var(--platform-border)] accent-[var(--platform-accent)] cursor-pointer"
+          aria-label={`Select order ${order.order_number}`}
+        />
+      </td>
       {/* Order # */}
       <td className="px-4 py-3">
         <span className="font-mono text-[var(--platform-text-primary)]">#{order.order_number}</span>
