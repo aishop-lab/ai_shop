@@ -555,7 +555,7 @@ export default function SettingsPage() {
             )}
 
             <div className="pt-4 border-t space-y-3">
-              <Link href="/dashboard/settings/shipping-providers">
+              <Link href="/platform/settings/shipping">
                 <Button variant="outline" className="w-full">
                   <Truck className="h-4 w-4 mr-2" />
                   Shipping Providers
@@ -564,7 +564,7 @@ export default function SettingsPage() {
               <p className="text-xs text-muted-foreground text-center">
                 Connect Shiprocket, Delhivery, Blue Dart, Shippo (US), or manage deliveries yourself
               </p>
-              <Link href="/dashboard/settings/shipping">
+              <Link href="/platform/settings/shipping">
                 <Button variant="ghost" className="w-full text-sm">
                   Advanced Shipping Zones
                 </Button>
@@ -623,7 +623,7 @@ export default function SettingsPage() {
                   Stripe {store.settings?.payments?.stripe_enabled ? '(Enabled)' : '(Disabled)'}
                 </p>
               </div>
-              <Link href="/dashboard/settings/payments">
+              <Link href="/platform/settings/payments">
                 <Button variant="outline" size="sm" className="mt-3">
                   Configure Payments
                   <ExternalLink className="h-3 w-3 ml-2" />
@@ -723,7 +723,7 @@ export default function SettingsPage() {
               Connect your own Resend and MSG91 accounts for branded notifications,
               or use platform credentials. Configure which notifications to send.
             </p>
-            <Link href="/dashboard/settings/notifications">
+            <Link href="/platform/settings/notifications">
               <Button variant="outline">
                 Notification Settings
                 <ExternalLink className="h-3 w-3 ml-2" />
@@ -748,7 +748,7 @@ export default function SettingsPage() {
               Import your entire product catalog from an existing Shopify or Etsy store.
               Products, images, variants, and collections are all transferred automatically.
             </p>
-            <Link href="/dashboard/migrate">
+            <Link href="/platform/settings/store">
               <Button variant="outline">
                 Import Products
                 <ExternalLink className="h-3 w-3 ml-2" />

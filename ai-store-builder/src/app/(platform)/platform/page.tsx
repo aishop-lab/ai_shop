@@ -8,11 +8,14 @@ import { useApprovals } from '@/lib/hooks/use-approvals'
 import { AGENT_TYPES } from '@/lib/agents/constants'
 import type { AgentType } from '@/lib/agents/types'
 
+import Link from 'next/link'
+import { Bot, MessageSquare, Settings, Zap } from 'lucide-react'
 import { CeoBriefingHeader } from '@/components/platform/command-center/ceo-briefing-header'
 import { ImpactMetricsRow } from '@/components/platform/command-center/impact-metrics-row'
 import { AgentActivityTimeline } from '@/components/platform/command-center/agent-activity-timeline'
 import { PendingApprovalsPanel } from '@/components/platform/command-center/pending-approvals-panel'
 import { AgentHealthOverview } from '@/components/platform/command-center/agent-health-overview'
+import { ProactiveInsights } from '@/components/platform/command-center/proactive-insights'
 
 interface StoreInfo {
   id: string
@@ -142,6 +145,52 @@ export default function CommandCenterPage() {
         totalAgents={AGENT_TYPES.length}
         currency={currency}
       />
+
+      {/* Proactive Insights from agents */}
+      <ProactiveInsights currency={currency} />
+
+      {/* Getting Started Banner — shown when no agent activity exists */}
+      {actions.length === 0 && agents.every((a) => a.total_actions === 0) && (
+        <div className="rounded-lg border border-[var(--platform-accent)]/20 bg-[var(--platform-accent)]/5 p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--platform-accent)]/30 bg-[var(--platform-accent)]/10">
+              <Zap className="h-5 w-5 text-[var(--platform-accent)]" />
+            </div>
+            <div>
+              <h2 className="font-mono text-sm font-semibold text-[var(--platform-text-primary)]">
+                Your agents are ready
+              </h2>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--platform-text-secondary)]">
+                Enable and configure your AI agents to start automating your business.
+                Once active, agent activity, metrics, and approval requests will appear here.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 pl-[52px]">
+            <Link
+              href="/platform/settings/agents"
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--platform-accent)] bg-[var(--platform-accent)] px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-[var(--platform-accent-hover)]"
+            >
+              <Settings className="h-3.5 w-3.5" />
+              Configure Agents
+            </Link>
+            <Link
+              href="/platform/agents/support"
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--platform-border)] px-4 py-2 text-xs font-medium text-[var(--platform-text-secondary)] transition-colors hover:border-[var(--platform-border-hover)] hover:text-[var(--platform-text-primary)]"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              Chat with Support
+            </Link>
+            <Link
+              href="/platform/agents/marketing"
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--platform-border)] px-4 py-2 text-xs font-medium text-[var(--platform-text-secondary)] transition-colors hover:border-[var(--platform-border-hover)] hover:text-[var(--platform-text-primary)]"
+            >
+              <Bot className="h-3.5 w-3.5" />
+              Chat with Marketing
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Main content: Timeline + Approvals */}
       <div className="grid gap-6 lg:grid-cols-3">

@@ -79,7 +79,27 @@ export default function AgentWorkspacePage() {
   }, [isValidAgent])
 
   // Real agent state from Supabase with real-time updates
-  const { agent: agentState, isLoading: isAgentLoading } = useAgentState(storeId, agentType)
+  const { agent: agentState, isLoading: isAgentLoading, refetch: refetchAgent } = useAgentState(storeId, agentType)
+
+  // Auto-initialize agent_states if they don't exist yet
+  const [isInitializing, setIsInitializing] = useState(false)
+  useEffect(() => {
+    if (!storeId || isAgentLoading || agentState || isInitializing) return
+    setIsInitializing(true)
+    fetch('/api/agents/initialize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ store_id: storeId }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.initialized) refetchAgent()
+      })
+      .catch(() => {
+        console.error('[AgentWorkspace] Agent initialization failed')
+      })
+      .finally(() => setIsInitializing(false))
+  }, [storeId, isAgentLoading, agentState, isInitializing, refetchAgent])
 
   // Real activity feed from Supabase with real-time updates
   const { actions: realtimeActions, isLoading: isActivityLoading } = useActivityFeed(storeId, {

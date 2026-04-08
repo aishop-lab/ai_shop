@@ -47,10 +47,10 @@ export async function loginAsMerchant(page: Page): Promise<boolean> {
     const submitBtn = page.locator('button[type="submit"]')
     await submitBtn.click()
 
-    // Wait for redirect to dashboard
-    await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15000 }).catch(() => {})
+    // Wait for redirect to dashboard or platform
+    await page.waitForURL(/\/(dashboard|platform|onboarding)/, { timeout: 15000 }).catch(() => {})
 
-    return page.url().includes('/dashboard') || page.url().includes('/onboarding')
+    return page.url().includes('/dashboard') || page.url().includes('/platform') || page.url().includes('/onboarding')
   } catch {
     return false
   }

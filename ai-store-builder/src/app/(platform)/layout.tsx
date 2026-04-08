@@ -41,7 +41,9 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ store_id: resolvedStoreId }),
-            }).catch(() => {})
+            }).catch((err) => {
+              console.error('[Platform] Agent initialization failed:', err)
+            })
 
             // Check if user has completed the agent intro
             const introKey = `agent-intro-${resolvedStoreId}`
@@ -128,6 +130,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
       <CommandPalette
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
+        storeSlug={storeSlug}
       />
 
       {showAgentIntro && storeId && (

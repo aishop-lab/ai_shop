@@ -13,6 +13,9 @@ import {
   LayoutDashboard,
   ExternalLink,
   X,
+  Users,
+  FolderOpen,
+  Ticket,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatusDot } from '@/components/platform/shared/status-dot'
@@ -140,8 +143,11 @@ export function PlatformSidebar({ isOpen, onClose, agents = [], pendingApprovals
             </p>
             <div className="space-y-1">
               <SidebarNavItem href="/platform/products" icon={Package} label="Products" />
+              <SidebarNavItem href="/platform/collections" icon={FolderOpen} label="Collections" />
               <SidebarNavItem href="/platform/orders" icon={ShoppingCart} label="Orders" />
-              <SidebarNavItem href="/platform/analytics" icon={LayoutDashboard} label="Analytics" />
+              <SidebarNavItem href="/platform/customers" icon={Users} label="Customers" />
+              <SidebarNavItem href="/platform/coupons" icon={Ticket} label="Coupons" />
+              <SidebarNavItem href="/platform/analytics" icon={LayoutDashboard} label="Reports" />
             </div>
           </div>
 

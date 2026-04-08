@@ -218,8 +218,28 @@ export default function AgentConfigPage() {
     fetchStoreId()
   }, [])
 
-  const { agents, isLoading } = useAgentStates(storeId)
+  const { agents, isLoading, refetch } = useAgentStates(storeId)
   const { updateAgent } = useUpdateAgentState()
+  const [initializing, setInitializing] = useState(false)
+
+  // Auto-initialize agent_states if they don't exist yet
+  useEffect(() => {
+    if (!storeId || isLoading || agents.length > 0 || initializing) return
+    setInitializing(true)
+    fetch('/api/agents/initialize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ store_id: storeId }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.initialized) refetch()
+      })
+      .catch(() => {
+        setSaveMessage('Failed to initialize agents — please refresh')
+      })
+      .finally(() => setInitializing(false))
+  }, [storeId, isLoading, agents.length, initializing, refetch])
 
   // Build settings from real agent states
   const agentSettings: Record<AgentType, AgentSettings> = Object.fromEntries(
@@ -272,7 +292,7 @@ export default function AgentConfigPage() {
     }
   }, [storeId, agents, updateAgent, showToast])
 
-  if (isLoading && agents.length === 0) {
+  if ((isLoading || initializing) && agents.length === 0) {
     return (
       <div className="mx-auto max-w-4xl space-y-8">
         <div className="space-y-1">
@@ -287,7 +307,7 @@ export default function AgentConfigPage() {
             Agent Configuration
           </h1>
           <p className="text-base text-[var(--platform-text-secondary)]">
-            Loading agent settings...
+            {initializing ? 'Initializing agents...' : 'Loading agent settings...'}
           </p>
         </div>
         <div className="flex h-64 items-center justify-center">
