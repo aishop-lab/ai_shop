@@ -17,6 +17,7 @@ import { PendingApprovalsPanel } from '@/components/platform/command-center/pend
 import { AgentHealthOverview } from '@/components/platform/command-center/agent-health-overview'
 import { ProactiveInsights } from '@/components/platform/command-center/proactive-insights'
 import { DailyBriefing } from '@/components/platform/command-center/daily-briefing'
+import { StoreHealth } from '@/components/platform/command-center/store-health'
 
 interface StoreInfo {
   id: string
@@ -215,6 +216,9 @@ export default function CommandCenterPage() {
             onApprove={approveAction}
             onReject={rejectAction}
           />
+
+          {/* Store Health */}
+          <StoreHealth storeId={storeId} />
         </div>
       </div>
 
