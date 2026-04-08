@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import {
   Users,
   Search,
@@ -702,6 +703,16 @@ function CustomerDetail({ customer, currency, onClose }: CustomerDetailProps) {
             mono
           />
         </Section>
+
+        {/* View Full Profile link */}
+        <div className="px-5 py-4">
+          <Link
+            href={`/platform/customers/${customer.id}`}
+            className="flex items-center justify-center gap-2 rounded-lg border border-[var(--platform-accent)] px-4 py-2 text-xs font-medium text-[var(--platform-accent)] transition-colors hover:bg-[var(--platform-accent)]/10"
+          >
+            View Full Profile
+          </Link>
+        </div>
       </div>
     </>
   )

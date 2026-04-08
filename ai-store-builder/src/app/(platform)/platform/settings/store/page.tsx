@@ -767,15 +767,15 @@ export default function StoreSettingsPage() {
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-[var(--platform-text-primary)]">More Settings</h2>
         <div className="grid gap-2 sm:grid-cols-2">
-          {/* Policies - legacy */}
+          {/* Policies */}
           <Link
-            href="/dashboard/settings/policies"
+            href="/platform/settings/policies"
             className="flex items-center gap-3 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-4 transition-colors hover:border-[var(--platform-border-hover)]"
           >
             <FileText className="h-4 w-4 text-[var(--platform-text-muted)]" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-[var(--platform-text-primary)]">Legal Policies</p>
-              <p className="text-[10px] text-[var(--platform-text-muted)]">Return, privacy, terms, shipping policies (opens legacy page)</p>
+              <p className="text-[10px] text-[var(--platform-text-muted)]">Return, privacy, terms, shipping policies</p>
             </div>
             <ArrowRight className="h-3 w-3 shrink-0 text-[var(--platform-text-muted)]" />
           </Link>
@@ -793,28 +793,28 @@ export default function StoreSettingsPage() {
             <ArrowRight className="h-3 w-3 shrink-0 text-[var(--platform-text-muted)]" />
           </Link>
 
-          {/* Data Export - legacy */}
+          {/* Data Export */}
           <Link
-            href="/dashboard/settings/data"
+            href="/platform/settings/data"
             className="flex items-center gap-3 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-4 transition-colors hover:border-[var(--platform-border-hover)]"
           >
             <Database className="h-4 w-4 text-[var(--platform-text-muted)]" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-[var(--platform-text-primary)]">Data &amp; Privacy</p>
-              <p className="text-[10px] text-[var(--platform-text-muted)]">Export your data, no lock-in (opens legacy page)</p>
+              <p className="text-[10px] text-[var(--platform-text-muted)]">Export your data, no lock-in</p>
             </div>
             <ArrowRight className="h-3 w-3 shrink-0 text-[var(--platform-text-muted)]" />
           </Link>
 
-          {/* Security - legacy */}
+          {/* Security */}
           <Link
-            href="/dashboard/settings/security"
+            href="/platform/settings/security"
             className="flex items-center gap-3 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-4 transition-colors hover:border-[var(--platform-border-hover)]"
           >
             <Shield className="h-4 w-4 text-[var(--platform-text-muted)]" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-[var(--platform-text-primary)]">Security</p>
-              <p className="text-[10px] text-[var(--platform-text-muted)]">Two-factor authentication settings (opens legacy page)</p>
+              <p className="text-[10px] text-[var(--platform-text-muted)]">Two-factor authentication settings</p>
             </div>
             <ArrowRight className="h-3 w-3 shrink-0 text-[var(--platform-text-muted)]" />
           </Link>
@@ -832,28 +832,28 @@ export default function StoreSettingsPage() {
             <ArrowRight className="h-3 w-3 shrink-0 text-[var(--platform-text-muted)]" />
           </Link>
 
-          {/* Domain - legacy */}
+          {/* Domain */}
           <Link
-            href="/dashboard/settings/domain"
+            href="/platform/settings/domain"
             className="flex items-center gap-3 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-4 transition-colors hover:border-[var(--platform-border-hover)]"
           >
             <Globe className="h-4 w-4 text-[var(--platform-text-muted)]" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-[var(--platform-text-primary)]">Custom Domain</p>
-              <p className="text-[10px] text-[var(--platform-text-muted)]">Connect your own domain (opens legacy page)</p>
+              <p className="text-[10px] text-[var(--platform-text-muted)]">Connect your own domain</p>
             </div>
             <ArrowRight className="h-3 w-3 shrink-0 text-[var(--platform-text-muted)]" />
           </Link>
 
-          {/* Import / Migration - legacy */}
+          {/* Import / Migration */}
           <Link
-            href="/dashboard/migrate"
+            href="/platform/settings/import"
             className="flex items-center gap-3 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-4 transition-colors hover:border-[var(--platform-border-hover)]"
           >
             <Import className="h-4 w-4 text-[var(--platform-text-muted)]" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-[var(--platform-text-primary)]">Import Products</p>
-              <p className="text-[10px] text-[var(--platform-text-muted)]">Migrate from Shopify or Etsy (opens legacy page)</p>
+              <p className="text-[10px] text-[var(--platform-text-muted)]">Migrate from Shopify or Etsy</p>
             </div>
             <ArrowRight className="h-3 w-3 shrink-0 text-[var(--platform-text-muted)]" />
           </Link>
