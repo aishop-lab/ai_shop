@@ -492,7 +492,7 @@ export default function OrdersPage() {
           selectedOrder ? 'translate-x-0' : 'translate-x-full',
         )}
       >
-        {selectedOrder && <OrderDetail order={selectedOrder} currency={currency} onClose={() => setSelectedOrder(null)} />}
+        {selectedOrder && <OrderDetail order={selectedOrder} currency={currency} storeId={storeId} onClose={() => setSelectedOrder(null)} onStatusUpdate={() => { setSelectedOrder(null); fetchOrders() }} />}
       </aside>
     </div>
   )
@@ -668,11 +668,56 @@ function PaymentBadge({ method }: { method: PaymentMethod }) {
 interface OrderDetailProps {
   order: OrderData
   currency: string
+  storeId: string | null
   onClose: () => void
+  onStatusUpdate: () => void
 }
 
-function OrderDetail({ order, currency, onClose }: OrderDetailProps) {
+function OrderDetail({ order, currency, storeId, onClose, onStatusUpdate }: OrderDetailProps) {
   const sc = STATUS_CONFIG[order.order_status] ?? STATUS_CONFIG.confirmed
+  const [updatingStatus, setUpdatingStatus] = useState(false)
+
+  async function handleStatusChange(newStatus: OrderStatus) {
+    if (!storeId || updatingStatus) return
+    setUpdatingStatus(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('orders')
+        .update({ order_status: newStatus })
+        .eq('id', order.id)
+        .eq('store_id', storeId)
+      if (!error) {
+        onStatusUpdate()
+      }
+    } catch {
+      console.error('[Orders] Status update failed')
+    } finally {
+      setUpdatingStatus(false)
+    }
+  }
+
+  // Determine available next statuses based on current
+  const nextStatuses: { status: OrderStatus; label: string; cls: string }[] = (() => {
+    switch (order.order_status) {
+      case 'confirmed':
+        return [
+          { status: 'processing', label: 'Start Processing', cls: 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' },
+          { status: 'cancelled', label: 'Cancel Order', cls: 'border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20' },
+        ]
+      case 'processing':
+        return [
+          { status: 'shipped', label: 'Mark Shipped', cls: 'border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20' },
+          { status: 'cancelled', label: 'Cancel Order', cls: 'border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20' },
+        ]
+      case 'shipped':
+        return [
+          { status: 'delivered', label: 'Mark Delivered', cls: 'border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20' },
+        ]
+      default:
+        return []
+    }
+  })()
 
   return (
     <>
@@ -733,6 +778,31 @@ function OrderDetail({ order, currency, onClose }: OrderDetailProps) {
           </div>
           <InfoRow label="Placed at" value={formatDateTime(order.created_at)} mono />
         </Section>
+
+        {/* Actions section */}
+        {nextStatuses.length > 0 && (
+          <Section icon={<Package className="h-3.5 w-3.5" />} title="Actions">
+            <div className="flex flex-wrap gap-2 py-1">
+              {nextStatuses.map((ns) => (
+                <button
+                  key={ns.status}
+                  type="button"
+                  disabled={updatingStatus}
+                  onClick={() => handleStatusChange(ns.status)}
+                  className={cn(
+                    'rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50',
+                    ns.cls
+                  )}
+                >
+                  {updatingStatus ? (
+                    <Loader2 className="h-3 w-3 animate-spin inline mr-1" />
+                  ) : null}
+                  {ns.label}
+                </button>
+              ))}
+            </div>
+          </Section>
+        )}
       </div>
     </>
   )
