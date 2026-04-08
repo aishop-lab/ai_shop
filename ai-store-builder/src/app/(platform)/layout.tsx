@@ -21,6 +21,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [storeId, setStoreId] = useState<string | null>(null)
+  const [storeSlug, setStoreSlug] = useState<string | null>(null)
   const [showAgentIntro, setShowAgentIntro] = useState(false)
 
   // Fetch the merchant's store ID and ensure agents are initialized
@@ -34,6 +35,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
           const resolvedStoreId = data.store?.id
           if (resolvedStoreId) {
             setStoreId(resolvedStoreId)
+            if (data.store?.slug) setStoreSlug(data.store.slug)
             // Lazily initialize agent_states if they don't exist yet
             fetch('/api/agents/initialize', {
               method: 'POST',
@@ -108,6 +110,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
         onClose={() => setSidebarOpen(false)}
         agents={agentNavInfo}
         pendingApprovals={pendingCount}
+        storeSlug={storeSlug}
       />
 
       <div className="flex flex-1 flex-col">

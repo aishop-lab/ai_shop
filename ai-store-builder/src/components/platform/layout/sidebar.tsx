@@ -11,6 +11,7 @@ import {
   Package,
   ShoppingCart,
   LayoutDashboard,
+  ExternalLink,
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -30,6 +31,14 @@ interface PlatformSidebarProps {
   onClose: () => void
   agents?: AgentNavInfo[]
   pendingApprovals?: number
+  storeSlug?: string | null
+}
+
+function getStoreUrl(slug: string): string {
+  if (process.env.NODE_ENV === 'production') {
+    return `https://${slug}.storeforge.site`
+  }
+  return `/${slug}`
 }
 
 const AGENT_ICONS: Record<AgentType, typeof Home> = {
@@ -40,7 +49,7 @@ const AGENT_ICONS: Record<AgentType, typeof Home> = {
   technical: SettingsIcon,
 }
 
-export function PlatformSidebar({ isOpen, onClose, agents = [], pendingApprovals = 0 }: PlatformSidebarProps) {
+export function PlatformSidebar({ isOpen, onClose, agents = [], pendingApprovals = 0, storeSlug }: PlatformSidebarProps) {
   return (
     <>
       {/* Mobile overlay */}
@@ -78,6 +87,17 @@ export function PlatformSidebar({ isOpen, onClose, agents = [], pendingApprovals
           {/* Main */}
           <div className="space-y-1">
             <SidebarNavItem href="/platform" icon={Home} label="Command Center" />
+            {storeSlug && (
+              <a
+                href={getStoreUrl(storeSlug)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-3 rounded-md px-3 py-2.5 min-h-[44px] text-xs text-[var(--platform-text-secondary)] hover:bg-[var(--platform-surface-hover)] hover:text-[var(--platform-text-primary)] border-l-2 border-l-transparent transition-colors"
+              >
+                <ExternalLink className="h-4 w-4 shrink-0" />
+                <span className="truncate flex-1">View Store</span>
+              </a>
+            )}
             <SidebarNavItem
               href="/platform/approvals"
               icon={ShieldCheck}
