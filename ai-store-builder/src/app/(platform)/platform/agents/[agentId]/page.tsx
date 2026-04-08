@@ -37,6 +37,39 @@ interface ChatMessage {
   content: string
 }
 
+const QUICK_PROMPTS: Record<AgentType, string[]> = {
+  support: [
+    'What can you help me with?',
+    'Draft a response to a customer complaint',
+    'Set up auto-replies for common questions',
+    'Show me recent support tickets',
+  ],
+  sales: [
+    'How can you boost my sales?',
+    'Recover abandoned carts',
+    'Suggest a pricing strategy',
+    'Create an upsell campaign',
+  ],
+  analytics: [
+    'Give me a business overview',
+    'What are my top-selling products?',
+    'Analyze my conversion rate',
+    'Find revenue trends this month',
+  ],
+  technical: [
+    'Audit my store SEO',
+    'Check my site performance',
+    'Optimize product images',
+    'Review my store setup',
+  ],
+  marketing: [
+    'Plan a marketing campaign',
+    'Write social media copy for my top product',
+    'Create an email newsletter',
+    'Suggest ad targeting strategy',
+  ],
+}
+
 export default function AgentWorkspacePage() {
   const params = useParams()
   const agentId = params.agentId as string
@@ -520,12 +553,44 @@ export default function AgentWorkspacePage() {
               {/* Messages */}
               <div ref={chatContainerRef} className="flex-1 space-y-3 p-4 max-h-[500px] overflow-y-auto">
                 {chatMessages.length === 0 && (
-                  <div className="flex items-center justify-center h-32">
-                    <p className="text-xs text-[var(--platform-text-muted)]">
-                      {enabled
-                        ? `Start a conversation with ${displayName.replace(' Agent', '')}...`
-                        : `Enable ${displayName.replace(' Agent', '')} to start chatting`}
-                    </p>
+                  <div className="flex flex-col items-center justify-center py-6 px-4 space-y-4">
+                    {!enabled ? (
+                      <p className="text-xs text-[var(--platform-text-muted)]">
+                        Enable {displayName.replace(' Agent', '')} to start chatting
+                      </p>
+                    ) : (
+                      <>
+                        <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg border', colors.bg, colors.border)}>
+                          <span className={cn('h-3 w-3 rounded-full', colors.dot)} />
+                        </div>
+                        <div className="text-center space-y-1">
+                          <p className="text-xs font-medium text-[var(--platform-text-primary)]">
+                            Chat with {displayName.replace(' Agent', '')}
+                          </p>
+                          <p className="text-[11px] text-[var(--platform-text-muted)] max-w-xs">
+                            {description}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-1.5 max-w-sm">
+                          {(QUICK_PROMPTS[agentType] ?? []).map((prompt) => (
+                            <button
+                              key={prompt}
+                              type="button"
+                              onClick={() => {
+                                setChatInput(prompt)
+                              }}
+                              className={cn(
+                                'rounded-full border px-3 py-1.5 text-[10px] transition-colors',
+                                'border-[var(--platform-border)] text-[var(--platform-text-secondary)]',
+                                'hover:border-[var(--platform-border-hover)] hover:text-[var(--platform-text-primary)]'
+                              )}
+                            >
+                              {prompt}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
                 {chatMessages.map((msg, idx) => (

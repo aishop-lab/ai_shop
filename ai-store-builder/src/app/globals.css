@@ -156,5 +156,26 @@
     /* Accent */
     --platform-accent: oklch(0.623 0.214 259.815);          /* #3b82f6 blue */
     --platform-accent-hover: oklch(0.566 0.225 262.881);    /* #2563eb darker blue */
+
+    /* Override shadcn variables to match platform theme when shadcn components
+       are used inside the platform layout (e.g., ProductForm) */
+    --background: oklch(0.098 0 0);
+    --foreground: oklch(0.95 0 0);
+    --card: oklch(0.13 0 0);
+    --card-foreground: oklch(0.95 0 0);
+    --popover: oklch(0.13 0 0);
+    --popover-foreground: oklch(0.95 0 0);
+    --primary: oklch(0.623 0.214 259.815);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.16 0 0);
+    --secondary-foreground: oklch(0.95 0 0);
+    --muted: oklch(0.16 0 0);
+    --muted-foreground: oklch(0.55 0 0);
+    --accent: oklch(0.16 0 0);
+    --accent-foreground: oklch(0.95 0 0);
+    --destructive: oklch(0.637 0.237 25.331);
+    --border: oklch(0.2 0 0);
+    --input: oklch(0.2 0 0);
+    --ring: oklch(0.623 0.214 259.815);
   }
 }

@@ -156,7 +156,7 @@ export default function CollectionsPage() {
           </p>
         </div>
         <Link
-          href="/dashboard/collections/create"
+          href="/platform/collections/create"
           className={cn(
             'flex items-center gap-1.5 rounded-lg px-3 py-1.5',
             'bg-[var(--platform-accent)] text-white text-xs font-medium',
@@ -223,7 +223,7 @@ export default function CollectionsPage() {
 
 function CollectionCard({ collection }: { collection: Collection }) {
   return (
-    <Link href={`/dashboard/collections/${collection.id}`}>
+    <Link href={`/dashboard/collections/${collection.id}`} title="Edit collection (opens legacy editor)">
       <div
         className={cn(
           'rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)]',
@@ -301,7 +301,7 @@ function EmptyState() {
         Group your products into collections for better organization
       </p>
       <Link
-        href="/dashboard/collections/create"
+        href="/platform/collections/create"
         className={cn(
           'mt-4 flex items-center gap-1.5 rounded-lg px-3 py-1.5',
           'bg-[var(--platform-accent)] text-white text-xs font-medium',

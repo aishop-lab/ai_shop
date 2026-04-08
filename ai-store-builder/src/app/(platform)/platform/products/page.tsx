@@ -60,6 +60,7 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft'>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
   const [products, setProducts] = useState<ProductData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [storeId, setStoreId] = useState<string | null>(null)
@@ -139,9 +140,13 @@ export default function ProductsPage() {
       const matchesSearch = (p.title ?? '').toLowerCase().includes(search.toLowerCase())
       const matchesStatus = statusFilter === 'all' || p.status === statusFilter
       const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter
-      return matchesSearch && matchesStatus && matchesCategory
+      const matchesStock =
+        stockFilter === 'all' ||
+        (stockFilter === 'low' && p.inventory > 0 && p.inventory <= LOW_STOCK_THRESHOLD) ||
+        (stockFilter === 'out' && p.inventory === 0)
+      return matchesSearch && matchesStatus && matchesCategory && matchesStock
     })
-  }, [search, statusFilter, categoryFilter, products])
+  }, [search, statusFilter, categoryFilter, stockFilter, products])
 
   if (isLoading) {
     return (
@@ -262,6 +267,18 @@ export default function ProductsPage() {
             ...uniqueCategories.map((c) => ({ value: c, label: c })),
           ]}
         />
+
+        {/* Stock filter */}
+        <FilterSelect
+          value={stockFilter}
+          onChange={(v) => setStockFilter(v as typeof stockFilter)}
+          aria-label="Filter by stock level"
+          options={[
+            { value: 'all', label: 'All stock' },
+            { value: 'low', label: 'Low stock' },
+            { value: 'out', label: 'Out of stock' },
+          ]}
+        />
       </div>
 
       {/* ----------------------------------------------------------------- */}
@@ -269,7 +286,7 @@ export default function ProductsPage() {
       {/* ----------------------------------------------------------------- */}
       <div className="rounded-xl border border-[var(--platform-border)] overflow-x-auto overflow-hidden">
         {filtered.length === 0 ? (
-          <EmptyState hasFilters={search !== '' || statusFilter !== 'all' || categoryFilter !== 'all'} />
+          <EmptyState hasFilters={search !== '' || statusFilter !== 'all' || categoryFilter !== 'all' || stockFilter !== 'all'} />
         ) : (
           <table className="w-full text-xs">
             <thead>
