@@ -13,6 +13,7 @@ import { TopBar } from '@/components/platform/layout/top-bar'
 import { MobileNav } from '@/components/platform/layout/mobile-nav'
 import { CommandPalette } from '@/components/platform/layout/command-palette'
 import { AgentIntroOverlay } from '@/components/platform/onboarding/agent-intro-overlay'
+import { KeyboardShortcutsDialog } from '@/components/platform/layout/keyboard-shortcuts-dialog'
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   const { isLoading: authLoading } = useRequireAuth()
@@ -20,6 +21,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   const isOnboarding = pathname === '/onboarding'
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [storeId, setStoreId] = useState<string | null>(null)
   const [storeSlug, setStoreSlug] = useState<string | null>(null)
   const [showAgentIntro, setShowAgentIntro] = useState(false)
@@ -84,10 +86,17 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
       description: 'Toggle command palette',
     },
     {
+      key: '?',
+      shift: true,
+      handler: () => setShortcutsOpen((prev) => !prev),
+      description: 'Toggle keyboard shortcuts',
+    },
+    {
       key: 'Escape',
       handler: () => {
         setCommandPaletteOpen(false)
         setSidebarOpen(false)
+        setShortcutsOpen(false)
       },
       allowInInput: true,
       description: 'Close overlays',
@@ -131,6 +140,11 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
         storeSlug={storeSlug}
+      />
+
+      <KeyboardShortcutsDialog
+        isOpen={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
       />
 
       {showAgentIntro && storeId && (
