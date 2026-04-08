@@ -16,6 +16,7 @@ import { AgentActivityTimeline } from '@/components/platform/command-center/agen
 import { PendingApprovalsPanel } from '@/components/platform/command-center/pending-approvals-panel'
 import { AgentHealthOverview } from '@/components/platform/command-center/agent-health-overview'
 import { ProactiveInsights } from '@/components/platform/command-center/proactive-insights'
+import { DailyBriefing } from '@/components/platform/command-center/daily-briefing'
 
 interface StoreInfo {
   id: string
@@ -145,6 +146,9 @@ export default function CommandCenterPage() {
         totalAgents={AGENT_TYPES.length}
         currency={currency}
       />
+
+      {/* Daily Briefing — real-time store metrics */}
+      <DailyBriefing storeId={storeId} currency={currency} />
 
       {/* Proactive Insights from agents */}
       <ProactiveInsights currency={currency} />
