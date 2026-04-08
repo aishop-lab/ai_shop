@@ -14,6 +14,7 @@ import { MobileNav } from '@/components/platform/layout/mobile-nav'
 import { CommandPalette } from '@/components/platform/layout/command-palette'
 import { AgentIntroOverlay } from '@/components/platform/onboarding/agent-intro-overlay'
 import { KeyboardShortcutsDialog } from '@/components/platform/layout/keyboard-shortcuts-dialog'
+import { PlatformStoreProvider } from '@/lib/hooks/use-platform-store'
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   const { isLoading: authLoading } = useRequireAuth()
@@ -115,6 +116,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   }
 
   return (
+    <PlatformStoreProvider>
     <div className="dark platform-theme flex min-h-screen overflow-x-hidden bg-[var(--platform-bg)]">
       <PlatformSidebar
         isOpen={sidebarOpen}
@@ -152,5 +154,6 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
         <AgentIntroOverlay storeId={storeId} onComplete={handleIntroComplete} />
       )}
     </div>
+    </PlatformStoreProvider>
   )
 }
