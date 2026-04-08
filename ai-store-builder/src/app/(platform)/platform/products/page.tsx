@@ -11,6 +11,8 @@ import {
   Package,
   Loader2,
   ExternalLink,
+  TrendingUp,
+  Archive,
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
@@ -187,6 +189,32 @@ export default function ProductsPage() {
           Add Product
         </Link>
       </div>
+
+      {/* ----------------------------------------------------------------- */}
+      {/* Quick Stats                                                          */}
+      {/* ----------------------------------------------------------------- */}
+      {products.length > 0 && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">Total</p>
+            <p className="mt-1 font-mono text-lg font-semibold text-[var(--platform-text-primary)]">{products.length}</p>
+          </div>
+          <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">Active</p>
+            <p className="mt-1 font-mono text-lg font-semibold text-green-400">{products.filter(p => p.status === 'active').length}</p>
+          </div>
+          <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">Draft</p>
+            <p className="mt-1 font-mono text-lg font-semibold text-[var(--platform-text-secondary)]">{products.filter(p => p.status === 'draft').length}</p>
+          </div>
+          <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">Low Stock</p>
+            <p className={cn('mt-1 font-mono text-lg font-semibold', products.filter(p => p.inventory <= LOW_STOCK_THRESHOLD && p.status === 'active').length > 0 ? 'text-amber-400' : 'text-[var(--platform-text-secondary)]')}>
+              {products.filter(p => p.inventory <= LOW_STOCK_THRESHOLD && p.status === 'active').length}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ----------------------------------------------------------------- */}
       {/* Filter bar                                                          */}
