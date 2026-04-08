@@ -315,6 +315,50 @@ test.describe('Platform Navigation', () => {
     ).toBe(true)
   })
 
+  test('Collection create page loads', async ({ page }) => {
+    await page.goto('/platform/collections/create', { waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(2000)
+
+    expect(
+      await page
+        .locator('text=Create')
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false)
+    ).toBe(true)
+  })
+
+  test('Coupon create page loads', async ({ page }) => {
+    await page.goto('/platform/coupons/create', { waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(2000)
+
+    expect(
+      await page
+        .locator('text=Create')
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false)
+    ).toBe(true)
+  })
+
+  // ============================================
+  // COMMAND CENTER COMPONENTS
+  // ============================================
+
+  test('Command center has key sections', async ({ page }) => {
+    await page.goto('/platform', { waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(3000)
+
+    // Should have metrics or getting-started banner
+    const hasMetrics = await page
+      .locator('text=Agent Activity')
+      .or(page.locator('text=Your agents are ready'))
+      .first()
+      .isVisible({ timeout: 5000 })
+      .catch(() => false)
+    expect(hasMetrics).toBe(true)
+  })
+
   // ============================================
   // SIDEBAR NAVIGATION
   // ============================================
