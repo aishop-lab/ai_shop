@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Search, ChevronDown, ChevronUp, ShoppingBag, X, User, CreditCard, Package, Loader2, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, ChevronDown, ChevronUp, ShoppingBag, X, User, CreditCard, Package, Loader2, ArrowUpDown, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
 import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
@@ -276,6 +276,17 @@ export default function OrdersPage() {
             {orders.length} orders total
           </p>
         </div>
+        <Link
+          href="/platform/orders/create"
+          className={cn(
+            'flex items-center gap-1.5 rounded-lg px-3 py-1.5',
+            'bg-[var(--platform-accent)] text-white text-xs font-medium',
+            'hover:opacity-90 transition-opacity',
+          )}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Create Order
+        </Link>
       </div>
 
       {/* ------------------------------------------------------------------ */}

@@ -13,6 +13,7 @@ import {
   ExternalLink,
   TrendingUp,
   Archive,
+  Camera,
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
@@ -182,17 +183,31 @@ export default function ProductsPage() {
             {products.length} products in your catalog
           </p>
         </div>
-        <Link
-          href="/platform/products/new"
-          className={cn(
-            'flex items-center gap-1.5 rounded-lg px-3 py-1.5',
-            'bg-[var(--platform-accent)] text-white text-xs font-medium',
-            'hover:opacity-90 transition-opacity',
-          )}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add Product
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/platform/products/photo"
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5',
+              'border border-[var(--platform-border)] bg-[var(--platform-surface)]',
+              'text-[var(--platform-text-primary)] text-xs font-medium',
+              'hover:border-[var(--platform-border-hover)] transition-colors',
+            )}
+          >
+            <Camera className="h-3.5 w-3.5" />
+            Photo to Product
+          </Link>
+          <Link
+            href="/platform/products/new"
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5',
+              'bg-[var(--platform-accent)] text-white text-xs font-medium',
+              'hover:opacity-90 transition-opacity',
+            )}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Product
+          </Link>
+        </div>
       </div>
 
       {/* ----------------------------------------------------------------- */}

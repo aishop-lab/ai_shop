@@ -265,6 +265,8 @@ export interface StoreBlueprint {
   }
   // AI-generated content
   ai_content?: AIContent
+  // Appearance customization
+  button_radius?: string
 }
 
 export interface Product {

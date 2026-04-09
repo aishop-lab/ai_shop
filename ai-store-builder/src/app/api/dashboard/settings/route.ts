@@ -118,6 +118,12 @@ export async function PATCH(request: Request) {
     if (body.button_radius !== undefined) {
       blueprintUpdates.button_radius = body.button_radius
     }
+    if (body.theme_template !== undefined) {
+      blueprintUpdates.theme = {
+        ...((existingStore.blueprint as Record<string, unknown>)?.theme || {}),
+        template: body.theme_template,
+      }
+    }
 
     if (Object.keys(blueprintUpdates).length > 0) {
       const currentBlueprint = (existingStore.blueprint || {}) as Record<string, unknown>

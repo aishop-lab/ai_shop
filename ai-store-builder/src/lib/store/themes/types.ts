@@ -59,6 +59,7 @@ export interface BrandStyles {
     heading_font: string
     body_font: string
   }
+  button_radius?: string
 }
 
 // Style variables generated from brand
