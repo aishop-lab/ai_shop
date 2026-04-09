@@ -32,9 +32,16 @@ function formatTimeAgo(dateString: string): string {
   return `${days}d ago`
 }
 
+interface ToolCallInfo {
+  name: string
+  args?: Record<string, unknown>
+  result?: string
+}
+
 interface ChatMessage {
   role: 'agent' | 'merchant'
   content: string
+  toolCalls?: ToolCallInfo[]
 }
 
 const QUICK_PROMPTS: Record<AgentType, string[]> = {
@@ -307,29 +314,79 @@ export default function AgentWorkspacePage() {
 
       const decoder = new TextDecoder()
       let assistantContent = ''
+      let toolCalls: ToolCallInfo[] = []
+      let sseBuffer = ''
 
       // Add a placeholder message for the assistant
-      setChatMessages((prev) => [...prev, { role: 'agent', content: '' }])
+      setChatMessages((prev) => [...prev, { role: 'agent', content: '', toolCalls: [] }])
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        assistantContent += chunk
-        // Update the last message (the assistant placeholder)
+      const updateMessage = () => {
         setChatMessages((prev) => {
           const updated = [...prev]
           updated[updated.length - 1] = {
             role: 'agent',
             content: assistantContent,
+            toolCalls: toolCalls.length > 0 ? [...toolCalls] : undefined,
           }
           return updated
         })
       }
 
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        sseBuffer += decoder.decode(value, { stream: true })
+
+        // Parse SSE events (UI Message Stream Protocol)
+        const lines = sseBuffer.split('\n')
+        sseBuffer = lines.pop() ?? '' // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const jsonStr = line.slice(6).trim()
+          if (!jsonStr || jsonStr === '[DONE]') continue
+
+          try {
+            const event = JSON.parse(jsonStr)
+
+            if (event.type === 'text-delta' && event.delta) {
+              assistantContent += event.delta
+              updateMessage()
+            } else if (event.type === 'tool-call-start') {
+              toolCalls.push({
+                name: event.toolName ?? event.name ?? 'tool',
+                args: undefined,
+                result: undefined,
+              })
+              updateMessage()
+            } else if (event.type === 'tool-call-args-delta' || event.type === 'tool-call-delta') {
+              // Tool args streaming — show tool is working
+              const lastTool = toolCalls[toolCalls.length - 1]
+              if (lastTool && !lastTool.result) {
+                lastTool.result = 'Running...'
+                updateMessage()
+              }
+            } else if (event.type === 'tool-result') {
+              const lastTool = toolCalls[toolCalls.length - 1]
+              if (lastTool) {
+                const resultStr = typeof event.result === 'string'
+                  ? event.result
+                  : JSON.stringify(event.result, null, 2)
+                lastTool.result = resultStr.length > 500
+                  ? resultStr.slice(0, 500) + '...'
+                  : resultStr
+                updateMessage()
+              }
+            }
+          } catch {
+            // Partial JSON or non-JSON line — skip
+          }
+        }
+      }
+
       // If we got no content at all, show a fallback
-      if (!assistantContent) {
+      if (!assistantContent && toolCalls.length === 0) {
         setChatMessages((prev) => {
           const updated = [...prev]
           updated[updated.length - 1] = {
@@ -599,10 +656,40 @@ export default function AgentWorkspacePage() {
                           {displayName.replace(' Agent', '')}
                         </p>
                       )}
+                      {/* Tool calls indicator */}
+                      {msg.toolCalls && msg.toolCalls.length > 0 && (
+                        <div className="mb-2 space-y-1.5">
+                          {msg.toolCalls.map((tc, ti) => (
+                            <div
+                              key={ti}
+                              className={cn(
+                                'rounded border px-2 py-1.5 font-mono text-[10px]',
+                                tc.result === 'Running...'
+                                  ? 'border-amber-500/20 bg-amber-500/5 text-amber-400'
+                                  : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'
+                              )}
+                            >
+                              <span className="font-semibold">
+                                {tc.result === 'Running...' ? '⟳' : '✓'} {tc.name}
+                              </span>
+                              {tc.result && tc.result !== 'Running...' && (
+                                <details className="mt-1">
+                                  <summary className="cursor-pointer text-[9px] opacity-60">
+                                    View result
+                                  </summary>
+                                  <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-[9px] opacity-80">
+                                    {tc.result}
+                                  </pre>
+                                </details>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {msg.content || (
                         <span className="inline-flex items-center gap-1">
                           <Loader2 className="h-3 w-3 animate-spin" />
-                          <span className="opacity-60">Thinking...</span>
+                          <span className="opacity-60">{msg.toolCalls?.length ? 'Working...' : 'Thinking...'}</span>
                         </span>
                       )}
                     </div>
