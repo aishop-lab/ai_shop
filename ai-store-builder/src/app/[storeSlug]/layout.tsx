@@ -11,6 +11,7 @@ import StoreFooter from '@/components/store/store-footer'
 import StoreSidebar from '@/components/store/store-sidebar'
 import { StoreClientWrapper } from '@/components/store/store-client-wrapper'
 import { ChatWidget } from '@/components/store/chat-widget'
+import { I18nProvider } from '@/lib/i18n'
 
 interface StoreLayoutProps {
   children: React.ReactNode
@@ -83,6 +84,7 @@ export default async function StoreLayout({ children, params }: StoreLayoutProps
 
       {/* Store Provider with CSS Variables */}
       <div style={styleVars as React.CSSProperties}>
+        <I18nProvider>
         <StoreProvider initialData={storeData}>
           <SidebarProvider>
             <AnalyticsProvider pixels={store.marketing_pixels || null} currency={currency}>
@@ -100,6 +102,7 @@ export default async function StoreLayout({ children, params }: StoreLayoutProps
             </AnalyticsProvider>
           </SidebarProvider>
         </StoreProvider>
+        </I18nProvider>
       </div>
     </>
   )

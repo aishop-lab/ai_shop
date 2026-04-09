@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation'
 import { useStore, useIsHydrated } from '@/lib/contexts/store-context'
 import MiniCart from '@/components/store/mini-cart'
 import AccountDropdown from '@/components/store/account-dropdown'
+import { LanguageSwitcher } from '@/components/store/language-switcher'
+import { useTranslation } from '@/lib/i18n'
 
 interface ModernMinimalHeaderProps {
   onMenuClick?: () => void
@@ -18,6 +20,7 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
   const [searchQuery, setSearchQuery] = useState('')
   const router = useRouter()
   const { store } = useStore()
+  const { t } = useTranslation()
   useIsHydrated()
   const baseUrl = `/${store.slug}`
 
@@ -80,33 +83,36 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
               className="text-gray-700 hover:text-[var(--color-primary)] transition-colors font-medium"
               style={{ fontFamily: 'var(--font-body)' }}
             >
-              Home
+              {t.nav.home}
             </Link>
             <Link
               href={`${baseUrl}/products`}
               className="text-gray-700 hover:text-[var(--color-primary)] transition-colors font-medium"
               style={{ fontFamily: 'var(--font-body)' }}
             >
-              Products
+              {t.nav.products}
             </Link>
             <Link
               href={`${baseUrl}/about`}
               className="text-gray-700 hover:text-[var(--color-primary)] transition-colors font-medium"
               style={{ fontFamily: 'var(--font-body)' }}
             >
-              About
+              {t.nav.about}
             </Link>
             <Link
               href={`${baseUrl}/contact`}
               className="text-gray-700 hover:text-[var(--color-primary)] transition-colors font-medium"
               style={{ fontFamily: 'var(--font-body)' }}
             >
-              Contact
+              {t.nav.contact}
             </Link>
           </nav>
 
           {/* Right Actions */}
           <div className="flex items-center space-x-1 sm:space-x-2">
+            {/* Language */}
+            <LanguageSwitcher />
+
             {/* Search Button */}
             <button
               onClick={() => setSearchOpen(!searchOpen)}
@@ -130,7 +136,7 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
                 type="search"
-                placeholder="Search products..."
+                placeholder={t.product.searchProducts}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus
