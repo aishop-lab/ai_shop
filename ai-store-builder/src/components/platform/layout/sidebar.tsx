@@ -11,7 +11,13 @@ import {
   Package,
   ShoppingCart,
   LayoutDashboard,
+  ExternalLink,
   X,
+  Users,
+  FolderOpen,
+  Ticket,
+  MessageCircle,
+  Camera,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatusDot } from '@/components/platform/shared/status-dot'
@@ -30,6 +36,14 @@ interface PlatformSidebarProps {
   onClose: () => void
   agents?: AgentNavInfo[]
   pendingApprovals?: number
+  storeSlug?: string | null
+}
+
+function getStoreUrl(slug: string): string {
+  if (process.env.NODE_ENV === 'production') {
+    return `https://${slug}.storeforge.site`
+  }
+  return `/${slug}`
 }
 
 const AGENT_ICONS: Record<AgentType, typeof Home> = {
@@ -40,7 +54,7 @@ const AGENT_ICONS: Record<AgentType, typeof Home> = {
   technical: SettingsIcon,
 }
 
-export function PlatformSidebar({ isOpen, onClose, agents = [], pendingApprovals = 0 }: PlatformSidebarProps) {
+export function PlatformSidebar({ isOpen, onClose, agents = [], pendingApprovals = 0, storeSlug }: PlatformSidebarProps) {
   return (
     <>
       {/* Mobile overlay */}
@@ -78,6 +92,17 @@ export function PlatformSidebar({ isOpen, onClose, agents = [], pendingApprovals
           {/* Main */}
           <div className="space-y-1">
             <SidebarNavItem href="/platform" icon={Home} label="Command Center" />
+            {storeSlug && (
+              <a
+                href={getStoreUrl(storeSlug)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-3 rounded-md px-3 py-2.5 min-h-[44px] text-xs text-[var(--platform-text-secondary)] hover:bg-[var(--platform-surface-hover)] hover:text-[var(--platform-text-primary)] border-l-2 border-l-transparent transition-colors"
+              >
+                <ExternalLink className="h-4 w-4 shrink-0" />
+                <span className="truncate flex-1">View Store</span>
+              </a>
+            )}
             <SidebarNavItem
               href="/platform/approvals"
               icon={ShieldCheck}
@@ -120,8 +145,22 @@ export function PlatformSidebar({ isOpen, onClose, agents = [], pendingApprovals
             </p>
             <div className="space-y-1">
               <SidebarNavItem href="/platform/products" icon={Package} label="Products" />
+              <SidebarNavItem href="/platform/collections" icon={FolderOpen} label="Collections" />
               <SidebarNavItem href="/platform/orders" icon={ShoppingCart} label="Orders" />
-              <SidebarNavItem href="/platform/analytics" icon={LayoutDashboard} label="Analytics" />
+              <SidebarNavItem href="/platform/customers" icon={Users} label="Customers" />
+              <SidebarNavItem href="/platform/coupons" icon={Ticket} label="Coupons" />
+              <SidebarNavItem href="/platform/analytics" icon={LayoutDashboard} label="Reports" />
+            </div>
+          </div>
+
+          {/* Marketing Tools */}
+          <div>
+            <p className="mb-2 px-3 text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">
+              Marketing
+            </p>
+            <div className="space-y-1">
+              <SidebarNavItem href="/platform/marketing/whatsapp" icon={MessageCircle} label="WhatsApp" />
+              <SidebarNavItem href="/platform/products/photo" icon={Camera} label="Photo to Product" />
             </div>
           </div>
 

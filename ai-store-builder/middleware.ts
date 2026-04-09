@@ -185,9 +185,63 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // Redirect old /dashboard root to /platform (keep sub-pages accessible)
-    if (user && pathname === '/dashboard') {
-      return NextResponse.redirect(new URL('/platform', request.url))
+    // Redirect old /dashboard routes to /platform equivalents
+    if (user && pathname.startsWith('/dashboard')) {
+      const dashboardToplatformMap: Record<string, string> = {
+        '/dashboard': '/platform',
+        '/dashboard/products': '/platform/products',
+        '/dashboard/products/new': '/platform/products/new',
+        '/dashboard/orders': '/platform/orders',
+        '/dashboard/analytics': '/platform/analytics',
+        '/dashboard/settings': '/platform/settings',
+        '/dashboard/settings/payments': '/platform/settings/payments',
+        '/dashboard/settings/shipping': '/platform/settings/shipping',
+        '/dashboard/settings/shipping-providers': '/platform/settings/shipping',
+        '/dashboard/settings/notifications': '/platform/settings/notifications',
+        '/dashboard/collections': '/platform/collections',
+        '/dashboard/coupons': '/platform/coupons',
+        '/dashboard/customers': '/platform/customers',
+        '/dashboard/abandoned-carts': '/platform/orders',
+        '/dashboard/reviews': '/platform/products',
+        '/dashboard/refunds': '/platform/orders',
+        '/dashboard/returns': '/platform/orders',
+        '/dashboard/reports': '/platform/analytics',
+      }
+
+      // Exact match redirects
+      const platformPath = dashboardToplatformMap[pathname]
+      if (platformPath) {
+        return NextResponse.redirect(new URL(platformPath, request.url))
+      }
+
+      // Pattern match: /dashboard/products/:id -> /platform/products/:id
+      const productEditMatch = pathname.match(/^\/dashboard\/products\/([^/]+)$/)
+      if (productEditMatch && productEditMatch[1] !== 'new') {
+        return NextResponse.redirect(new URL(`/platform/products/${productEditMatch[1]}`, request.url))
+      }
+
+      // Pattern match: /dashboard/collections/:id -> /platform/collections/:id
+      const collectionEditMatch = pathname.match(/^\/dashboard\/collections\/([^/]+)$/)
+      if (collectionEditMatch && collectionEditMatch[1] !== 'create') {
+        return NextResponse.redirect(new URL(`/platform/collections/${collectionEditMatch[1]}`, request.url))
+      }
+
+      // Pattern match: /dashboard/coupons/:id -> /platform/coupons/:id
+      const couponEditMatch = pathname.match(/^\/dashboard\/coupons\/([^/]+)$/)
+      if (couponEditMatch && couponEditMatch[1] !== 'create') {
+        return NextResponse.redirect(new URL(`/platform/coupons/${couponEditMatch[1]}`, request.url))
+      }
+
+      // Pattern match: /dashboard/orders/:id -> /platform/orders/:id
+      const orderDetailMatch = pathname.match(/^\/dashboard\/orders\/([^/]+)$/)
+      if (orderDetailMatch) {
+        return NextResponse.redirect(new URL(`/platform/orders/${orderDetailMatch[1]}`, request.url))
+      }
+
+      // Catch-all: any remaining /dashboard/* routes redirect to /platform
+      if (!dashboardToplatformMap[pathname]) {
+        return NextResponse.redirect(new URL('/platform', request.url))
+      }
     }
 
     // Redirect to platform if accessing auth routes while logged in

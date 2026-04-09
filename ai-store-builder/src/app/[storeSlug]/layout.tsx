@@ -45,7 +45,8 @@ export default async function StoreLayout({ children, params }: StoreLayoutProps
   // Generate CSS variables from brand colors
   const styleVars = generateStyleVars({
     colors: store.brand_colors,
-    typography: store.typography
+    typography: store.typography,
+    button_radius: store.blueprint?.button_radius as string | undefined,
   })
   
   // Get Google Fonts URL

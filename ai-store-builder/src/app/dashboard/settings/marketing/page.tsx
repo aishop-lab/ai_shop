@@ -121,7 +121,7 @@ export default function MarketingSettingsPage() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => router.push('/dashboard/settings')}
+          onClick={() => router.push('/platform/settings')}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>

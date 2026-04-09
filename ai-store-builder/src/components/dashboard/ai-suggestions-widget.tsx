@@ -157,7 +157,7 @@ export function AISuggestionsWidget({ storeCategory, productCount, orderCount = 
         )}
 
         {/* CTA */}
-        <Link href="/dashboard/products/new">
+        <Link href="/platform/products/new">
           <Button className="w-full gap-2" size="sm">
             <Plus className="h-4 w-4" />
             Add Product with AI

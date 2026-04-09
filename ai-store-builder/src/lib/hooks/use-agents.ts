@@ -107,30 +107,34 @@ type AgentStateUpdates = Partial<
   config?: AgentConfig
 }
 
-// Hook to update agent config (enable/disable, autonomy level)
+// Hook to update agent config via the server-side API (bypasses RLS)
 export function useUpdateAgentState() {
   const [isUpdating, setIsUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const updateAgent = useCallback(
-    async (storeId: string, agentType: AgentType, updates: AgentStateUpdates): Promise<AgentState | null> => {
+    async (agentId: string, updates: AgentStateUpdates): Promise<AgentState | null> => {
       try {
         setIsUpdating(true)
         setError(null)
-        const supabase = createClient()
-        const { data, error: updateError } = await supabase
-          .from('agent_states')
-          .update(updates)
-          .eq('store_id', storeId)
-          .eq('agent_type', agentType)
-          .select()
-          .single()
 
-        if (updateError) throw updateError
-        return data as AgentState
+        const response = await fetch(`/api/agents/${agentId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
+        })
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({ error: 'Request failed' }))
+          throw new Error(err.error || `HTTP ${response.status}`)
+        }
+
+        const data = await response.json()
+        return (data.data ?? data) as AgentState
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to update agent state'
         setError(message)
+        console.error('[useUpdateAgentState]', message)
         return null
       } finally {
         setIsUpdating(false)

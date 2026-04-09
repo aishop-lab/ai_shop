@@ -109,7 +109,7 @@ export function PlatformConnector({
       if (response.ok && data.success) {
         toast.success(`Connected to ${data.shop_name}`)
         // Redirect to refresh state
-        window.location.href = '/dashboard/migrate?connected=shopify'
+        window.location.href = '/platform/migrate?connected=shopify'
       } else {
         toast.error(data.error || 'Failed to connect to Shopify')
       }

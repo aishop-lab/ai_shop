@@ -85,6 +85,7 @@ export function generateStyleVars(brand: BrandStyles): StyleVariables {
     '--color-accent-contrast': getContrastColor(accent), // Black or white for text on accent bg
     '--font-heading': `"${brand.typography.heading_font}", system-ui, sans-serif`,
     '--font-body': `"${brand.typography.body_font}", system-ui, sans-serif`,
+    '--button-radius': brand.button_radius || '8px',
   }
 }
 

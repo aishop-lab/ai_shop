@@ -16,11 +16,6 @@ import {
 } from '@/lib/agents/constants'
 import type { AgentType, AutonomyLevel } from '@/lib/agents/types'
 
-interface AgentConfigHints {
-  label: string
-  value: string
-}
-
 interface ConfigOption {
   label: string
   value: string
@@ -209,7 +204,7 @@ export default function AgentConfigPage() {
         const response = await fetch('/api/dashboard/stats')
         if (response.ok) {
           const data = await response.json()
-          if (data.storeId) setStoreId(data.storeId)
+          if (data.store?.id) setStoreId(data.store.id)
         }
       } catch {
         console.error('[AgentConfig] Failed to fetch store ID')
@@ -218,8 +213,28 @@ export default function AgentConfigPage() {
     fetchStoreId()
   }, [])
 
-  const { agents, isLoading } = useAgentStates(storeId)
+  const { agents, isLoading, refetch } = useAgentStates(storeId)
   const { updateAgent } = useUpdateAgentState()
+  const [initializing, setInitializing] = useState(false)
+
+  // Auto-initialize agent_states if they don't exist yet
+  useEffect(() => {
+    if (!storeId || isLoading || agents.length > 0 || initializing) return
+    setInitializing(true)
+    fetch('/api/agents/initialize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ store_id: storeId }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.initialized) refetch()
+      })
+      .catch(() => {
+        setSaveMessage('Failed to initialize agents — please refresh')
+      })
+      .finally(() => setInitializing(false))
+  }, [storeId, isLoading, agents.length, initializing, refetch])
 
   // Build settings from real agent states
   const agentSettings: Record<AgentType, AgentSettings> = Object.fromEntries(
@@ -241,38 +256,38 @@ export default function AgentConfigPage() {
   }, [])
 
   const handleToggle = useCallback(async (agentType: AgentType) => {
-    if (!storeId) return
     const agentState = agents.find((a) => a.agent_type === agentType)
     if (!agentState) return
 
     setSavingAgents((prev) => new Set(prev).add(agentType))
-    const result = await updateAgent(storeId, agentType, { is_enabled: !agentState.is_enabled })
+    const result = await updateAgent(agentState.id, { is_enabled: !agentState.is_enabled })
     setSavingAgents((prev) => { const next = new Set(prev); next.delete(agentType); return next })
 
     if (result) {
+      refetch()
       showToast(`${AGENT_DISPLAY_NAMES[agentType]} ${result.is_enabled ? 'enabled' : 'disabled'}`)
     } else {
       showToast('Failed to update — please try again')
     }
-  }, [storeId, agents, updateAgent, showToast])
+  }, [agents, updateAgent, refetch, showToast])
 
   const handleAutonomyChange = useCallback(async (agentType: AgentType, level: AutonomyLevel) => {
-    if (!storeId) return
     const agentState = agents.find((a) => a.agent_type === agentType)
     if (!agentState) return
 
     setSavingAgents((prev) => new Set(prev).add(agentType))
-    const result = await updateAgent(storeId, agentType, { autonomy_level: level })
+    const result = await updateAgent(agentState.id, { autonomy_level: level })
     setSavingAgents((prev) => { const next = new Set(prev); next.delete(agentType); return next })
 
     if (result) {
+      refetch()
       showToast(`${AGENT_DISPLAY_NAMES[agentType]} autonomy set to level ${level}`)
     } else {
       showToast('Failed to update — please try again')
     }
-  }, [storeId, agents, updateAgent, showToast])
+  }, [agents, updateAgent, refetch, showToast])
 
-  if (isLoading && agents.length === 0) {
+  if ((isLoading || initializing) && agents.length === 0) {
     return (
       <div className="mx-auto max-w-4xl space-y-8">
         <div className="space-y-1">
@@ -287,7 +302,7 @@ export default function AgentConfigPage() {
             Agent Configuration
           </h1>
           <p className="text-base text-[var(--platform-text-secondary)]">
-            Loading agent settings...
+            {initializing ? 'Initializing agents...' : 'Loading agent settings...'}
           </p>
         </div>
         <div className="flex h-64 items-center justify-center">
@@ -326,11 +341,12 @@ export default function AgentConfigPage() {
             onToggle={() => handleToggle(agentType)}
             onAutonomyChange={(level) => handleAutonomyChange(agentType, level)}
             onConfigChange={(label, value) => {
-              // Config changes saved to agent config JSON
               const agentState = agents.find((a) => a.agent_type === agentType)
-              if (agentState && storeId) {
+              if (agentState) {
                 const updatedConfig = { ...(agentState.config || {}), [label]: value }
-                updateAgent(storeId, agentType, { config: updatedConfig })
+                updateAgent(agentState.id, { config: updatedConfig }).then((result) => {
+                  if (result) refetch()
+                })
                 showToast(`${AGENT_DISPLAY_NAMES[agentType]}: ${label} updated`)
               }
             }}

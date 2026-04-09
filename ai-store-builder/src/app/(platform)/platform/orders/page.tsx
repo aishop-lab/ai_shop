@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Search, ChevronDown, ChevronUp, ShoppingBag, X, User, CreditCard, Package, Loader2, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { Search, ChevronDown, ChevronUp, ShoppingBag, X, User, CreditCard, Package, Loader2, ArrowUpDown, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
 import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
@@ -97,6 +98,8 @@ export default function OrdersPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [sortField, setSortField] = useState<SortField>('created_at')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkUpdating, setBulkUpdating] = useState(false)
   const { currency } = useStoreCurrency()
 
   // Fetch the merchant's store ID
@@ -106,7 +109,7 @@ export default function OrdersPage() {
         const response = await fetch('/api/dashboard/stats')
         if (response.ok) {
           const data = await response.json()
-          if (data.storeId) setStoreId(data.storeId)
+          if (data.store?.id) setStoreId(data.store.id)
         }
       } catch {
         console.error('[Orders] Failed to fetch store ID')
@@ -190,6 +193,55 @@ export default function OrdersPage() {
     })
   }, [search, statusFilter, orders])
 
+  // Status counts for tab badges
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: orders.length }
+    for (const o of orders) {
+      counts[o.order_status] = (counts[o.order_status] || 0) + 1
+    }
+    return counts
+  }, [orders])
+
+  // Bulk selection helpers
+  function toggleSelectAll() {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filtered.map((o) => o.id)))
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  // Bulk status update
+  async function handleBulkStatusUpdate(newStatus: OrderStatus) {
+    if (selectedIds.size === 0 || !storeId) return
+    setBulkUpdating(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('orders')
+        .update({ order_status: newStatus })
+        .in('id', Array.from(selectedIds))
+        .eq('store_id', storeId)
+      if (!error) {
+        setSelectedIds(new Set())
+        fetchOrders()
+      }
+    } catch {
+      console.error('[Orders] Bulk update failed')
+    } finally {
+      setBulkUpdating(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-6xl space-y-6">
@@ -224,13 +276,61 @@ export default function OrdersPage() {
             {orders.length} orders total
           </p>
         </div>
+        <Link
+          href="/platform/orders/create"
+          className={cn(
+            'flex items-center gap-1.5 rounded-lg px-3 py-1.5',
+            'bg-[var(--platform-accent)] text-white text-xs font-medium',
+            'hover:opacity-90 transition-opacity',
+          )}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Create Order
+        </Link>
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Filter bar                                                           */}
+      {/* Status tab bar                                                       */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="flex gap-0 border-b border-[var(--platform-border)] overflow-x-auto">
+        {([
+          { value: 'all', label: 'All' },
+          { value: 'confirmed', label: 'Confirmed' },
+          { value: 'processing', label: 'Processing' },
+          { value: 'shipped', label: 'Shipped' },
+          { value: 'delivered', label: 'Delivered' },
+          { value: 'cancelled', label: 'Cancelled' },
+        ] as const).map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => { setStatusFilter(tab.value); setPage(0); setSelectedIds(new Set()) }}
+            className={cn(
+              'flex items-center gap-1.5 whitespace-nowrap px-4 py-2.5 text-xs font-medium transition-colors border-b-2 -mb-px',
+              statusFilter === tab.value
+                ? 'border-[var(--platform-accent)] text-[var(--platform-text-primary)]'
+                : 'border-transparent text-[var(--platform-text-muted)] hover:text-[var(--platform-text-secondary)]'
+            )}
+          >
+            {tab.label}
+            {(statusCounts[tab.value] ?? 0) > 0 && (
+              <span className={cn(
+                'rounded-full px-1.5 py-px font-mono text-[9px]',
+                statusFilter === tab.value
+                  ? 'bg-[var(--platform-accent)]/15 text-[var(--platform-accent)]'
+                  : 'bg-[var(--platform-surface-hover)] text-[var(--platform-text-muted)]'
+              )}>
+                {statusCounts[tab.value]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Search + Bulk actions bar                                            */}
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* Search */}
         <div className="relative min-w-48 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--platform-text-muted)]" />
           <input
@@ -250,20 +350,45 @@ export default function OrdersPage() {
           />
         </div>
 
-        {/* Status filter */}
-        <FilterSelect
-          value={statusFilter}
-          onChange={(v) => setStatusFilter(v as StatusFilter)}
-          aria-label="Filter by order status"
-          options={[
-            { value: 'all', label: 'All status' },
-            { value: 'confirmed', label: 'Confirmed' },
-            { value: 'processing', label: 'Processing' },
-            { value: 'shipped', label: 'Shipped' },
-            { value: 'delivered', label: 'Delivered' },
-            { value: 'cancelled', label: 'Cancelled' },
-          ]}
-        />
+        {/* Bulk actions — shown when orders are selected */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] text-[var(--platform-text-muted)]">
+              {selectedIds.size} selected
+            </span>
+            <button
+              type="button"
+              disabled={bulkUpdating}
+              onClick={() => handleBulkStatusUpdate('processing')}
+              className="rounded border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] font-medium text-amber-400 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
+            >
+              Mark Processing
+            </button>
+            <button
+              type="button"
+              disabled={bulkUpdating}
+              onClick={() => handleBulkStatusUpdate('shipped')}
+              className="rounded border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[10px] font-medium text-purple-400 transition-colors hover:bg-purple-500/20 disabled:opacity-50"
+            >
+              Mark Shipped
+            </button>
+            <button
+              type="button"
+              disabled={bulkUpdating}
+              onClick={() => handleBulkStatusUpdate('delivered')}
+              className="rounded border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-[10px] font-medium text-green-400 transition-colors hover:bg-green-500/20 disabled:opacity-50"
+            >
+              Mark Delivered
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              className="rounded border border-[var(--platform-border)] px-2.5 py-1 text-[10px] font-medium text-[var(--platform-text-muted)] transition-colors hover:text-[var(--platform-text-secondary)]"
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ------------------------------------------------------------------ */}
@@ -276,6 +401,15 @@ export default function OrdersPage() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[var(--platform-border)] bg-[var(--platform-surface)]">
+                <th className="w-10 px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onChange={toggleSelectAll}
+                    className="h-3.5 w-3.5 rounded border-[var(--platform-border)] accent-[var(--platform-accent)] cursor-pointer"
+                    aria-label="Select all orders"
+                  />
+                </th>
                 <Th>Order #</Th>
                 <Th>Customer</Th>
                 <SortableTh field="total_amount" currentField={sortField} direction={sortDirection} onSort={handleSort} align="right">Total</SortableTh>
@@ -292,6 +426,8 @@ export default function OrdersPage() {
                   order={order}
                   currency={currency}
                   isSelected={selectedOrder?.id === order.id}
+                  isChecked={selectedIds.has(order.id)}
+                  onCheck={() => toggleSelect(order.id)}
                   onClick={() =>
                     setSelectedOrder((prev) => (prev?.id === order.id ? null : order))
                   }
@@ -368,7 +504,7 @@ export default function OrdersPage() {
           selectedOrder ? 'translate-x-0' : 'translate-x-full',
         )}
       >
-        {selectedOrder && <OrderDetail order={selectedOrder} currency={currency} onClose={() => setSelectedOrder(null)} />}
+        {selectedOrder && <OrderDetail order={selectedOrder} currency={currency} storeId={storeId} onClose={() => setSelectedOrder(null)} onStatusUpdate={() => { setSelectedOrder(null); fetchOrders() }} />}
       </aside>
     </div>
   )
@@ -437,10 +573,12 @@ interface OrderRowProps {
   order: OrderData
   currency: string
   isSelected: boolean
+  isChecked: boolean
+  onCheck: () => void
   onClick: () => void
 }
 
-function OrderRow({ order, currency, isSelected, onClick }: OrderRowProps) {
+function OrderRow({ order, currency, isSelected, isChecked, onCheck, onClick }: OrderRowProps) {
   const sc = STATUS_CONFIG[order.order_status] ?? STATUS_CONFIG.confirmed
 
   return (
@@ -450,9 +588,21 @@ function OrderRow({ order, currency, isSelected, onClick }: OrderRowProps) {
         'cursor-pointer transition-colors',
         isSelected
           ? 'bg-[var(--platform-surface-active)]'
-          : 'hover:bg-[var(--platform-surface-hover)]',
+          : isChecked
+            ? 'bg-[var(--platform-accent)]/5'
+            : 'hover:bg-[var(--platform-surface-hover)]',
       )}
     >
+      {/* Checkbox */}
+      <td className="w-10 px-3 py-3" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          checked={isChecked}
+          onChange={onCheck}
+          className="h-3.5 w-3.5 rounded border-[var(--platform-border)] accent-[var(--platform-accent)] cursor-pointer"
+          aria-label={`Select order ${order.order_number}`}
+        />
+      </td>
       {/* Order # */}
       <td className="px-4 py-3">
         <span className="font-mono text-[var(--platform-text-primary)]">#{order.order_number}</span>
@@ -530,11 +680,56 @@ function PaymentBadge({ method }: { method: PaymentMethod }) {
 interface OrderDetailProps {
   order: OrderData
   currency: string
+  storeId: string | null
   onClose: () => void
+  onStatusUpdate: () => void
 }
 
-function OrderDetail({ order, currency, onClose }: OrderDetailProps) {
+function OrderDetail({ order, currency, storeId, onClose, onStatusUpdate }: OrderDetailProps) {
   const sc = STATUS_CONFIG[order.order_status] ?? STATUS_CONFIG.confirmed
+  const [updatingStatus, setUpdatingStatus] = useState(false)
+
+  async function handleStatusChange(newStatus: OrderStatus) {
+    if (!storeId || updatingStatus) return
+    setUpdatingStatus(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('orders')
+        .update({ order_status: newStatus })
+        .eq('id', order.id)
+        .eq('store_id', storeId)
+      if (!error) {
+        onStatusUpdate()
+      }
+    } catch {
+      console.error('[Orders] Status update failed')
+    } finally {
+      setUpdatingStatus(false)
+    }
+  }
+
+  // Determine available next statuses based on current
+  const nextStatuses: { status: OrderStatus; label: string; cls: string }[] = (() => {
+    switch (order.order_status) {
+      case 'confirmed':
+        return [
+          { status: 'processing', label: 'Start Processing', cls: 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' },
+          { status: 'cancelled', label: 'Cancel Order', cls: 'border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20' },
+        ]
+      case 'processing':
+        return [
+          { status: 'shipped', label: 'Mark Shipped', cls: 'border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20' },
+          { status: 'cancelled', label: 'Cancel Order', cls: 'border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20' },
+        ]
+      case 'shipped':
+        return [
+          { status: 'delivered', label: 'Mark Delivered', cls: 'border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20' },
+        ]
+      default:
+        return []
+    }
+  })()
 
   return (
     <>
@@ -595,6 +790,41 @@ function OrderDetail({ order, currency, onClose }: OrderDetailProps) {
           </div>
           <InfoRow label="Placed at" value={formatDateTime(order.created_at)} mono />
         </Section>
+
+        {/* Actions section */}
+        {nextStatuses.length > 0 && (
+          <Section icon={<Package className="h-3.5 w-3.5" />} title="Actions">
+            <div className="flex flex-wrap gap-2 py-1">
+              {nextStatuses.map((ns) => (
+                <button
+                  key={ns.status}
+                  type="button"
+                  disabled={updatingStatus}
+                  onClick={() => handleStatusChange(ns.status)}
+                  className={cn(
+                    'rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50',
+                    ns.cls
+                  )}
+                >
+                  {updatingStatus ? (
+                    <Loader2 className="h-3 w-3 animate-spin inline mr-1" />
+                  ) : null}
+                  {ns.label}
+                </button>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* View Full Order link */}
+        <div className="px-5 py-4">
+          <Link
+            href={`/platform/orders/${order.id}`}
+            className="flex items-center justify-center gap-2 rounded-lg border border-[var(--platform-accent)] px-4 py-2 text-xs font-medium text-[var(--platform-accent)] transition-colors hover:bg-[var(--platform-accent)]/10"
+          >
+            View Full Order
+          </Link>
+        </div>
       </div>
     </>
   )

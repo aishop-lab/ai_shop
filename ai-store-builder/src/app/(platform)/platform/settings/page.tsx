@@ -2,7 +2,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, Bot, Link2, Store, Bell, CreditCard, Truck } from 'lucide-react'
+import { ArrowRight, Bot, Link2, Store, Bell, CreditCard, Truck, Palette } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
 
@@ -31,29 +31,31 @@ const SETTING_CARDS: SettingCard[] = [
     title: 'Store Settings',
     description: 'Store name, branding, policies, and checkout configuration',
     icon: <Store className="h-5 w-5" />,
-    href: '/dashboard/settings',
-    external: true,
+    href: '/platform/settings/store',
+  },
+  {
+    title: 'Appearance',
+    description: 'Theme, colors, fonts, and storefront visual customization',
+    icon: <Palette className="h-5 w-5" />,
+    href: '/platform/settings/appearance',
   },
   {
     title: 'Notifications',
     description: 'Email, WhatsApp, and push notification preferences',
     icon: <Bell className="h-5 w-5" />,
-    href: '/dashboard/settings/notifications',
-    external: true,
+    href: '/platform/settings/notifications',
   },
   {
     title: 'Payments',
     description: 'Razorpay, Stripe, and payment gateway configuration',
     icon: <CreditCard className="h-5 w-5" />,
-    href: '/dashboard/settings/payments',
-    external: true,
+    href: '/platform/settings/payments',
   },
   {
     title: 'Shipping',
     description: 'Shipping providers and delivery configuration',
     icon: <Truck className="h-5 w-5" />,
-    href: '/dashboard/settings/shipping-providers',
-    external: true,
+    href: '/platform/settings/shipping',
   },
 ]
 

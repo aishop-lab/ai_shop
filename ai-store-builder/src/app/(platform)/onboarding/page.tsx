@@ -1179,9 +1179,12 @@ export default function OnboardingPage() {
                 href="/platform"
                 className="inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-300"
               >
-                Set Up Your AI Agents
+                Go to Command Center
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
+              <p className="mt-2 text-xs text-zinc-500 max-w-xs text-center">
+                Your 5 AI agents (Support, Sales, Analytics, Technical, Marketing) are ready to be configured
+              </p>
             </div>
           </div>
         )}

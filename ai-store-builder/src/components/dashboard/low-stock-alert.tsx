@@ -49,7 +49,7 @@ export default function LowStockAlert({ products }: LowStockAlertProps) {
               </span>
             </div>
           )}
-          <Link href="/dashboard/products?filter=low_stock" className="inline-block mt-2">
+          <Link href="/platform/products?filter=low_stock" className="inline-block mt-2">
             <Button variant="outline" size="sm" className="border-orange-500/30 hover:bg-orange-500/10">
               <Package className="h-4 w-4 mr-2" />
               Manage Inventory

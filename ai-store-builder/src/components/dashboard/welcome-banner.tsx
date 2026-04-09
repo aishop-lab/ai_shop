@@ -76,7 +76,7 @@ export function WelcomeBanner({ storeName, storeSlug, isFirstVisit }: WelcomeBan
               <ExternalLink className="h-3.5 w-3.5" />
             </Button>
           </Link>
-          <Link href="/dashboard/products/new">
+          <Link href="/platform/products/new">
             <Button size="sm" className="gap-2">
               <Plus className="h-4 w-4" />
               Add First Product

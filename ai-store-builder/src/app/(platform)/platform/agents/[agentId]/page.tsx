@@ -32,9 +32,49 @@ function formatTimeAgo(dateString: string): string {
   return `${days}d ago`
 }
 
+interface ToolCallInfo {
+  name: string
+  args?: Record<string, unknown>
+  result?: string
+}
+
 interface ChatMessage {
   role: 'agent' | 'merchant'
   content: string
+  toolCalls?: ToolCallInfo[]
+}
+
+const QUICK_PROMPTS: Record<AgentType, string[]> = {
+  support: [
+    'What can you help me with?',
+    'Draft a response to a customer complaint',
+    'Set up auto-replies for common questions',
+    'Show me recent support tickets',
+  ],
+  sales: [
+    'How can you boost my sales?',
+    'Recover abandoned carts',
+    'Suggest a pricing strategy',
+    'Create an upsell campaign',
+  ],
+  analytics: [
+    'Give me a business overview',
+    'What are my top-selling products?',
+    'Analyze my conversion rate',
+    'Find revenue trends this month',
+  ],
+  technical: [
+    'Audit my store SEO',
+    'Check my site performance',
+    'Optimize product images',
+    'Review my store setup',
+  ],
+  marketing: [
+    'Plan a marketing campaign',
+    'Write social media copy for my top product',
+    'Create an email newsletter',
+    'Suggest ad targeting strategy',
+  ],
 }
 
 export default function AgentWorkspacePage() {
@@ -69,7 +109,7 @@ export default function AgentWorkspacePage() {
         const response = await fetch('/api/dashboard/stats')
         if (response.ok) {
           const data = await response.json()
-          if (data.storeId) setStoreId(data.storeId)
+          if (data.store?.id) setStoreId(data.store.id)
         }
       } catch {
         console.error('[AgentWorkspace] Failed to fetch store ID')
@@ -79,7 +119,27 @@ export default function AgentWorkspacePage() {
   }, [isValidAgent])
 
   // Real agent state from Supabase with real-time updates
-  const { agent: agentState, isLoading: isAgentLoading } = useAgentState(storeId, agentType)
+  const { agent: agentState, isLoading: isAgentLoading, refetch: refetchAgent } = useAgentState(storeId, agentType)
+
+  // Auto-initialize agent_states if they don't exist yet
+  const [isInitializing, setIsInitializing] = useState(false)
+  useEffect(() => {
+    if (!storeId || isAgentLoading || agentState || isInitializing) return
+    setIsInitializing(true)
+    fetch('/api/agents/initialize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ store_id: storeId }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.initialized) refetchAgent()
+      })
+      .catch(() => {
+        console.error('[AgentWorkspace] Agent initialization failed')
+      })
+      .finally(() => setIsInitializing(false))
+  }, [storeId, isAgentLoading, agentState, isInitializing, refetchAgent])
 
   // Real activity feed from Supabase with real-time updates
   const { actions: realtimeActions, isLoading: isActivityLoading } = useActivityFeed(storeId, {
@@ -254,41 +314,79 @@ export default function AgentWorkspacePage() {
 
       const decoder = new TextDecoder()
       let assistantContent = ''
+      let toolCalls: ToolCallInfo[] = []
+      let sseBuffer = ''
 
       // Add a placeholder message for the assistant
-      setChatMessages((prev) => [...prev, { role: 'agent', content: '' }])
+      setChatMessages((prev) => [...prev, { role: 'agent', content: '', toolCalls: [] }])
+
+      const updateMessage = () => {
+        setChatMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = {
+            role: 'agent',
+            content: assistantContent,
+            toolCalls: toolCalls.length > 0 ? [...toolCalls] : undefined,
+          }
+          return updated
+        })
+      }
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
+        sseBuffer += decoder.decode(value, { stream: true })
+
+        // Parse SSE events (UI Message Stream Protocol)
+        const lines = sseBuffer.split('\n')
+        sseBuffer = lines.pop() ?? '' // Keep incomplete line in buffer
 
         for (const line of lines) {
-          // AI SDK UI stream protocol: text chunks are prefixed with "0:"
-          if (line.startsWith('0:')) {
-            try {
-              const text = JSON.parse(line.slice(2))
-              assistantContent += text
-              // Update the last message (the assistant placeholder)
-              setChatMessages((prev) => {
-                const updated = [...prev]
-                updated[updated.length - 1] = {
-                  role: 'agent',
-                  content: assistantContent,
-                }
-                return updated
+          if (!line.startsWith('data: ')) continue
+          const jsonStr = line.slice(6).trim()
+          if (!jsonStr || jsonStr === '[DONE]') continue
+
+          try {
+            const event = JSON.parse(jsonStr)
+
+            if (event.type === 'text-delta' && event.delta) {
+              assistantContent += event.delta
+              updateMessage()
+            } else if (event.type === 'tool-call-start') {
+              toolCalls.push({
+                name: event.toolName ?? event.name ?? 'tool',
+                args: undefined,
+                result: undefined,
               })
-            } catch {
-              // Ignore parse errors on partial chunks
+              updateMessage()
+            } else if (event.type === 'tool-call-args-delta' || event.type === 'tool-call-delta') {
+              // Tool args streaming — show tool is working
+              const lastTool = toolCalls[toolCalls.length - 1]
+              if (lastTool && !lastTool.result) {
+                lastTool.result = 'Running...'
+                updateMessage()
+              }
+            } else if (event.type === 'tool-result') {
+              const lastTool = toolCalls[toolCalls.length - 1]
+              if (lastTool) {
+                const resultStr = typeof event.result === 'string'
+                  ? event.result
+                  : JSON.stringify(event.result, null, 2)
+                lastTool.result = resultStr.length > 500
+                  ? resultStr.slice(0, 500) + '...'
+                  : resultStr
+                updateMessage()
+              }
             }
+          } catch {
+            // Partial JSON or non-JSON line — skip
           }
         }
       }
 
       // If we got no content at all, show a fallback
-      if (!assistantContent) {
+      if (!assistantContent && toolCalls.length === 0) {
         setChatMessages((prev) => {
           const updated = [...prev]
           updated[updated.length - 1] = {
@@ -500,12 +598,44 @@ export default function AgentWorkspacePage() {
               {/* Messages */}
               <div ref={chatContainerRef} className="flex-1 space-y-3 p-4 max-h-[500px] overflow-y-auto">
                 {chatMessages.length === 0 && (
-                  <div className="flex items-center justify-center h-32">
-                    <p className="text-xs text-[var(--platform-text-muted)]">
-                      {enabled
-                        ? `Start a conversation with ${displayName.replace(' Agent', '')}...`
-                        : `Enable ${displayName.replace(' Agent', '')} to start chatting`}
-                    </p>
+                  <div className="flex flex-col items-center justify-center py-6 px-4 space-y-4">
+                    {!enabled ? (
+                      <p className="text-xs text-[var(--platform-text-muted)]">
+                        Enable {displayName.replace(' Agent', '')} to start chatting
+                      </p>
+                    ) : (
+                      <>
+                        <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg border', colors.bg, colors.border)}>
+                          <span className={cn('h-3 w-3 rounded-full', colors.dot)} />
+                        </div>
+                        <div className="text-center space-y-1">
+                          <p className="text-xs font-medium text-[var(--platform-text-primary)]">
+                            Chat with {displayName.replace(' Agent', '')}
+                          </p>
+                          <p className="text-[11px] text-[var(--platform-text-muted)] max-w-xs">
+                            {description}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-1.5 max-w-sm">
+                          {(QUICK_PROMPTS[agentType] ?? []).map((prompt) => (
+                            <button
+                              key={prompt}
+                              type="button"
+                              onClick={() => {
+                                setChatInput(prompt)
+                              }}
+                              className={cn(
+                                'rounded-full border px-3 py-1.5 text-[10px] transition-colors',
+                                'border-[var(--platform-border)] text-[var(--platform-text-secondary)]',
+                                'hover:border-[var(--platform-border-hover)] hover:text-[var(--platform-text-primary)]'
+                              )}
+                            >
+                              {prompt}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
                 {chatMessages.map((msg, idx) => (
@@ -526,10 +656,40 @@ export default function AgentWorkspacePage() {
                           {displayName.replace(' Agent', '')}
                         </p>
                       )}
+                      {/* Tool calls indicator */}
+                      {msg.toolCalls && msg.toolCalls.length > 0 && (
+                        <div className="mb-2 space-y-1.5">
+                          {msg.toolCalls.map((tc, ti) => (
+                            <div
+                              key={ti}
+                              className={cn(
+                                'rounded border px-2 py-1.5 font-mono text-[10px]',
+                                tc.result === 'Running...'
+                                  ? 'border-amber-500/20 bg-amber-500/5 text-amber-400'
+                                  : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'
+                              )}
+                            >
+                              <span className="font-semibold">
+                                {tc.result === 'Running...' ? '⟳' : '✓'} {tc.name}
+                              </span>
+                              {tc.result && tc.result !== 'Running...' && (
+                                <details className="mt-1">
+                                  <summary className="cursor-pointer text-[9px] opacity-60">
+                                    View result
+                                  </summary>
+                                  <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-[9px] opacity-80">
+                                    {tc.result}
+                                  </pre>
+                                </details>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {msg.content || (
                         <span className="inline-flex items-center gap-1">
                           <Loader2 className="h-3 w-3 animate-spin" />
-                          <span className="opacity-60">Thinking...</span>
+                          <span className="opacity-60">{msg.toolCalls?.length ? 'Working...' : 'Thinking...'}</span>
                         </span>
                       )}
                     </div>

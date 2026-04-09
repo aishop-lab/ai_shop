@@ -106,7 +106,9 @@ function getAccountDisplayName(provider: ConnectionProvider, record: ConnectionR
 // Component
 // ---------------------------------------------------------------------------
 
-export default function ConnectionsPage() {
+import { Suspense } from 'react'
+
+function ConnectionsPageInner() {
   const searchParams = useSearchParams()
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -404,5 +406,13 @@ export default function ConnectionsPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function ConnectionsPage() {
+  return (
+    <Suspense>
+      <ConnectionsPageInner />
+    </Suspense>
   )
 }

@@ -149,8 +149,15 @@ Available specialists: ${chiefSubAgents.map((s) => `${s.codename} (${s.id})`).jo
   const baseSystemPrompt = `You are the ${AGENT_DISPLAY_NAMES[agentType]} for the store "${store?.name || 'Unknown'}".
 ${AGENT_DESCRIPTIONS[agentType]}.
 
+CRITICAL CONTEXT — use these values when calling tools:
+- store_id: "${storeId}"
+- store_name: "${store?.name || 'Unknown'}"
+- store_slug: "${store?.slug || ''}"
+- currency: "${storeContext.currency}"
+
 Your autonomy level is ${agent.autonomy_level}/5. You are having a conversation with the store merchant.
-Be concise, helpful, and action-oriented. When the merchant asks you to do something, explain what you would do and whether it requires approval.
+Be concise, helpful, and action-oriented. When the merchant asks you to do something, USE YOUR TOOLS to actually do it — don't just describe what you would do. Call tools directly to fetch data, send emails, create campaigns, etc.
+If a tool requires merchant approval, explain what you want to do and ask for confirmation.
 ${delegationInstructions}`
 
   // Enhance system prompt with sub-agent identity and specialized instructions

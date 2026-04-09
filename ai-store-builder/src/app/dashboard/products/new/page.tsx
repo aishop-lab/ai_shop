@@ -69,7 +69,7 @@ export default function NewProductPage() {
     <div className="p-6">
       {/* Header */}
       <div className="mb-8">
-        <Link href="/dashboard/products">
+        <Link href="/platform/products">
           <Button variant="ghost" size="sm" className="mb-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Products

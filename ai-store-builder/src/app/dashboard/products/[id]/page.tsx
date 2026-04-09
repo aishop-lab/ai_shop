@@ -91,7 +91,7 @@ export default function ProductDetailPage() {
           description: 'Product not found',
           variant: 'destructive'
         })
-        router.push('/dashboard/products')
+        router.push('/platform/products')
         return
       }
 
@@ -127,7 +127,7 @@ export default function ProductDetailPage() {
       <div className="text-center py-12">
         <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
         <h2 className="text-xl font-semibold mb-2">Product not found</h2>
-        <Link href="/dashboard/products">
+        <Link href="/platform/products">
           <Button variant="outline">Back to Products</Button>
         </Link>
       </div>
@@ -167,7 +167,7 @@ export default function ProductDetailPage() {
     <div className="space-y-6">
       {/* Back button + title */}
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/products">
+        <Link href="/platform/products">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="w-5 h-5" />
           </Button>

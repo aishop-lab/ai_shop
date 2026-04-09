@@ -129,13 +129,13 @@ export function NotificationBell({ className }: NotificationBellProps) {
       case 'payment_failed':
       case 'refund_requested':
         if (data?.order_number) {
-          window.location.href = `/dashboard/orders?search=${data.order_number}`
+          window.location.href = `/platform/orders?search=${data.order_number}`
         }
         break
       case 'low_stock':
       case 'out_of_stock':
         if (data?.product_id) {
-          window.location.href = `/dashboard/products/${data.product_id}`
+          window.location.href = `/platform/products/${data.product_id}`
         }
         break
       case 'new_review':
@@ -249,7 +249,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
               size="sm"
               className="w-full text-xs"
               onClick={() => {
-                window.location.href = '/dashboard/notifications'
+                window.location.href = '/platform/settings/notifications'
                 setOpen(false)
               }}
             >

@@ -791,12 +791,16 @@ const check_integration_status = tool({
       .select(
         `
         name,
-        razorpay_credentials,
-        stripe_credentials,
-        shipping_providers,
-        resend_credentials,
-        msg91_credentials,
-        notification_settings
+        razorpay_key_id,
+        razorpay_key_secret_encrypted,
+        razorpay_credentials_verified,
+        stripe_publishable_key,
+        stripe_secret_key_encrypted,
+        stripe_credentials_verified,
+        resend_api_key_encrypted,
+        resend_credentials_verified,
+        msg91_auth_key_encrypted,
+        msg91_credentials_verified
       `
       )
       .eq('id', store_id)
@@ -806,48 +810,30 @@ const check_integration_status = tool({
       return { success: false, error: error.message, integrations: [] }
     }
 
-    const razorpay = data?.razorpay_credentials as Record<string, unknown> | null
-    const stripe = data?.stripe_credentials as Record<string, unknown> | null
-    const shipping = data?.shipping_providers as Record<string, unknown>[] | null
-    const resend = data?.resend_credentials as Record<string, unknown> | null
-    const msg91 = data?.msg91_credentials as Record<string, unknown> | null
-
     const integrations = [
       {
         name: 'Razorpay',
         category: 'payment',
-        configured: !!(razorpay?.key_id_encrypted || razorpay?.key_id),
-        using_platform_fallback: !(razorpay?.key_id_encrypted || razorpay?.key_id),
+        configured: !!(data?.razorpay_key_id && data?.razorpay_key_secret_encrypted && data?.razorpay_credentials_verified),
+        using_platform_fallback: !(data?.razorpay_key_id && data?.razorpay_key_secret_encrypted && data?.razorpay_credentials_verified),
       },
       {
         name: 'Stripe',
         category: 'payment',
-        configured: !!(stripe?.secret_key_encrypted || stripe?.secret_key),
-        using_platform_fallback: !(stripe?.secret_key_encrypted || stripe?.secret_key),
-      },
-      {
-        name: 'Shiprocket',
-        category: 'shipping',
-        configured: !!(
-          Array.isArray(shipping) &&
-          shipping.some((p) => p.type === 'shiprocket' && p.credentials)
-        ),
-        using_platform_fallback: !(
-          Array.isArray(shipping) &&
-          shipping.some((p) => p.type === 'shiprocket' && p.credentials)
-        ),
+        configured: !!(data?.stripe_publishable_key && data?.stripe_secret_key_encrypted && data?.stripe_credentials_verified),
+        using_platform_fallback: !(data?.stripe_publishable_key && data?.stripe_secret_key_encrypted && data?.stripe_credentials_verified),
       },
       {
         name: 'Resend (Email)',
         category: 'email',
-        configured: !!(resend?.api_key_encrypted || resend?.api_key),
-        using_platform_fallback: !(resend?.api_key_encrypted || resend?.api_key),
+        configured: !!(data?.resend_api_key_encrypted && data?.resend_credentials_verified),
+        using_platform_fallback: !(data?.resend_api_key_encrypted && data?.resend_credentials_verified),
       },
       {
         name: 'MSG91 (WhatsApp)',
         category: 'whatsapp',
-        configured: !!(msg91?.auth_key_encrypted || msg91?.auth_key),
-        using_platform_fallback: !(msg91?.auth_key_encrypted || msg91?.auth_key),
+        configured: !!(data?.msg91_auth_key_encrypted && data?.msg91_credentials_verified),
+        using_platform_fallback: !(data?.msg91_auth_key_encrypted && data?.msg91_credentials_verified),
       },
     ]
 

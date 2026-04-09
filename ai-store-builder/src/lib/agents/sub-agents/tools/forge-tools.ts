@@ -36,17 +36,17 @@ const list_abandoned_carts = tool({
         phone,
         items,
         subtotal,
-        currency,
+        item_count,
         recovery_status,
-        emails_sent,
-        last_email_sent_at,
+        recovery_emails_sent,
         created_at,
-        updated_at
+        updated_at,
+        abandoned_at
       `
       )
       .eq('store_id', store_id)
       .gte('created_at', since)
-      .in('recovery_status', ['abandoned', 'email_1_sent', 'email_2_sent'])
+      .in('recovery_status', ['active', 'email_1_sent', 'email_2_sent'])
       .order('subtotal', { ascending: false })
       .limit(limit)
 
@@ -91,18 +91,11 @@ const send_recovery_email = tool({
 
     // Update the cart's recovery status
     const supabase = getSupabaseAdmin()
-    const statusMap: Record<number, string> = {
-      1: 'email_1_sent',
-      2: 'email_2_sent',
-      3: 'email_3_sent',
-    }
-
     await supabase
       .from('abandoned_carts')
       .update({
-        recovery_status: statusMap[sequence_step] ?? 'email_1_sent',
-        emails_sent: sequence_step,
-        last_email_sent_at: new Date().toISOString(),
+        recovery_emails_sent: sequence_step,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', cart_id)
       .eq('store_id', store_id)
@@ -147,9 +140,9 @@ const get_product_prices = tool({
         title,
         price,
         compare_at_price,
-        cost_per_item,
+        cost_price,
         category,
-        inventory_quantity,
+        stock_quantity,
         status,
         created_at
       `
@@ -337,35 +330,59 @@ const get_at_risk_customers = tool({
     const supabase = getSupabaseAdmin()
     const cutoff = new Date(Date.now() - inactive_days * 24 * 60 * 60 * 1000).toISOString()
 
-    // Get customers with their last order date
-    const { data, error } = await supabase
+    // Fetch all customers for this store (the customers table only has basic fields)
+    const { data: customers, error } = await supabase
       .from('customers')
-      .select(
-        `
-        id,
-        name,
-        email,
-        total_orders,
-        total_spent,
-        last_order_at,
-        created_at
-      `
-      )
+      .select('id, full_name, email, phone, created_at')
       .eq('store_id', store_id)
-      .gte('total_orders', min_previous_orders)
-      .lt('last_order_at', cutoff)
-      .order('total_spent', { ascending: false })
-      .limit(limit)
 
     if (error) {
       return { success: false, error: error.message, customers: [] }
     }
 
+    if (!customers?.length) {
+      return { success: true, count: 0, cutoff_date: cutoff, customers: [] }
+    }
+
+    // Compute order stats from the orders table
+    const customerIds = customers.map((c) => c.id)
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('customer_id, total_amount, created_at')
+      .eq('store_id', store_id)
+      .eq('payment_status', 'paid')
+      .in('customer_id', customerIds)
+
+    // Group orders by customer_id
+    const orderStats: Record<string, { total_orders: number; total_spent: number; last_order_at: string | null }> = {}
+    for (const order of orders ?? []) {
+      if (!order.customer_id) continue
+      if (!orderStats[order.customer_id]) {
+        orderStats[order.customer_id] = { total_orders: 0, total_spent: 0, last_order_at: null }
+      }
+      const stats = orderStats[order.customer_id]
+      stats.total_orders++
+      stats.total_spent += Number(order.total_amount) || 0
+      if (!stats.last_order_at || order.created_at > stats.last_order_at) {
+        stats.last_order_at = order.created_at
+      }
+    }
+
+    // Filter: must have min_previous_orders AND last order before cutoff
+    const atRisk = customers
+      .map((c) => {
+        const stats = orderStats[c.id] ?? { total_orders: 0, total_spent: 0, last_order_at: null }
+        return { ...c, ...stats }
+      })
+      .filter((c) => c.total_orders >= min_previous_orders && c.last_order_at && c.last_order_at < cutoff)
+      .sort((a, b) => b.total_spent - a.total_spent)
+      .slice(0, limit)
+
     return {
       success: true,
-      count: data?.length ?? 0,
+      count: atRisk.length,
       cutoff_date: cutoff,
-      customers: data ?? [],
+      customers: atRisk,
     }
   },
 })

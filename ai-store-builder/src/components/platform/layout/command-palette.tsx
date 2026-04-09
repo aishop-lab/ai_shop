@@ -16,6 +16,9 @@ import {
   Settings2,
   ExternalLink,
   Plus,
+  Users,
+  FolderOpen,
+  Ticket,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AGENT_TYPES, AGENT_DISPLAY_NAMES, AGENT_COLORS } from '@/lib/agents/constants'
@@ -23,6 +26,7 @@ import { AGENT_TYPES, AGENT_DISPLAY_NAMES, AGENT_COLORS } from '@/lib/agents/con
 interface CommandPaletteProps {
   isOpen: boolean
   onClose: () => void
+  storeSlug?: string | null
 }
 
 interface CommandItem {
@@ -79,6 +83,30 @@ const NAV_ITEMS: CommandItem[] = [
     keywords: ['sales', 'purchases', 'transactions'],
   },
   {
+    id: 'nav-customers',
+    label: 'Customers',
+    icon: <Users className="h-4 w-4" />,
+    href: '/platform/customers',
+    section: 'navigation',
+    keywords: ['buyers', 'users', 'crm', 'contacts'],
+  },
+  {
+    id: 'nav-collections',
+    label: 'Collections',
+    icon: <FolderOpen className="h-4 w-4" />,
+    href: '/platform/collections',
+    section: 'navigation',
+    keywords: ['groups', 'categories', 'catalog'],
+  },
+  {
+    id: 'nav-coupons',
+    label: 'Coupons',
+    icon: <Ticket className="h-4 w-4" />,
+    href: '/platform/coupons',
+    section: 'navigation',
+    keywords: ['discounts', 'promotions', 'codes'],
+  },
+  {
     id: 'nav-analytics',
     label: 'Analytics',
     icon: <BarChart3 className="h-4 w-4" />,
@@ -121,14 +149,20 @@ const ACTION_ITEMS: CommandItem[] = [
     label: 'View Store',
     description: 'Open your storefront in a new tab',
     icon: <ExternalLink className="h-4 w-4" />,
-    href: '/',
+    href: '__STORE_URL__', // Replaced at runtime with actual store URL
     external: true,
     section: 'actions',
     keywords: ['store', 'storefront', 'shop', 'preview'],
   },
 ]
 
-const ALL_ITEMS = [...NAV_ITEMS, ...AGENT_ITEMS, ...ACTION_ITEMS]
+function getStoreUrl(slug: string | null | undefined): string {
+  if (!slug) return '/'
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') return `/${slug}`
+  return `https://${slug}.storeforge.site`
+}
+
+const ALL_ITEMS_TEMPLATE = [...NAV_ITEMS, ...AGENT_ITEMS, ...ACTION_ITEMS]
 
 const SECTION_LABELS: Record<string, string> = {
   navigation: 'Navigation',
@@ -138,7 +172,7 @@ const SECTION_LABELS: Record<string, string> = {
 
 const SECTION_ORDER: Array<'navigation' | 'agents' | 'actions'> = ['navigation', 'agents', 'actions']
 
-export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
+export function CommandPalette({ isOpen, onClose, storeSlug }: CommandPaletteProps) {
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -153,6 +187,14 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       requestAnimationFrame(() => inputRef.current?.focus())
     }
   }, [isOpen])
+
+  // Replace store URL placeholder with actual store URL
+  const ALL_ITEMS = useMemo(() => {
+    const storeUrl = getStoreUrl(storeSlug)
+    return ALL_ITEMS_TEMPLATE.map((item) =>
+      item.href === '__STORE_URL__' ? { ...item, href: storeUrl } : item
+    )
+  }, [storeSlug])
 
   const filteredItems = useMemo((): CommandItem[] => {
     const trimmed = query.trim()
@@ -178,7 +220,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         item.description?.toLowerCase().includes(q) ||
         item.keywords?.some((k) => k.includes(q))
     )
-  }, [query])
+  }, [query, ALL_ITEMS])
 
   // Group filtered items by section, preserving section order
   const sections = SECTION_ORDER.reduce<Record<string, CommandItem[]>>((acc, section) => {

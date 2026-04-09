@@ -13,6 +13,8 @@ import { TopBar } from '@/components/platform/layout/top-bar'
 import { MobileNav } from '@/components/platform/layout/mobile-nav'
 import { CommandPalette } from '@/components/platform/layout/command-palette'
 import { AgentIntroOverlay } from '@/components/platform/onboarding/agent-intro-overlay'
+import { KeyboardShortcutsDialog } from '@/components/platform/layout/keyboard-shortcuts-dialog'
+import { PlatformStoreProvider } from '@/lib/hooks/use-platform-store'
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   const { isLoading: authLoading } = useRequireAuth()
@@ -20,7 +22,9 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   const isOnboarding = pathname === '/onboarding'
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [storeId, setStoreId] = useState<string | null>(null)
+  const [storeSlug, setStoreSlug] = useState<string | null>(null)
   const [showAgentIntro, setShowAgentIntro] = useState(false)
 
   // Fetch the merchant's store ID and ensure agents are initialized
@@ -34,12 +38,15 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
           const resolvedStoreId = data.store?.id
           if (resolvedStoreId) {
             setStoreId(resolvedStoreId)
+            if (data.store?.slug) setStoreSlug(data.store.slug)
             // Lazily initialize agent_states if they don't exist yet
             fetch('/api/agents/initialize', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ store_id: resolvedStoreId }),
-            }).catch(() => {})
+            }).catch((err) => {
+              console.error('[Platform] Agent initialization failed:', err)
+            })
 
             // Check if user has completed the agent intro
             const introKey = `agent-intro-${resolvedStoreId}`
@@ -80,10 +87,17 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
       description: 'Toggle command palette',
     },
     {
+      key: '?',
+      shift: true,
+      handler: () => setShortcutsOpen((prev) => !prev),
+      description: 'Toggle keyboard shortcuts',
+    },
+    {
       key: 'Escape',
       handler: () => {
         setCommandPaletteOpen(false)
         setSidebarOpen(false)
+        setShortcutsOpen(false)
       },
       allowInInput: true,
       description: 'Close overlays',
@@ -102,12 +116,14 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   }
 
   return (
+    <PlatformStoreProvider>
     <div className="dark platform-theme flex min-h-screen overflow-x-hidden bg-[var(--platform-bg)]">
       <PlatformSidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         agents={agentNavInfo}
         pendingApprovals={pendingCount}
+        storeSlug={storeSlug}
       />
 
       <div className="flex flex-1 flex-col">
@@ -115,6 +131,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
           onMenuClick={() => setSidebarOpen(true)}
           onSearchClick={() => setCommandPaletteOpen(true)}
           pendingApprovals={pendingCount}
+          storeId={storeId}
         />
 
         <main className="flex-1 overflow-y-auto p-4 pb-20 lg:p-6 lg:pb-6">{children}</main>
@@ -125,11 +142,18 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
       <CommandPalette
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
+        storeSlug={storeSlug}
+      />
+
+      <KeyboardShortcutsDialog
+        isOpen={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
       />
 
       {showAgentIntro && storeId && (
         <AgentIntroOverlay storeId={storeId} onComplete={handleIntroComplete} />
       )}
     </div>
+    </PlatformStoreProvider>
   )
 }

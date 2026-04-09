@@ -490,7 +490,7 @@ const get_ad_spend_analysis = tool({
         .gte('created_at', since),
       supabase
         .from('coupons')
-        .select('id, code, discount_type, discount_value, usage_count')
+        .select('id, code, discount_type, discount_value, current_uses')
         .eq('store_id', store_id)
         .eq('is_active', true),
     ])
@@ -499,7 +499,7 @@ const get_ad_spend_analysis = tool({
     const coupons = couponsResult.data ?? []
     const paidOrders = orders.filter((o) => o.payment_status === 'paid')
     const totalRevenue = paidOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0)
-    const totalCouponUses = coupons.reduce((sum, c) => sum + ((c.usage_count as number) || 0), 0)
+    const totalCouponUses = coupons.reduce((sum, c) => sum + ((c.current_uses as number) || 0), 0)
 
     return {
       success: true,
@@ -513,7 +513,7 @@ const get_ad_spend_analysis = tool({
       promotions: {
         active_coupons: coupons.length,
         total_coupon_uses: totalCouponUses,
-        coupon_codes: coupons.map((c) => ({ code: c.code, uses: c.usage_count })),
+        coupon_codes: coupons.map((c) => ({ code: c.code, uses: c.current_uses })),
       },
       ad_integration_status: {
         meta_ads: (await checkAdPlatformConnection(store_id, 'meta')).connected

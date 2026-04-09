@@ -212,7 +212,7 @@ export default function AgentMemoryPage({
   useEffect(() => {
     fetch('/api/dashboard/stats')
       .then((r) => r.json())
-      .then((d) => setStoreId(d.storeId))
+      .then((d) => setStoreId(d.store?.id))
       .catch(() => {})
   }, [])
 

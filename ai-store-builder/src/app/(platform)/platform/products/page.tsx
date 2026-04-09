@@ -11,6 +11,9 @@ import {
   Package,
   Loader2,
   ExternalLink,
+  TrendingUp,
+  Archive,
+  Camera,
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
@@ -58,6 +61,7 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft'>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
   const [products, setProducts] = useState<ProductData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [storeId, setStoreId] = useState<string | null>(null)
@@ -71,8 +75,8 @@ export default function ProductsPage() {
         const response = await fetch('/api/dashboard/stats')
         if (response.ok) {
           const data = await response.json()
-          if (data.storeId) setStoreId(data.storeId)
-          if (data.storeSlug) setStoreSlug(data.storeSlug)
+          if (data.store?.id) setStoreId(data.store.id)
+          if (data.store?.slug) setStoreSlug(data.store.slug)
         }
       } catch {
         console.error('[Products] Failed to fetch store ID')
@@ -137,9 +141,13 @@ export default function ProductsPage() {
       const matchesSearch = (p.title ?? '').toLowerCase().includes(search.toLowerCase())
       const matchesStatus = statusFilter === 'all' || p.status === statusFilter
       const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter
-      return matchesSearch && matchesStatus && matchesCategory
+      const matchesStock =
+        stockFilter === 'all' ||
+        (stockFilter === 'low' && p.inventory > 0 && p.inventory <= LOW_STOCK_THRESHOLD) ||
+        (stockFilter === 'out' && p.inventory === 0)
+      return matchesSearch && matchesStatus && matchesCategory && matchesStock
     })
-  }, [search, statusFilter, categoryFilter, products])
+  }, [search, statusFilter, categoryFilter, stockFilter, products])
 
   if (isLoading) {
     return (
@@ -175,18 +183,58 @@ export default function ProductsPage() {
             {products.length} products in your catalog
           </p>
         </div>
-        <Link
-          href="/dashboard/products/new"
-          className={cn(
-            'flex items-center gap-1.5 rounded-lg px-3 py-1.5',
-            'bg-[var(--platform-accent)] text-white text-xs font-medium',
-            'hover:opacity-90 transition-opacity',
-          )}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add Product
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/platform/products/photo"
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5',
+              'border border-[var(--platform-border)] bg-[var(--platform-surface)]',
+              'text-[var(--platform-text-primary)] text-xs font-medium',
+              'hover:border-[var(--platform-border-hover)] transition-colors',
+            )}
+          >
+            <Camera className="h-3.5 w-3.5" />
+            Photo to Product
+          </Link>
+          <Link
+            href="/platform/products/new"
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5',
+              'bg-[var(--platform-accent)] text-white text-xs font-medium',
+              'hover:opacity-90 transition-opacity',
+            )}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Product
+          </Link>
+        </div>
       </div>
+
+      {/* ----------------------------------------------------------------- */}
+      {/* Quick Stats                                                          */}
+      {/* ----------------------------------------------------------------- */}
+      {products.length > 0 && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">Total</p>
+            <p className="mt-1 font-mono text-lg font-semibold text-[var(--platform-text-primary)]">{products.length}</p>
+          </div>
+          <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">Active</p>
+            <p className="mt-1 font-mono text-lg font-semibold text-green-400">{products.filter(p => p.status === 'active').length}</p>
+          </div>
+          <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">Draft</p>
+            <p className="mt-1 font-mono text-lg font-semibold text-[var(--platform-text-secondary)]">{products.filter(p => p.status === 'draft').length}</p>
+          </div>
+          <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">Low Stock</p>
+            <p className={cn('mt-1 font-mono text-lg font-semibold', products.filter(p => p.inventory <= LOW_STOCK_THRESHOLD && p.status === 'active').length > 0 ? 'text-amber-400' : 'text-[var(--platform-text-secondary)]')}>
+              {products.filter(p => p.inventory <= LOW_STOCK_THRESHOLD && p.status === 'active').length}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ----------------------------------------------------------------- */}
       {/* Filter bar                                                          */}
@@ -234,6 +282,18 @@ export default function ProductsPage() {
             ...uniqueCategories.map((c) => ({ value: c, label: c })),
           ]}
         />
+
+        {/* Stock filter */}
+        <FilterSelect
+          value={stockFilter}
+          onChange={(v) => setStockFilter(v as typeof stockFilter)}
+          aria-label="Filter by stock level"
+          options={[
+            { value: 'all', label: 'All stock' },
+            { value: 'low', label: 'Low stock' },
+            { value: 'out', label: 'Out of stock' },
+          ]}
+        />
       </div>
 
       {/* ----------------------------------------------------------------- */}
@@ -241,7 +301,7 @@ export default function ProductsPage() {
       {/* ----------------------------------------------------------------- */}
       <div className="rounded-xl border border-[var(--platform-border)] overflow-x-auto overflow-hidden">
         {filtered.length === 0 ? (
-          <EmptyState hasFilters={search !== '' || statusFilter !== 'all' || categoryFilter !== 'all'} />
+          <EmptyState hasFilters={search !== '' || statusFilter !== 'all' || categoryFilter !== 'all' || stockFilter !== 'all'} />
         ) : (
           <table className="w-full text-xs">
             <thead>
@@ -304,7 +364,7 @@ function ProductRow({ product, currency, storeSlug }: ProductRowProps) {
   const primaryImage = sortedImages[0]?.thumbnail_url || sortedImages[0]?.original_url || null
 
   return (
-    <Link href={`/dashboard/products/${product.id}`} className="contents">
+    <Link href={`/platform/products/${product.id}`} className="contents">
       <tr
         className={cn(
           'cursor-pointer transition-colors',

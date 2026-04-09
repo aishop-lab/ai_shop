@@ -28,33 +28,10 @@ export const get_customers = tool({
 
     let query = supabase
       .from('customers')
-      .select('id, name, email, total_orders, total_spent, last_order_at, created_at')
+      .select('id, full_name, email, created_at')
       .eq('store_id', store_id)
-      .order('total_spent', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(limit)
-
-    if (min_orders) {
-      query = query.gte('total_orders', min_orders)
-    }
-    if (min_spent) {
-      query = query.gte('total_spent', min_spent)
-    }
-
-    // Segment filters based on last_order_at
-    const now = new Date()
-    if (segment === 'active') {
-      const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
-      query = query.gte('last_order_at', cutoff)
-    } else if (segment === 'at_risk') {
-      const start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString()
-      const end = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
-      query = query.gte('last_order_at', start).lt('last_order_at', end)
-    } else if (segment === 'churned') {
-      const cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString()
-      query = query.lt('last_order_at', cutoff).gte('total_orders', 1)
-    } else if (segment === 'new') {
-      query = query.lt('total_orders', 1)
-    }
 
     const { data, error } = await query
 
@@ -62,7 +39,67 @@ export const get_customers = tool({
       return { success: false, error: error.message, customers: [] }
     }
 
-    return { success: true, count: data?.length ?? 0, customers: data ?? [] }
+    const customerIds = (data ?? []).map((c) => c.id)
+
+    // Aggregate order data per customer
+    let orderAgg: Array<{ customer_id: string; total_amount: number; created_at: string }> = []
+    if (customerIds.length > 0) {
+      const { data: aggData } = await supabase
+        .from('orders')
+        .select('customer_id, total_amount, created_at')
+        .eq('store_id', store_id)
+        .in('customer_id', customerIds)
+      orderAgg = (aggData ?? []) as Array<{ customer_id: string; total_amount: number; created_at: string }>
+    }
+
+    const customerMetrics: Record<string, { total_orders: number; total_spent: number; last_order_at: string | null }> = {}
+    for (const o of orderAgg) {
+      if (!o.customer_id) continue
+      if (!customerMetrics[o.customer_id]) {
+        customerMetrics[o.customer_id] = { total_orders: 0, total_spent: 0, last_order_at: null }
+      }
+      customerMetrics[o.customer_id].total_orders++
+      customerMetrics[o.customer_id].total_spent += Number(o.total_amount) || 0
+      if (!customerMetrics[o.customer_id].last_order_at || o.created_at > customerMetrics[o.customer_id].last_order_at!) {
+        customerMetrics[o.customer_id].last_order_at = o.created_at
+      }
+    }
+
+    const enriched = (data ?? []).map((c) => {
+      const metrics = customerMetrics[c.id] ?? { total_orders: 0, total_spent: 0, last_order_at: null }
+      return { ...c, total_orders: metrics.total_orders, total_spent: metrics.total_spent, last_order_at: metrics.last_order_at }
+    })
+
+    // Apply segment / min filters on computed values
+    const now = new Date()
+    const day30 = 30 * 24 * 60 * 60 * 1000
+    const day90 = 90 * 24 * 60 * 60 * 1000
+    let filtered = enriched
+
+    if (min_orders) {
+      filtered = filtered.filter((c) => c.total_orders >= min_orders)
+    }
+    if (min_spent) {
+      filtered = filtered.filter((c) => c.total_spent >= min_spent)
+    }
+    if (segment === 'active') {
+      filtered = filtered.filter((c) => c.last_order_at && now.getTime() - new Date(c.last_order_at).getTime() <= day30)
+    } else if (segment === 'at_risk') {
+      filtered = filtered.filter((c) => {
+        if (!c.last_order_at) return false
+        const diff = now.getTime() - new Date(c.last_order_at).getTime()
+        return diff > day30 && diff <= day90
+      })
+    } else if (segment === 'churned') {
+      filtered = filtered.filter((c) => c.total_orders >= 1 && c.last_order_at && now.getTime() - new Date(c.last_order_at).getTime() > day90)
+    } else if (segment === 'new') {
+      filtered = filtered.filter((c) => c.total_orders < 1)
+    }
+
+    // Sort by total_spent descending
+    filtered.sort((a, b) => b.total_spent - a.total_spent)
+
+    return { success: true, count: filtered.length, customers: filtered }
   },
 })
 
@@ -89,7 +126,7 @@ export const get_customer_history = tool({
     // Find the customer
     let customerQuery = supabase
       .from('customers')
-      .select('id, name, email, phone, total_orders, total_spent, last_order_at, created_at')
+      .select('id, full_name, email, phone, created_at')
       .eq('store_id', store_id)
 
     if (customer_id) {
@@ -108,7 +145,7 @@ export const get_customer_history = tool({
     const { data: orders } = await supabase
       .from('orders')
       .select(
-        `id, order_number, total_amount, currency, payment_status, fulfillment_status,
+        `id, order_number, total_amount, payment_status, order_status,
          created_at, order_items(title, quantity, price)`
       )
       .eq('store_id', store_id)
@@ -156,11 +193,37 @@ export const get_customer_segments = tool({
 
     const { data, error } = await supabase
       .from('customers')
-      .select('id, total_orders, total_spent, last_order_at')
+      .select('id')
       .eq('store_id', store_id)
 
     if (error) {
       return { success: false, error: error.message, segments: [] }
+    }
+
+    const customerIds = (data ?? []).map((c) => c.id)
+
+    // Aggregate order data per customer
+    let orderAgg: Array<{ customer_id: string; total_amount: number; created_at: string }> = []
+    if (customerIds.length > 0) {
+      const { data: aggData } = await supabase
+        .from('orders')
+        .select('customer_id, total_amount, created_at')
+        .eq('store_id', store_id)
+        .in('customer_id', customerIds)
+      orderAgg = (aggData ?? []) as Array<{ customer_id: string; total_amount: number; created_at: string }>
+    }
+
+    const customerMetrics: Record<string, { total_orders: number; total_spent: number; last_order_at: string | null }> = {}
+    for (const o of orderAgg) {
+      if (!o.customer_id) continue
+      if (!customerMetrics[o.customer_id]) {
+        customerMetrics[o.customer_id] = { total_orders: 0, total_spent: 0, last_order_at: null }
+      }
+      customerMetrics[o.customer_id].total_orders++
+      customerMetrics[o.customer_id].total_spent += Number(o.total_amount) || 0
+      if (!customerMetrics[o.customer_id].last_order_at || o.created_at > customerMetrics[o.customer_id].last_order_at!) {
+        customerMetrics[o.customer_id].last_order_at = o.created_at
+      }
     }
 
     const now = Date.now()
@@ -175,15 +238,16 @@ export const get_customer_segments = tool({
     }
 
     for (const c of data ?? []) {
-      const orders = c.total_orders || 0
-      const spent = c.total_spent || 0
+      const metrics = customerMetrics[c.id] ?? { total_orders: 0, total_spent: 0, last_order_at: null }
+      const orders = metrics.total_orders
+      const spent = metrics.total_spent
 
       if (orders === 0) {
         segments.new.count++
         segments.new.total_spent += spent
         segments.new.total_orders += orders
       } else {
-        const lastOrder = c.last_order_at ? now - new Date(c.last_order_at).getTime() : Infinity
+        const lastOrder = metrics.last_order_at ? now - new Date(metrics.last_order_at).getTime() : Infinity
         if (lastOrder <= day30) {
           segments.active.count++
           segments.active.total_spent += spent
