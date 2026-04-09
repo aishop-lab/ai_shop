@@ -2,7 +2,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, Bot, Link2, Store, Bell, CreditCard, Truck } from 'lucide-react'
+import { ArrowRight, Bot, Link2, Store, Bell, CreditCard, Truck, Palette } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
 
@@ -32,6 +32,12 @@ const SETTING_CARDS: SettingCard[] = [
     description: 'Store name, branding, policies, and checkout configuration',
     icon: <Store className="h-5 w-5" />,
     href: '/platform/settings/store',
+  },
+  {
+    title: 'Appearance',
+    description: 'Theme, colors, fonts, and storefront visual customization',
+    icon: <Palette className="h-5 w-5" />,
+    href: '/platform/settings/appearance',
   },
   {
     title: 'Notifications',

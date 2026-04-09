@@ -99,17 +99,29 @@ export async function PATCH(request: Request) {
     if (body.brand_colors !== undefined) updateData.brand_colors = body.brand_colors
     if (body.settings !== undefined) updateData.settings = body.settings
     if (body.logo_url !== undefined) updateData.logo_url = body.logo_url
+    if (body.theme_template !== undefined) updateData.theme = body.theme_template
 
-    // Handle currency update (stored in blueprint.location.currency)
+    // Handle fields stored in blueprint JSON
+    const blueprintUpdates: Record<string, unknown> = {}
     if (body.currency !== undefined) {
-      const currentBlueprint = existingStore.blueprint || {}
-      updateData.blueprint = {
-        ...currentBlueprint,
-        location: {
-          ...(currentBlueprint.location || {}),
-          currency: body.currency
-        }
+      blueprintUpdates.location = {
+        ...((existingStore.blueprint as Record<string, unknown>)?.location || {}),
+        currency: body.currency,
       }
+    }
+    if (body.typography !== undefined) {
+      blueprintUpdates.branding = {
+        ...((existingStore.blueprint as Record<string, unknown>)?.branding || {}),
+        typography: body.typography,
+      }
+    }
+    if (body.button_radius !== undefined) {
+      blueprintUpdates.button_radius = body.button_radius
+    }
+
+    if (Object.keys(blueprintUpdates).length > 0) {
+      const currentBlueprint = (existingStore.blueprint || {}) as Record<string, unknown>
+      updateData.blueprint = { ...currentBlueprint, ...blueprintUpdates }
     }
 
     // Update store

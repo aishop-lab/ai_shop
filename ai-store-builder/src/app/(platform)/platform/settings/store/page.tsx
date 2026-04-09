@@ -767,6 +767,19 @@ export default function StoreSettingsPage() {
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-[var(--platform-text-primary)]">More Settings</h2>
         <div className="grid gap-2 sm:grid-cols-2">
+          {/* Appearance */}
+          <Link
+            href="/platform/settings/appearance"
+            className="flex items-center gap-3 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] p-4 transition-colors hover:border-[var(--platform-border-hover)]"
+          >
+            <Palette className="h-4 w-4 text-[var(--platform-text-muted)]" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-[var(--platform-text-primary)]">Appearance</p>
+              <p className="text-[10px] text-[var(--platform-text-muted)]">Theme, colors, fonts, and storefront customization</p>
+            </div>
+            <ArrowRight className="h-3 w-3 shrink-0 text-[var(--platform-text-muted)]" />
+          </Link>
+
           {/* Policies */}
           <Link
             href="/platform/settings/policies"
