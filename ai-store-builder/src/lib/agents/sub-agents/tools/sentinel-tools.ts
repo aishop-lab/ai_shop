@@ -33,14 +33,9 @@ const get_order_status = tool({
         `
         id,
         order_number,
-        status,
-        fulfillment_status,
+        order_status,
         payment_status,
         total_amount,
-        currency,
-        tracking_number,
-        courier_name,
-        estimated_delivery,
         created_at,
         shipping_address,
         order_items (
@@ -143,17 +138,21 @@ const send_whatsapp_message = tool({
     let authKey = process.env.MSG91_AUTH_KEY
     let integratedNumber = process.env.MSG91_WHATSAPP_INTEGRATED_NUMBER
 
-    // Check for store-level credentials
+    // Check for store-level credentials (individual encrypted columns, not a JSON blob)
     const { data: store } = await supabase
       .from('stores')
-      .select('msg91_credentials')
+      .select('msg91_auth_key_encrypted, msg91_whatsapp_number, msg91_credentials_verified')
       .eq('id', store_id)
       .single()
 
-    if (store?.msg91_credentials) {
-      const creds = store.msg91_credentials as Record<string, string>
-      if (creds.auth_key) authKey = creds.auth_key
-      if (creds.whatsapp_number) integratedNumber = creds.whatsapp_number
+    if (store?.msg91_credentials_verified && store.msg91_auth_key_encrypted && store.msg91_whatsapp_number) {
+      try {
+        const { decrypt } = await import('@/lib/encryption')
+        authKey = decrypt(store.msg91_auth_key_encrypted as string)
+        integratedNumber = store.msg91_whatsapp_number as string
+      } catch {
+        // Fall through to platform credentials
+      }
     }
 
     // If no credentials at all, log as queued
@@ -273,11 +272,8 @@ const get_order_tracking = tool({
         `
         id,
         order_number,
-        fulfillment_status,
-        tracking_number,
-        courier_name,
-        estimated_delivery,
-        shipped_at
+        order_status,
+        shipping_method
       `
       )
       .eq('store_id', store_id)
@@ -292,11 +288,9 @@ const get_order_tracking = tool({
       success: true,
       tracking: {
         order_number: data?.order_number,
-        fulfillment_status: data?.fulfillment_status,
-        courier: data?.courier_name,
-        tracking_number: data?.tracking_number,
-        estimated_delivery: data?.estimated_delivery,
-        shipped_at: data?.shipped_at,
+        order_status: data?.order_status,
+        shipping_method: data?.shipping_method,
+        note: 'Detailed tracking (tracking number, courier, estimated delivery) requires shipping provider integration. Check the shipping provider dashboard for real-time tracking.',
       },
     }
   },
@@ -329,13 +323,10 @@ const get_order_for_return = tool({
         `
         id,
         order_number,
-        status,
-        fulfillment_status,
+        order_status,
         payment_status,
         payment_method,
         total_amount,
-        currency,
-        delivered_at,
         created_at,
         order_items (
           id,
@@ -364,23 +355,19 @@ const get_order_for_return = tool({
 
     const policies = (store?.policies as Record<string, unknown>) ?? {}
 
-    // Assess return window
-    const deliveredAt = order?.delivered_at ? new Date(order.delivered_at as string) : null
+    // Assess return window based on order creation date (delivered_at column not available)
     const returnWindowDays = (policies.return_window_days as number) ?? 7
-    const returnDeadline = deliveredAt
-      ? new Date(deliveredAt.getTime() + returnWindowDays * 24 * 60 * 60 * 1000)
-      : null
-    const isWithinReturnWindow = returnDeadline ? new Date() <= returnDeadline : false
+    const isDelivered = order?.order_status === 'delivered'
 
     return {
       success: true,
       order,
       return_assessment: {
-        is_delivered: order?.fulfillment_status === 'delivered',
-        delivered_at: deliveredAt?.toISOString() ?? null,
+        is_delivered: isDelivered,
         return_window_days: returnWindowDays,
-        return_deadline: returnDeadline?.toISOString() ?? null,
-        is_within_return_window: isWithinReturnWindow,
+        note: isDelivered
+          ? 'Order is marked as delivered. Verify delivery date with shipping provider for exact return window.'
+          : `Order status is "${order?.order_status}". Returns are typically only processed after delivery.`,
       },
       policies,
     }
@@ -408,13 +395,13 @@ const process_refund = tool({
     const { data, error } = await supabase
       .from('orders')
       .update({
-        fulfillment_status: 'refund_initiated',
+        order_status: 'refund_initiated',
         notes: `Refund initiated: ${refund_type} refund of ${currency} ${refund_amount}. Reason: ${refund_reason}`,
         updated_at: new Date().toISOString(),
       })
       .eq('id', order_id)
       .eq('store_id', store_id)
-      .select('id, order_number, fulfillment_status')
+      .select('id, order_number, order_status')
       .single()
 
     if (error) {
@@ -462,7 +449,7 @@ const update_order_status = tool({
     const supabase = getSupabaseAdmin()
 
     const updatePayload: Record<string, unknown> = {
-      fulfillment_status: new_status,
+      order_status: new_status,
       updated_at: new Date().toISOString(),
     }
     if (note) {
@@ -474,7 +461,7 @@ const update_order_status = tool({
       .update(updatePayload)
       .eq('id', order_id)
       .eq('store_id', store_id)
-      .select('id, order_number, fulfillment_status')
+      .select('id, order_number, order_status')
       .single()
 
     if (error) {

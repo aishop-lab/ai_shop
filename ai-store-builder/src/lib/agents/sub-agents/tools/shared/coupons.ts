@@ -24,7 +24,7 @@ export const get_coupons = tool({
     let query = supabase
       .from('coupons')
       .select(
-        'id, code, discount_type, discount_value, min_order_amount, max_uses, uses_count, is_active, expires_at, created_at'
+        'id, code, discount_type, discount_value, min_order_amount, max_uses, current_uses, is_active, valid_until, created_at'
       )
       .eq('store_id', store_id)
       .order('created_at', { ascending: false })
@@ -64,7 +64,7 @@ export const get_coupon_performance = tool({
     // Get coupons
     let couponQuery = supabase
       .from('coupons')
-      .select('id, code, discount_type, discount_value, max_uses, uses_count, is_active, created_at')
+      .select('id, code, discount_type, discount_value, max_uses, current_uses, is_active, created_at')
       .eq('store_id', store_id)
 
     if (coupon_id) {
@@ -77,29 +77,8 @@ export const get_coupon_performance = tool({
       return { success: false, error: error.message, coupons: [] }
     }
 
-    // Get orders with coupon codes in the period
-    const { data: orders } = await supabase
-      .from('orders')
-      .select('id, total_amount, payment_status, coupon_code, created_at')
-      .eq('store_id', store_id)
-      .gte('created_at', since)
-      .not('coupon_code', 'is', null)
-
-    // Map coupon usage
-    const couponOrders: Record<string, { order_count: number; paid_count: number; total_revenue: number }> = {}
-    for (const o of orders ?? []) {
-      const code = (o.coupon_code as string)?.toUpperCase()
-      if (!code) continue
-      if (!couponOrders[code]) couponOrders[code] = { order_count: 0, paid_count: 0, total_revenue: 0 }
-      couponOrders[code].order_count++
-      if (o.payment_status === 'paid') {
-        couponOrders[code].paid_count++
-        couponOrders[code].total_revenue += Number(o.total_amount) || 0
-      }
-    }
-
+    // Note: orders table does not have a coupon_code column, so we rely on coupons.current_uses
     const performance = (coupons ?? []).map((c) => {
-      const usage = couponOrders[c.code?.toUpperCase()] ?? { order_count: 0, paid_count: 0, total_revenue: 0 }
       return {
         coupon_id: c.id,
         code: c.code,
@@ -107,11 +86,8 @@ export const get_coupon_performance = tool({
         discount_value: c.discount_value,
         is_active: c.is_active,
         max_uses: c.max_uses,
-        total_uses: c.uses_count ?? 0,
-        period_orders: usage.order_count,
-        period_paid_orders: usage.paid_count,
-        period_revenue: Math.round(usage.total_revenue * 100) / 100,
-        utilization_pct: c.max_uses ? Math.round(((c.uses_count ?? 0) / c.max_uses) * 100) : null,
+        total_uses: c.current_uses ?? 0,
+        utilization_pct: c.max_uses ? Math.round(((c.current_uses ?? 0) / c.max_uses) * 100) : null,
       }
     })
 

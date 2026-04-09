@@ -20,7 +20,7 @@ export const get_store_config = tool({
 
     const { data, error } = await supabase
       .from('stores')
-      .select('id, name, slug, currency, category, description, blueprint, notification_settings')
+      .select('id, name, slug, description, blueprint')
       .eq('id', store_id)
       .single()
 
@@ -36,10 +36,9 @@ export const get_store_config = tool({
         id: data.id,
         name: data.name,
         slug: data.slug,
-        currency: data.currency,
-        category: data.category,
+        currency: (blueprint.currency as string) ?? 'INR',
+        category: (blueprint.category as string) ?? null,
         description: data.description,
-        notification_settings: data.notification_settings,
         checkout: blueprint.checkout ?? null,
       },
     }
@@ -95,7 +94,7 @@ export const get_brand_guidelines = tool({
 
     const { data, error } = await supabase
       .from('stores')
-      .select('name, category, description, logo_url, blueprint')
+      .select('name, description, logo_url, blueprint')
       .eq('id', store_id)
       .single()
 
@@ -110,7 +109,7 @@ export const get_brand_guidelines = tool({
       success: true,
       brand: {
         store_name: data.name,
-        category: data.category,
+        category: (blueprint.category as string) ?? null,
         description: data.description,
         logo_url: data.logo_url,
         brand_vibe: (design.vibe as string) ?? 'modern',

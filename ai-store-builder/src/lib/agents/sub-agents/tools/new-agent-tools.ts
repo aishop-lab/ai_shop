@@ -20,7 +20,7 @@ const create_coupon = tool({
     discount_value: z.number().positive(),
     min_order_amount: z.number().optional(),
     max_uses: z.number().optional(),
-    expires_at: z.string().optional().describe('ISO date string for expiry'),
+    valid_until: z.string().optional().describe('ISO date string for expiry'),
   }),
   execute: async ({
     store_id,
@@ -29,7 +29,7 @@ const create_coupon = tool({
     discount_value,
     min_order_amount,
     max_uses,
-    expires_at,
+    valid_until,
   }) => {
     const supabase = getSupabaseAdmin()
     const { data, error } = await supabase
@@ -41,7 +41,7 @@ const create_coupon = tool({
         discount_value,
         min_order_amount: min_order_amount ?? 0,
         max_uses: max_uses ?? null,
-        expires_at: expires_at ?? null,
+        valid_until: valid_until ?? null,
         is_active: true,
       })
       .select('id, code, discount_type, discount_value')
@@ -84,7 +84,7 @@ const get_checkout_funnel = tool({
     // Get orders (completed checkouts)
     const { data: orders, count: orderCount } = await supabase
       .from('orders')
-      .select('payment_status, fulfillment_status', { count: 'exact' })
+      .select('payment_status, order_status', { count: 'exact' })
       .eq('store_id', store_id)
       .gte('created_at', since)
 
@@ -129,23 +129,48 @@ const score_customers = tool({
   }),
   execute: async ({ store_id, limit = 100 }) => {
     const supabase = getSupabaseAdmin()
-    const { data, error } = await supabase
+
+    // Fetch customers (only basic fields exist in the customers table)
+    const { data: customers, error } = await supabase
       .from('customers')
-      .select(
-        'id, name, email, total_orders, total_spent, last_order_at, created_at'
-      )
+      .select('id, full_name, email, created_at')
       .eq('store_id', store_id)
-      .order('total_spent', { ascending: false })
-      .limit(limit)
 
     if (error) return { success: false, error: error.message }
 
+    if (!customers?.length) return { success: true, count: 0, customers: [] }
+
+    // Compute order stats from orders table
+    const customerIds = customers.map((c) => c.id)
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('customer_id, total_amount, created_at')
+      .eq('store_id', store_id)
+      .eq('payment_status', 'paid')
+      .in('customer_id', customerIds)
+
+    // Group orders by customer_id
+    const orderStats: Record<string, { total_orders: number; total_spent: number; last_order_at: string | null }> = {}
+    for (const order of orders ?? []) {
+      if (!order.customer_id) continue
+      if (!orderStats[order.customer_id]) {
+        orderStats[order.customer_id] = { total_orders: 0, total_spent: 0, last_order_at: null }
+      }
+      const stats = orderStats[order.customer_id]
+      stats.total_orders++
+      stats.total_spent += Number(order.total_amount) || 0
+      if (!stats.last_order_at || order.created_at > stats.last_order_at) {
+        stats.last_order_at = order.created_at
+      }
+    }
+
     const now = Date.now()
-    const scored = (data ?? [])
+    const scored = customers
       .map((c) => {
-        const daysSinceLastOrder = c.last_order_at
+        const stats = orderStats[c.id] ?? { total_orders: 0, total_spent: 0, last_order_at: null }
+        const daysSinceLastOrder = stats.last_order_at
           ? Math.floor(
-              (now - new Date(c.last_order_at).getTime()) / 86400000
+              (now - new Date(stats.last_order_at).getTime()) / 86400000
             )
           : 999
         const recencyScore =
@@ -156,9 +181,9 @@ const score_customers = tool({
               : daysSinceLastOrder <= 90
                 ? 10
                 : 0
-        const frequencyScore = Math.min((c.total_orders || 0) * 10, 30)
+        const frequencyScore = Math.min(stats.total_orders * 10, 30)
         const monetaryScore = Math.min(
-          Math.floor((c.total_spent || 0) / 100) * 5,
+          Math.floor(stats.total_spent / 100) * 5,
           40
         )
         const totalScore = recencyScore + frequencyScore + monetaryScore
@@ -172,6 +197,9 @@ const score_customers = tool({
                 : 'cold'
         return {
           ...c,
+          total_orders: stats.total_orders,
+          total_spent: stats.total_spent,
+          last_order_at: stats.last_order_at,
           score: totalScore,
           tier,
           recencyScore,
@@ -181,6 +209,7 @@ const score_customers = tool({
         }
       })
       .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
 
     return { success: true, count: scored.length, customers: scored }
   },
@@ -219,7 +248,7 @@ const get_common_queries = tool({
       .from('orders')
       .select('id', { count: 'exact', head: true })
       .eq('store_id', store_id)
-      .in('fulfillment_status', ['returned', 'refund_initiated', 'refunded'])
+      .in('order_status', ['returned', 'refund_initiated', 'refunded'])
       .gte('created_at', since)
 
     // Get pending reviews
@@ -293,11 +322,11 @@ const get_negative_signals = tool({
     const { data: problemOrders } = await supabase
       .from('orders')
       .select(
-        'id, order_number, fulfillment_status, payment_status, total_amount, customer_email, created_at'
+        'id, order_number, order_status, payment_status, total_amount, customer_email, created_at'
       )
       .eq('store_id', store_id)
       .gte('created_at', since)
-      .in('fulfillment_status', ['cancelled', 'refund_initiated', 'returned'])
+      .in('order_status', ['cancelled', 'refund_initiated', 'returned'])
       .limit(20)
 
     // Multiple abandoned carts from same customer (frustrated)
@@ -355,7 +384,7 @@ const get_market_position = tool({
     const supabase = getSupabaseAdmin()
     const { data: products } = await supabase
       .from('products')
-      .select('price, compare_at_price, category, inventory_quantity, status')
+      .select('price, compare_at_price, category, stock_quantity, status')
       .eq('store_id', store_id)
       .eq('is_demo', false)
       .eq('status', 'active')
@@ -374,7 +403,7 @@ const get_market_position = tool({
       (p) => p.compare_at_price && p.compare_at_price > p.price
     ).length
     const lowStock = products.filter(
-      (p) => (p.inventory_quantity ?? 0) < 5
+      (p) => (p.stock_quantity ?? 0) < 5
     ).length
 
     return {

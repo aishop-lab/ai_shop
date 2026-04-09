@@ -34,7 +34,7 @@ export const get_products = tool({
       .from('products')
       .select(
         `id, title, description, price, compare_at_price, category, tags,
-         inventory_quantity, status, has_variants, created_at`
+         stock_quantity, status, created_at`
       )
       .eq('store_id', store_id)
       .eq('is_demo', false)
@@ -95,9 +95,9 @@ export const get_product_details = tool({
     const { data: product, error } = await supabase
       .from('products')
       .select(
-        `id, title, description, price, compare_at_price, cost_per_item,
-         category, tags, inventory_quantity, status, has_variants,
-         seo_description, seo_title, handle, created_at, updated_at`
+        `id, title, description, price, compare_at_price, cost_price,
+         category, tags, stock_quantity, status,
+         created_at, updated_at`
       )
       .eq('id', product_id)
       .eq('store_id', store_id)
@@ -118,7 +118,7 @@ export const get_product_details = tool({
     // Fetch variants
     const { data: variants } = await supabase
       .from('product_variants')
-      .select('id, title, price, compare_at_price, inventory_quantity, sku, options')
+      .select('id, title, price, compare_at_price, stock_quantity, sku, options')
       .eq('product_id', product_id)
       .order('title')
 

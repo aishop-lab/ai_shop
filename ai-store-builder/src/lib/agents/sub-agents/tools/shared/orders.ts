@@ -34,9 +34,8 @@ export const get_orders = tool({
     let query = supabase
       .from('orders')
       .select(
-        `id, order_number, status, fulfillment_status, payment_status, payment_method,
-         total_amount, currency, customer_email, customer_name,
-         tracking_number, courier_name, estimated_delivery,
+        `id, order_number, order_status, payment_status, payment_method,
+         total_amount, customer_email, customer_name,
          created_at, updated_at,
          order_items(id, product_id, title, quantity, price, variant_title)`
       )
@@ -45,7 +44,7 @@ export const get_orders = tool({
       .limit(limit)
 
     if (status && status !== 'all') {
-      query = query.eq('fulfillment_status', status)
+      query = query.eq('order_status', status)
     }
     if (payment_status && payment_status !== 'all') {
       query = query.eq('payment_status', payment_status)
@@ -94,11 +93,10 @@ export const get_order_details = tool({
     let query = supabase
       .from('orders')
       .select(
-        `id, order_number, status, fulfillment_status, payment_status, payment_method,
-         subtotal, total_amount, currency,
+        `id, order_number, order_status, payment_status, payment_method,
+         subtotal, total_amount,
          customer_email, customer_name, customer_phone,
          shipping_address, billing_address,
-         tracking_number, courier_name, estimated_delivery, shipped_at, delivered_at,
          notes, created_at, updated_at,
          order_items(id, product_id, title, quantity, price, variant_title)`
       )
@@ -138,7 +136,7 @@ export const get_order_stats = tool({
 
     const { data: orders, error } = await supabase
       .from('orders')
-      .select('id, total_amount, currency, payment_status, fulfillment_status, order_items(product_id, title, quantity, price)')
+      .select('id, total_amount, payment_status, order_status, order_items(product_id, title, quantity, price)')
       .eq('store_id', store_id)
       .gte('created_at', since)
 
@@ -153,7 +151,7 @@ export const get_order_stats = tool({
     // Status breakdown
     const statusCounts: Record<string, number> = {}
     for (const o of allOrders) {
-      const st = o.fulfillment_status || 'unknown'
+      const st = o.order_status || 'unknown'
       statusCounts[st] = (statusCounts[st] || 0) + 1
     }
 
@@ -190,8 +188,8 @@ export const get_order_stats = tool({
         paid_orders: paidOrders.length,
         total_revenue: Math.round(totalRevenue * 100) / 100,
         avg_order_value: paidOrders.length > 0 ? Math.round((totalRevenue / paidOrders.length) * 100) / 100 : 0,
-        currency: allOrders[0]?.currency ?? 'INR',
-        by_fulfillment_status: statusCounts,
+        currency: 'INR',
+        by_order_status: statusCounts,
         by_payment_status: paymentCounts,
         top_products: topProducts,
       },
@@ -221,7 +219,7 @@ export const get_revenue_summary = tool({
 
     const { data: orders, error } = await supabase
       .from('orders')
-      .select('total_amount, currency, payment_status, created_at')
+      .select('total_amount, payment_status, created_at')
       .eq('store_id', store_id)
       .eq('payment_status', 'paid')
       .gte('created_at', since)
@@ -270,7 +268,7 @@ export const get_revenue_summary = tool({
       success: true,
       period_days: days,
       group_by,
-      currency: (orders ?? [])[0]?.currency ?? 'INR',
+      currency: 'INR',
       summary,
     }
   },
