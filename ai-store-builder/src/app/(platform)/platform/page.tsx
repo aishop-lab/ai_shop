@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useAgentStates, useUpdateAgentState, getEnabledCount } from '@/lib/hooks/use-agents'
+import { useAgentStates, getEnabledCount } from '@/lib/hooks/use-agents'
 import { useActivityFeed } from '@/lib/hooks/use-activity'
 import { useApprovals } from '@/lib/hooks/use-approvals'
 import { AGENT_TYPES } from '@/lib/agents/constants'
@@ -56,7 +56,6 @@ export default function CommandCenterPage() {
   const { agents, isLoading: agentsLoading } = useAgentStates(storeId)
   const { actions, isLoading: activityLoading } = useActivityFeed(storeId, { limit: 20 })
   const { approvals, pendingCount, isLoading: approvalsLoading, approveAction, rejectAction } = useApprovals(storeId)
-  const { updateAgent } = useUpdateAgentState()
 
   const currency = storeInfo?.blueprint?.location?.currency ?? 'INR'
   const merchantName = storeInfo?.name ?? ''

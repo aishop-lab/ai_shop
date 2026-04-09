@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { AgentType, AutonomyLevel } from '@/lib/agents/types'
 import { DEFAULT_AUTONOMY_LEVEL } from '@/lib/agents/constants'
-import { useUpdateAgentState } from '@/lib/hooks/use-agents'
+import { useAgentStates, useUpdateAgentState } from '@/lib/hooks/use-agents'
 import { AGENT_INTRO_ORDER, AGENT_INTROS } from './agent-intro-data'
 import { AgentIntroCard } from './agent-intro-card'
 import { AgentTeamSummary } from './agent-team-summary'
@@ -52,6 +52,7 @@ export function AgentIntroOverlay({ storeId, onComplete }: AgentIntroOverlayProp
   const [isTransitioning, setIsTransitioning] = useState(false)
 
   const overlayRef = useRef<HTMLDivElement>(null)
+  const { agents } = useAgentStates(storeId)
   const { updateAgent } = useUpdateAgentState()
 
   // Detect prefers-reduced-motion once
@@ -126,9 +127,12 @@ export function AgentIntroOverlay({ storeId, onComplete }: AgentIntroOverlayProp
       [agentType]: { ...prev[agentType], enabled },
     }))
 
-    updateAgent(storeId, agentType, { is_enabled: enabled }).catch(() => {
-      toast.error(`Failed to update ${agentType} agent`)
-    })
+    const agentRow = agents.find((a) => a.agent_type === agentType)
+    if (agentRow) {
+      updateAgent(agentRow.id, { is_enabled: enabled }).catch(() => {
+        toast.error(`Failed to update ${agentType} agent`)
+      })
+    }
   }
 
   // ── Change autonomy level ──────────────────────────────────────────────────
@@ -139,9 +143,12 @@ export function AgentIntroOverlay({ storeId, onComplete }: AgentIntroOverlayProp
       [agentType]: { ...prev[agentType], autonomy: level, enabled: true },
     }))
 
-    updateAgent(storeId, agentType, { autonomy_level: level, is_enabled: true }).catch(() => {
-      toast.error(`Failed to update ${agentType} autonomy`)
-    })
+    const agentRow = agents.find((a) => a.agent_type === agentType)
+    if (agentRow) {
+      updateAgent(agentRow.id, { autonomy_level: level, is_enabled: true }).catch(() => {
+        toast.error(`Failed to update ${agentType} autonomy`)
+      })
+    }
   }
 
   // ── Complete (Enter Command Center) ────────────────────────────────────────

@@ -256,36 +256,36 @@ export default function AgentConfigPage() {
   }, [])
 
   const handleToggle = useCallback(async (agentType: AgentType) => {
-    if (!storeId) return
     const agentState = agents.find((a) => a.agent_type === agentType)
     if (!agentState) return
 
     setSavingAgents((prev) => new Set(prev).add(agentType))
-    const result = await updateAgent(storeId, agentType, { is_enabled: !agentState.is_enabled })
+    const result = await updateAgent(agentState.id, { is_enabled: !agentState.is_enabled })
     setSavingAgents((prev) => { const next = new Set(prev); next.delete(agentType); return next })
 
     if (result) {
+      refetch()
       showToast(`${AGENT_DISPLAY_NAMES[agentType]} ${result.is_enabled ? 'enabled' : 'disabled'}`)
     } else {
       showToast('Failed to update — please try again')
     }
-  }, [storeId, agents, updateAgent, showToast])
+  }, [agents, updateAgent, refetch, showToast])
 
   const handleAutonomyChange = useCallback(async (agentType: AgentType, level: AutonomyLevel) => {
-    if (!storeId) return
     const agentState = agents.find((a) => a.agent_type === agentType)
     if (!agentState) return
 
     setSavingAgents((prev) => new Set(prev).add(agentType))
-    const result = await updateAgent(storeId, agentType, { autonomy_level: level })
+    const result = await updateAgent(agentState.id, { autonomy_level: level })
     setSavingAgents((prev) => { const next = new Set(prev); next.delete(agentType); return next })
 
     if (result) {
+      refetch()
       showToast(`${AGENT_DISPLAY_NAMES[agentType]} autonomy set to level ${level}`)
     } else {
       showToast('Failed to update — please try again')
     }
-  }, [storeId, agents, updateAgent, showToast])
+  }, [agents, updateAgent, refetch, showToast])
 
   if ((isLoading || initializing) && agents.length === 0) {
     return (
@@ -341,11 +341,12 @@ export default function AgentConfigPage() {
             onToggle={() => handleToggle(agentType)}
             onAutonomyChange={(level) => handleAutonomyChange(agentType, level)}
             onConfigChange={(label, value) => {
-              // Config changes saved to agent config JSON
               const agentState = agents.find((a) => a.agent_type === agentType)
-              if (agentState && storeId) {
+              if (agentState) {
                 const updatedConfig = { ...(agentState.config || {}), [label]: value }
-                updateAgent(storeId, agentType, { config: updatedConfig })
+                updateAgent(agentState.id, { config: updatedConfig }).then((result) => {
+                  if (result) refetch()
+                })
                 showToast(`${AGENT_DISPLAY_NAMES[agentType]}: ${label} updated`)
               }
             }}

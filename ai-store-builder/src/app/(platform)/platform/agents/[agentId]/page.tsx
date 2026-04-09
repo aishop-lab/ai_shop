@@ -316,28 +316,16 @@ export default function AgentWorkspacePage() {
         if (done) break
 
         const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          // AI SDK UI stream protocol: text chunks are prefixed with "0:"
-          if (line.startsWith('0:')) {
-            try {
-              const text = JSON.parse(line.slice(2))
-              assistantContent += text
-              // Update the last message (the assistant placeholder)
-              setChatMessages((prev) => {
-                const updated = [...prev]
-                updated[updated.length - 1] = {
-                  role: 'agent',
-                  content: assistantContent,
-                }
-                return updated
-              })
-            } catch {
-              // Ignore parse errors on partial chunks
-            }
+        assistantContent += chunk
+        // Update the last message (the assistant placeholder)
+        setChatMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = {
+            role: 'agent',
+            content: assistantContent,
           }
-        }
+          return updated
+        })
       }
 
       // If we got no content at all, show a fallback

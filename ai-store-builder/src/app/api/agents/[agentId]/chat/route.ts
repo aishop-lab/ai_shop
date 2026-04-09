@@ -274,5 +274,5 @@ ${memoryContext}`
     stopWhen: stepCountIs(5),
   })
 
-  return result.toUIMessageStreamResponse()
+  return result.toTextStreamResponse()
 }
