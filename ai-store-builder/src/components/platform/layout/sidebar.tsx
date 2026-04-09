@@ -16,6 +16,8 @@ import {
   Users,
   FolderOpen,
   Ticket,
+  MessageCircle,
+  Camera,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatusDot } from '@/components/platform/shared/status-dot'
@@ -148,6 +150,17 @@ export function PlatformSidebar({ isOpen, onClose, agents = [], pendingApprovals
               <SidebarNavItem href="/platform/customers" icon={Users} label="Customers" />
               <SidebarNavItem href="/platform/coupons" icon={Ticket} label="Coupons" />
               <SidebarNavItem href="/platform/analytics" icon={LayoutDashboard} label="Reports" />
+            </div>
+          </div>
+
+          {/* Marketing Tools */}
+          <div>
+            <p className="mb-2 px-3 text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">
+              Marketing
+            </p>
+            <div className="space-y-1">
+              <SidebarNavItem href="/platform/marketing/whatsapp" icon={MessageCircle} label="WhatsApp" />
+              <SidebarNavItem href="/platform/products/photo" icon={Camera} label="Photo to Product" />
             </div>
           </div>
 
