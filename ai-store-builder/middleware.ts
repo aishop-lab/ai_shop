@@ -220,9 +220,23 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL(`/platform/products/${productEditMatch[1]}`, request.url))
       }
 
-      // Note: /dashboard/collections/create and /dashboard/coupons/create
-      // are NOT redirected because no platform equivalents exist yet.
-      // Only the list pages redirect.
+      // Pattern match: /dashboard/collections/:id -> /platform/collections/:id
+      const collectionEditMatch = pathname.match(/^\/dashboard\/collections\/([^/]+)$/)
+      if (collectionEditMatch && collectionEditMatch[1] !== 'create') {
+        return NextResponse.redirect(new URL(`/platform/collections/${collectionEditMatch[1]}`, request.url))
+      }
+
+      // Pattern match: /dashboard/coupons/:id -> /platform/coupons/:id
+      const couponEditMatch = pathname.match(/^\/dashboard\/coupons\/([^/]+)$/)
+      if (couponEditMatch && couponEditMatch[1] !== 'create') {
+        return NextResponse.redirect(new URL(`/platform/coupons/${couponEditMatch[1]}`, request.url))
+      }
+
+      // Pattern match: /dashboard/orders/:id -> /platform/orders/:id
+      const orderDetailMatch = pathname.match(/^\/dashboard\/orders\/([^/]+)$/)
+      if (orderDetailMatch) {
+        return NextResponse.redirect(new URL(`/platform/orders/${orderDetailMatch[1]}`, request.url))
+      }
 
       // Catch-all: any remaining /dashboard/* routes redirect to /platform
       if (!dashboardToplatformMap[pathname]) {

@@ -223,7 +223,7 @@ export default function CollectionsPage() {
 
 function CollectionCard({ collection }: { collection: Collection }) {
   return (
-    <Link href={`/dashboard/collections/${collection.id}`} title="Edit collection (opens legacy editor)">
+    <Link href={`/platform/collections/${collection.id}`} title="Edit collection">
       <div
         className={cn(
           'rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)]',

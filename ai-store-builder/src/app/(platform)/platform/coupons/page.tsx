@@ -11,6 +11,7 @@ import {
   DollarSign,
   Calendar,
   ChevronDown,
+  Pencil,
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
@@ -239,6 +240,9 @@ export default function CouponsPage() {
                 <th className="px-4 py-2.5 text-left font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">
                   Expires
                 </th>
+                <th className="px-4 py-2.5 text-right font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--platform-text-muted)]">
+                  &nbsp;
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--platform-border)] bg-[var(--platform-bg)]">
@@ -337,6 +341,21 @@ function CouponRow({ coupon, currency }: CouponRowProps) {
           <Calendar className="h-3 w-3" />
           {coupon.expires_at ? formatDate(coupon.expires_at) : 'No expiry'}
         </span>
+      </td>
+
+      {/* Edit */}
+      <td className="px-4 py-3 text-right">
+        <Link
+          href={`/platform/coupons/${coupon.id}`}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-md border border-[var(--platform-border)] px-2.5 py-1',
+            'text-[10px] font-medium text-[var(--platform-text-secondary)]',
+            'transition-colors hover:border-[var(--platform-border-hover)] hover:text-[var(--platform-text-primary)]',
+          )}
+        >
+          <Pencil className="h-3 w-3" />
+          Edit
+        </Link>
       </td>
     </tr>
   )

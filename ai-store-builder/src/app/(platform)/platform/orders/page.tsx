@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { Search, ChevronDown, ChevronUp, ShoppingBag, X, User, CreditCard, Package, Loader2, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PlatformBreadcrumb } from '@/components/ui/breadcrumb'
@@ -803,6 +804,16 @@ function OrderDetail({ order, currency, storeId, onClose, onStatusUpdate }: Orde
             </div>
           </Section>
         )}
+
+        {/* View Full Order link */}
+        <div className="px-5 py-4">
+          <Link
+            href={`/platform/orders/${order.id}`}
+            className="flex items-center justify-center gap-2 rounded-lg border border-[var(--platform-accent)] px-4 py-2 text-xs font-medium text-[var(--platform-accent)] transition-colors hover:bg-[var(--platform-accent)]/10"
+          >
+            View Full Order
+          </Link>
+        </div>
       </div>
     </>
   )
