@@ -36,17 +36,17 @@ const list_abandoned_carts = tool({
         phone,
         items,
         subtotal,
-        currency,
+        item_count,
         recovery_status,
-        emails_sent,
-        last_email_sent_at,
+        recovery_emails_sent,
         created_at,
-        updated_at
+        updated_at,
+        abandoned_at
       `
       )
       .eq('store_id', store_id)
       .gte('created_at', since)
-      .in('recovery_status', ['abandoned', 'email_1_sent', 'email_2_sent'])
+      .in('recovery_status', ['active', 'email_1_sent', 'email_2_sent'])
       .order('subtotal', { ascending: false })
       .limit(limit)
 
@@ -101,8 +101,8 @@ const send_recovery_email = tool({
       .from('abandoned_carts')
       .update({
         recovery_status: statusMap[sequence_step] ?? 'email_1_sent',
-        emails_sent: sequence_step,
-        last_email_sent_at: new Date().toISOString(),
+        recovery_emails_sent: sequence_step,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', cart_id)
       .eq('store_id', store_id)

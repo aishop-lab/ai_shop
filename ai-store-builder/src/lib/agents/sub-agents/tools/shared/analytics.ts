@@ -29,7 +29,7 @@ export const get_funnel_data = tool({
         .gte('created_at', since),
       supabase
         .from('orders')
-        .select('id, payment_status, fulfillment_status')
+        .select('id, payment_status, order_status')
         .eq('store_id', store_id)
         .gte('created_at', since),
     ])
@@ -82,7 +82,7 @@ export const get_payment_failures = tool({
 
     const { data, error } = await supabase
       .from('orders')
-      .select('id, order_number, payment_status, payment_method, total_amount, currency, notes, created_at')
+      .select('id, order_number, payment_status, payment_method, total_amount, notes, created_at')
       .eq('store_id', store_id)
       .eq('payment_status', 'failed')
       .gte('created_at', since)
@@ -109,7 +109,7 @@ export const get_payment_failures = tool({
       period_days: days,
       total_failures: failedOrders.length,
       lost_revenue: Math.round(totalLostRevenue * 100) / 100,
-      currency: failedOrders[0]?.currency ?? 'INR',
+      currency: 'INR',
       by_payment_method: byMethod,
       recent_failures: failedOrders.slice(0, 10).map((o) => ({
         order_number: o.order_number,
@@ -139,7 +139,7 @@ export const get_recovery_stats = tool({
 
     const { data, error } = await supabase
       .from('abandoned_carts')
-      .select('id, recovery_status, emails_sent, subtotal')
+      .select('id, recovery_status, recovery_emails_sent, subtotal')
       .eq('store_id', store_id)
       .gte('created_at', since)
 
@@ -158,7 +158,7 @@ export const get_recovery_stats = tool({
     // Breakdown by emails_sent stage
     const byStep: Record<string, { total: number; recovered: number }> = {}
     for (const c of carts) {
-      const step = String(c.emails_sent ?? 0)
+      const step = String(c.recovery_emails_sent ?? 0)
       if (!byStep[step]) byStep[step] = { total: 0, recovered: 0 }
       byStep[step].total++
       if (c.recovery_status === 'recovered') byStep[step].recovered++
