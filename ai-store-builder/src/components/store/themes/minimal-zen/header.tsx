@@ -31,7 +31,7 @@ export default function MinimalZenHeader({ onMenuClick }: MinimalZenHeaderProps)
   }
 
   return (
-    <header className="sticky top-0 bg-white/95 backdrop-blur-sm z-40">
+    <header className="store-header sticky top-0 backdrop-blur-sm z-40" style={{ backgroundColor: 'var(--color-header-bg)', color: 'var(--color-header-text)' }}>
       <div className="max-w-[1100px] mx-auto px-8">
         <div className="flex items-center justify-between h-[60px]">
           {/* Left: Menu Toggle + Logo */}
@@ -39,7 +39,8 @@ export default function MinimalZenHeader({ onMenuClick }: MinimalZenHeaderProps)
             {/* Sidebar Toggle (always visible) */}
             <button
               onClick={onMenuClick}
-              className="text-gray-600 hover:text-[var(--color-primary)] transition-colors"
+              className="hover:text-[var(--color-primary)] transition-colors"
+              style={{ color: 'var(--color-header-text)' }}
               aria-label="Open menu"
             >
               <Menu className="w-5 h-5" />
@@ -57,8 +58,8 @@ export default function MinimalZenHeader({ onMenuClick }: MinimalZenHeaderProps)
                 />
               ) : (
                 <span
-                  className="text-lg font-medium tracking-tight text-gray-900"
-                  style={{ fontFamily: 'var(--font-heading)' }}
+                  className="text-lg font-medium tracking-tight"
+                  style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-header-text)' }}
                 >
                   {store.name}
                 </span>
@@ -70,26 +71,29 @@ export default function MinimalZenHeader({ onMenuClick }: MinimalZenHeaderProps)
           <nav className="hidden md:flex items-center space-x-12">
             <Link
               href={baseUrl}
-              className="text-sm text-gray-600 hover:text-[var(--color-primary)] transition-colors"
-              style={{ fontFamily: 'var(--font-body)' }}
+              className="text-sm hover:text-[var(--color-primary)] transition-colors"
+              style={{ fontFamily: 'var(--font-body)', color: 'var(--color-header-text)' }}
             >
               Home
             </Link>
             <Link
               href={`${baseUrl}/products`}
-              className="text-sm text-gray-600 hover:text-[var(--color-primary)] transition-colors"
+              className="text-sm hover:text-[var(--color-primary)] transition-colors"
+              style={{ color: 'var(--color-header-text)' }}
             >
               Products
             </Link>
             <Link
               href={`${baseUrl}/about`}
-              className="text-sm text-gray-600 hover:text-[var(--color-primary)] transition-colors"
+              className="text-sm hover:text-[var(--color-primary)] transition-colors"
+              style={{ color: 'var(--color-header-text)' }}
             >
               About
             </Link>
             <Link
               href={`${baseUrl}/contact`}
-              className="text-sm text-gray-600 hover:text-[var(--color-primary)] transition-colors"
+              className="text-sm hover:text-[var(--color-primary)] transition-colors"
+              style={{ color: 'var(--color-header-text)' }}
             >
               Contact
             </Link>
@@ -99,7 +103,8 @@ export default function MinimalZenHeader({ onMenuClick }: MinimalZenHeaderProps)
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="text-gray-600 hover:text-[var(--color-primary)] transition-colors"
+              className="hover:text-[var(--color-primary)] transition-colors"
+              style={{ color: 'var(--color-header-text)' }}
               aria-label="Search"
             >
               <Search className="w-5 h-5" />

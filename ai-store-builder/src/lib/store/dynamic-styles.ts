@@ -68,23 +68,36 @@ export function generateStyleVars(brand: BrandStyles): StyleVariables {
   const primary = brand.colors.primary || '#3B82F6'
   const secondary = brand.colors.secondary || '#6B7280'
   const accent = brand.colors.accent || primary
+  const background = brand.colors.background || '#FFFFFF'
+  const text = brand.colors.text || '#111827'
+  const headerBg = brand.colors.header_bg || '#FFFFFF'
+  const headerText = brand.colors.header_text || '#111827'
+  const footerBg = brand.colors.footer_bg || '#111827'
+  const footerText = brand.colors.footer_text || '#F9FAFB'
 
   return {
     '--color-primary': primary,
     '--color-primary-dark': adjustColor(primary, -15),
-    '--color-primary-light': createTint(primary, 0.9), // Light tint for backgrounds
-    '--color-primary-lighter': createTint(primary, 0.95), // Even lighter tint
-    '--color-primary-contrast': getContrastColor(primary), // Black or white for text on primary bg
+    '--color-primary-light': createTint(primary, 0.9),
+    '--color-primary-lighter': createTint(primary, 0.95),
+    '--color-primary-contrast': getContrastColor(primary),
     '--color-secondary': secondary,
     '--color-secondary-dark': adjustColor(secondary, -15),
     '--color-secondary-light': createTint(secondary, 0.9),
-    '--color-secondary-contrast': getContrastColor(secondary), // Black or white for text on secondary bg
+    '--color-secondary-contrast': getContrastColor(secondary),
     '--color-accent': accent,
     '--color-accent-dark': adjustColor(accent, -15),
     '--color-accent-light': createTint(accent, 0.9),
-    '--color-accent-contrast': getContrastColor(accent), // Black or white for text on accent bg
+    '--color-accent-contrast': getContrastColor(accent),
+    '--color-background': background,
+    '--color-text': text,
+    '--color-header-bg': headerBg,
+    '--color-header-text': headerText,
+    '--color-footer-bg': footerBg,
+    '--color-footer-text': footerText,
     '--font-heading': `"${brand.typography.heading_font}", system-ui, sans-serif`,
     '--font-body': `"${brand.typography.body_font}", system-ui, sans-serif`,
+    '--font-size-base': brand.typography.base_font_size || '16px',
     '--button-radius': brand.button_radius || '8px',
   }
 }
@@ -249,6 +262,37 @@ export function generateColorPalette(primary: string) {
     800: adjustColor(primary, -45),
     900: adjustColor(primary, -60)
   }
+}
+
+/**
+ * Sanitize custom CSS to prevent XSS and dangerous patterns
+ * Strips: javascript: URLs, expression(), @import, behavior, -moz-binding, </style> tags
+ */
+export function sanitizeCustomCSS(css: string): string {
+  if (!css || typeof css !== 'string') return ''
+
+  let sanitized = css
+    // Remove any script-like content or HTML tags
+    .replace(/<\/?[^>]+(>|$)/g, '')
+    // Remove javascript: protocol
+    .replace(/javascript\s*:/gi, '')
+    // Remove expression() (IE CSS expressions)
+    .replace(/expression\s*\(/gi, '')
+    // Remove behavior: (IE HTC)
+    .replace(/behavior\s*:/gi, '')
+    // Remove -moz-binding (Firefox XBL)
+    .replace(/-moz-binding\s*:/gi, '')
+    // Remove @import (prevent loading external stylesheets)
+    .replace(/@import\b/gi, '')
+    // Remove url() with data: schemes other than images
+    .replace(/url\s*\(\s*(['"]?)data:(?!image\/)[^)]*\1\s*\)/gi, '')
+
+  // Cap at 10KB to prevent abuse
+  if (sanitized.length > 10240) {
+    sanitized = sanitized.slice(0, 10240)
+  }
+
+  return sanitized.trim()
 }
 
 // Font stacks for fallbacks

@@ -35,7 +35,13 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
   }
 
   return (
-    <header className="border-b sticky top-0 bg-white z-40">
+    <header
+      className="store-header border-b sticky top-0 z-40"
+      style={{
+        backgroundColor: 'var(--color-header-bg)',
+        color: 'var(--color-header-text)',
+      }}
+    >
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Left: Menu Toggle + Logo */}
@@ -43,7 +49,8 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
             {/* Sidebar Toggle (always visible) */}
             <button
               onClick={onMenuClick}
-              className="p-2 text-gray-700 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] rounded-lg transition-colors"
+              className="p-2 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] rounded-lg transition-colors"
+              style={{ color: 'var(--color-header-text)' }}
               aria-label="Open menu"
             >
               <Menu className="w-6 h-6" />
@@ -68,8 +75,8 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
                 </div>
               )}
               <span
-                className="text-xl md:text-2xl font-bold text-gray-900 hidden sm:block"
-                style={{ fontFamily: 'var(--font-heading)' }}
+                className="text-xl md:text-2xl font-bold hidden sm:block"
+                style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-header-text)' }}
               >
                 {store.name}
               </span>
@@ -80,29 +87,29 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
           <nav className="hidden md:flex items-center space-x-8">
             <Link
               href={baseUrl}
-              className="text-gray-700 hover:text-[var(--color-primary)] transition-colors font-medium"
-              style={{ fontFamily: 'var(--font-body)' }}
+              className="hover:text-[var(--color-primary)] transition-colors font-medium"
+              style={{ fontFamily: 'var(--font-body)', color: 'var(--color-header-text)', opacity: 0.85 }}
             >
               {t.nav.home}
             </Link>
             <Link
               href={`${baseUrl}/products`}
-              className="text-gray-700 hover:text-[var(--color-primary)] transition-colors font-medium"
-              style={{ fontFamily: 'var(--font-body)' }}
+              className="hover:text-[var(--color-primary)] transition-colors font-medium"
+              style={{ fontFamily: 'var(--font-body)', color: 'var(--color-header-text)', opacity: 0.85 }}
             >
               {t.nav.products}
             </Link>
             <Link
               href={`${baseUrl}/about`}
-              className="text-gray-700 hover:text-[var(--color-primary)] transition-colors font-medium"
-              style={{ fontFamily: 'var(--font-body)' }}
+              className="hover:text-[var(--color-primary)] transition-colors font-medium"
+              style={{ fontFamily: 'var(--font-body)', color: 'var(--color-header-text)', opacity: 0.85 }}
             >
               {t.nav.about}
             </Link>
             <Link
               href={`${baseUrl}/contact`}
-              className="text-gray-700 hover:text-[var(--color-primary)] transition-colors font-medium"
-              style={{ fontFamily: 'var(--font-body)' }}
+              className="hover:text-[var(--color-primary)] transition-colors font-medium"
+              style={{ fontFamily: 'var(--font-body)', color: 'var(--color-header-text)', opacity: 0.85 }}
             >
               {t.nav.contact}
             </Link>
@@ -116,7 +123,8 @@ export default function ModernMinimalHeader({ onMenuClick }: ModernMinimalHeader
             {/* Search Button */}
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="p-2 text-gray-700 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] rounded-lg transition-colors"
+              className="p-2 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] rounded-lg transition-colors"
+              style={{ color: 'var(--color-header-text)' }}
               aria-label="Search"
             >
               <Search className="w-5 h-5" />

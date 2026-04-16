@@ -31,7 +31,7 @@ export default function PlayfulBrightHeader({ onMenuClick }: PlayfulBrightHeader
   }
 
   return (
-    <header className="sticky top-0 bg-white z-40 shadow-sm">
+    <header className="store-header sticky top-0 z-40 shadow-sm" style={{ backgroundColor: 'var(--color-header-bg)', color: 'var(--color-header-text)' }}>
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-[70px]">
           {/* Left: Menu Toggle + Logo */}
@@ -39,7 +39,8 @@ export default function PlayfulBrightHeader({ onMenuClick }: PlayfulBrightHeader
             {/* Sidebar Toggle (always visible) */}
             <button
               onClick={onMenuClick}
-              className="p-3 rounded-xl bg-gray-100 hover:bg-[var(--color-primary-light)] text-gray-700 hover:text-[var(--color-primary)] transition-colors"
+              className="p-3 rounded-xl bg-gray-100 hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-colors"
+              style={{ color: 'var(--color-header-text)' }}
               aria-label="Open menu"
             >
               <Menu className="w-5 h-5" />
@@ -64,8 +65,8 @@ export default function PlayfulBrightHeader({ onMenuClick }: PlayfulBrightHeader
                 </div>
               )}
               <span
-                className="text-xl md:text-2xl font-bold text-gray-900 hidden sm:block"
-                style={{ fontFamily: 'var(--font-heading)' }}
+                className="text-xl md:text-2xl font-bold hidden sm:block"
+                style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-header-text)' }}
               >
                 {store.name}
               </span>
@@ -83,8 +84,8 @@ export default function PlayfulBrightHeader({ onMenuClick }: PlayfulBrightHeader
               <Link
                 key={link.href}
                 href={link.href}
-                className="px-4 py-2 rounded-xl text-gray-700 hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all font-medium"
-                style={{ fontFamily: 'var(--font-body)' }}
+                className="px-4 py-2 rounded-xl hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-all font-medium"
+                style={{ fontFamily: 'var(--font-body)', color: 'var(--color-header-text)' }}
               >
                 {link.label}
               </Link>
@@ -95,7 +96,8 @@ export default function PlayfulBrightHeader({ onMenuClick }: PlayfulBrightHeader
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="p-3 rounded-xl bg-gray-100 hover:bg-[var(--color-primary-light)] text-gray-700 hover:text-[var(--color-primary)] transition-colors"
+              className="p-3 rounded-xl bg-gray-100 hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-colors"
+              style={{ color: 'var(--color-header-text)' }}
               aria-label="Search"
             >
               <Search className="w-5 h-5" />

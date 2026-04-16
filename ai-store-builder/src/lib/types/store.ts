@@ -1,5 +1,7 @@
 // Store and Product TypeScript Types
 
+import type { StoreCustomization } from './customization'
+
 // Razorpay Credentials Types
 export interface RazorpayCredentials {
   key_id: string
@@ -131,6 +133,7 @@ export interface Store {
     body_font: string
   }
   theme_template: string
+  customization?: StoreCustomization
   contact_email: string
   contact_phone?: string
   whatsapp_number?: string

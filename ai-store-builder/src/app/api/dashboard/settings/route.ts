@@ -28,7 +28,7 @@ export async function GET() {
         stripe_publishable_key, stripe_credentials_verified, stripe_credentials_verified_at,
         msg91_whatsapp_number, msg91_credentials_verified,
         resend_from_email, resend_credentials_verified,
-        shipping_providers,
+        shipping_providers, customization,
         owner_id, created_at, updated_at, activated_at
       `)
       .eq('owner_id', user.id)
@@ -100,6 +100,7 @@ export async function PATCH(request: Request) {
     if (body.settings !== undefined) updateData.settings = body.settings
     if (body.logo_url !== undefined) updateData.logo_url = body.logo_url
     if (body.theme_template !== undefined) updateData.theme = body.theme_template
+    if (body.customization !== undefined) updateData.customization = body.customization
 
     // Handle fields stored in blueprint JSON
     const blueprintUpdates: Record<string, unknown> = {}
@@ -145,7 +146,7 @@ export async function PATCH(request: Request) {
         stripe_publishable_key, stripe_credentials_verified, stripe_credentials_verified_at,
         msg91_whatsapp_number, msg91_credentials_verified,
         resend_from_email, resend_credentials_verified,
-        shipping_providers,
+        shipping_providers, customization,
         owner_id, created_at, updated_at, activated_at
       `)
       .single()

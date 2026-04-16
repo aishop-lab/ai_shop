@@ -31,7 +31,7 @@ export default function ClassicElegantHeader({ onMenuClick }: ClassicElegantHead
   }
 
   return (
-    <header className="border-b border-gray-200 sticky top-0 bg-white z-40">
+    <header className="store-header border-b border-gray-200 sticky top-0 z-40" style={{ backgroundColor: 'var(--color-header-bg)', color: 'var(--color-header-text)' }}>
       {/* Top bar */}
       <div className="text-white text-center py-2 text-sm tracking-wide" style={{ backgroundColor: 'var(--color-primary)' }}>
         {store.tagline || 'Welcome to our store'}
@@ -44,7 +44,8 @@ export default function ClassicElegantHeader({ onMenuClick }: ClassicElegantHead
             {/* Sidebar Toggle (always visible) */}
             <button
               onClick={onMenuClick}
-              className="p-2 text-gray-700 hover:text-[var(--color-primary)] transition-colors"
+              className="p-2 hover:text-[var(--color-primary)] transition-colors"
+              style={{ color: 'var(--color-header-text)' }}
               aria-label="Open menu"
             >
               <Menu className="w-6 h-6" />
@@ -70,8 +71,8 @@ export default function ClassicElegantHeader({ onMenuClick }: ClassicElegantHead
               )}
               <div className="flex flex-col hidden sm:flex">
                 <span
-                  className="text-2xl font-serif tracking-wide text-gray-900"
-                  style={{ fontFamily: 'var(--font-heading)' }}
+                  className="text-2xl font-serif tracking-wide"
+                  style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-header-text)' }}
                 >
                   {store.name}
                 </span>
@@ -88,26 +89,29 @@ export default function ClassicElegantHeader({ onMenuClick }: ClassicElegantHead
           <nav className="hidden md:flex items-center space-x-10">
             <Link
               href={baseUrl}
-              className="text-gray-700 hover:text-[var(--color-primary)] transition-colors tracking-wide font-medium"
-              style={{ fontFamily: 'var(--font-body)' }}
+              className="hover:text-[var(--color-primary)] transition-colors tracking-wide font-medium"
+              style={{ fontFamily: 'var(--font-body)', color: 'var(--color-header-text)' }}
             >
               Home
             </Link>
             <Link
               href={`${baseUrl}/products`}
-              className="text-gray-700 hover:text-[var(--color-primary)] transition-colors tracking-wide font-medium"
+              className="hover:text-[var(--color-primary)] transition-colors tracking-wide font-medium"
+              style={{ color: 'var(--color-header-text)' }}
             >
               Collection
             </Link>
             <Link
               href={`${baseUrl}/about`}
-              className="text-gray-700 hover:text-[var(--color-primary)] transition-colors tracking-wide font-medium"
+              className="hover:text-[var(--color-primary)] transition-colors tracking-wide font-medium"
+              style={{ color: 'var(--color-header-text)' }}
             >
               Our Story
             </Link>
             <Link
               href={`${baseUrl}/contact`}
-              className="text-gray-700 hover:text-[var(--color-primary)] transition-colors tracking-wide font-medium"
+              className="hover:text-[var(--color-primary)] transition-colors tracking-wide font-medium"
+              style={{ color: 'var(--color-header-text)' }}
             >
               Contact
             </Link>
@@ -117,7 +121,8 @@ export default function ClassicElegantHeader({ onMenuClick }: ClassicElegantHead
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="p-2 text-gray-700 hover:text-[var(--color-primary)] transition-colors"
+              className="p-2 hover:text-[var(--color-primary)] transition-colors"
+              style={{ color: 'var(--color-header-text)' }}
               aria-label="Search products"
             >
               <Search className="w-5 h-5" />

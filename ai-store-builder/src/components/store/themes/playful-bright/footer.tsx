@@ -10,7 +10,7 @@ export default function PlayfulBrightFooter() {
   const currentYear = new Date().getFullYear()
   
   return (
-    <footer style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-contrast)' }}>
+    <footer className="store-footer" style={{ backgroundColor: 'var(--color-footer-bg)', color: 'var(--color-footer-text)' }}>
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand */}
@@ -83,7 +83,7 @@ export default function PlayfulBrightFooter() {
           </div>
         </div>
         
-        <div className="mt-12 pt-8 border-t border-current/20">
+        <div className="mt-12 pt-8 border-t" style={{ borderColor: 'color-mix(in srgb, var(--color-footer-text) 20%, transparent)' }}>
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="flex items-center opacity-60 text-sm">
               Made with <Heart className="w-4 h-4 mx-1 text-red-400 fill-current" /> by {store.name} &copy; {currentYear}

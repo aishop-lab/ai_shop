@@ -54,12 +54,22 @@ export interface BrandStyles {
     primary: string
     secondary: string
     accent?: string
+    background?: string
+    text?: string
+    header_bg?: string
+    header_text?: string
+    footer_bg?: string
+    footer_text?: string
   }
   typography: {
     heading_font: string
     body_font: string
+    base_font_size?: string
   }
   button_radius?: string
+  header_style?: 'default' | 'centered' | 'minimal'
+  product_card_style?: 'default' | 'minimal' | 'overlay'
+  product_grid_columns?: 2 | 3 | 4
 }
 
 // Style variables generated from brand
@@ -68,14 +78,25 @@ export interface StyleVariables {
   '--color-primary-dark': string
   '--color-primary-light': string
   '--color-primary-lighter': string
+  '--color-primary-contrast': string
   '--color-secondary': string
   '--color-secondary-dark': string
   '--color-secondary-light': string
+  '--color-secondary-contrast': string
   '--color-accent': string
   '--color-accent-dark': string
   '--color-accent-light': string
+  '--color-accent-contrast': string
+  '--color-background': string
+  '--color-text': string
+  '--color-header-bg': string
+  '--color-header-text': string
+  '--color-footer-bg': string
+  '--color-footer-text': string
   '--font-heading': string
   '--font-body': string
+  '--font-size-base': string
+  '--button-radius': string
   [key: string]: string
 }
 

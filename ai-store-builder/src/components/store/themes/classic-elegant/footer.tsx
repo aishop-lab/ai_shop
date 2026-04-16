@@ -10,7 +10,7 @@ export default function ClassicElegantFooter() {
   const currentYear = new Date().getFullYear()
   
   return (
-    <footer className="bg-[var(--color-primary-lighter)] border-t border-gray-200">
+    <footer className="store-footer border-t" style={{ backgroundColor: 'var(--color-footer-bg)', color: 'var(--color-footer-text)', borderColor: 'color-mix(in srgb, var(--color-footer-text) 20%, transparent)' }}>
       <div className="max-w-[1200px] mx-auto px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
@@ -21,7 +21,7 @@ export default function ClassicElegantFooter() {
             >
               {store.name}
             </h3>
-            <p className="text-gray-600 mb-6 leading-relaxed max-w-md">
+            <p className="opacity-70 mb-6 leading-relaxed max-w-md">
               {store.blueprint?.ai_content?.about_us?.short_description || store.tagline || `Experience timeless elegance with our curated collection.`}
             </p>
             <div className="flex space-x-4">
@@ -30,7 +30,8 @@ export default function ClassicElegantFooter() {
                   href={`https://instagram.com/${store.instagram_handle}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-3 border border-gray-300 rounded-full hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors"
+                  className="p-3 border rounded-full opacity-70 hover:opacity-100 transition-all"
+                  style={{ borderColor: 'color-mix(in srgb, var(--color-footer-text) 30%, transparent)' }}
                 >
                   <Instagram className="w-5 h-5" />
                 </a>
@@ -40,7 +41,8 @@ export default function ClassicElegantFooter() {
                   href={`https://wa.me/${store.whatsapp_number}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-3 border border-gray-300 rounded-full hover:border-green-600 hover:text-green-600 transition-colors"
+                  className="p-3 border rounded-full opacity-70 hover:opacity-100 hover:text-green-600 transition-all"
+                  style={{ borderColor: 'color-mix(in srgb, var(--color-footer-text) 30%, transparent)' }}
                 >
                   <MessageCircle className="w-5 h-5" />
                 </a>
@@ -52,10 +54,10 @@ export default function ClassicElegantFooter() {
           <div>
             <h4 className="font-semibold mb-6 uppercase tracking-widest text-sm">Explore</h4>
             <ul className="space-y-4">
-              <li><Link href={baseUrl} className="text-gray-600 hover:text-[var(--color-primary)] transition-colors">Home</Link></li>
-              <li><Link href={`${baseUrl}/products`} className="text-gray-600 hover:text-[var(--color-primary)] transition-colors">Collection</Link></li>
-              <li><Link href={`${baseUrl}/about`} className="text-gray-600 hover:text-[var(--color-primary)] transition-colors">Our Story</Link></li>
-              <li><Link href={`${baseUrl}/contact`} className="text-gray-600 hover:text-[var(--color-primary)] transition-colors">Contact</Link></li>
+              <li><Link href={baseUrl} className="opacity-70 hover:opacity-100 transition-opacity">Home</Link></li>
+              <li><Link href={`${baseUrl}/products`} className="opacity-70 hover:opacity-100 transition-opacity">Collection</Link></li>
+              <li><Link href={`${baseUrl}/about`} className="opacity-70 hover:opacity-100 transition-opacity">Our Story</Link></li>
+              <li><Link href={`${baseUrl}/contact`} className="opacity-70 hover:opacity-100 transition-opacity">Contact</Link></li>
             </ul>
           </div>
           
@@ -65,7 +67,7 @@ export default function ClassicElegantFooter() {
             <ul className="space-y-4">
               {store.contact_email && (
                 <li>
-                  <a href={`mailto:${store.contact_email}`} className="flex items-center space-x-3 text-gray-600 hover:text-[var(--color-primary)]">
+                  <a href={`mailto:${store.contact_email}`} className="flex items-center space-x-3 opacity-70 hover:opacity-100 transition-opacity">
                     <Mail className="w-4 h-4" />
                     <span>{store.contact_email}</span>
                   </a>
@@ -73,7 +75,7 @@ export default function ClassicElegantFooter() {
               )}
               {store.contact_phone && (
                 <li>
-                  <a href={`tel:${store.contact_phone}`} className="flex items-center space-x-3 text-gray-600 hover:text-[var(--color-primary)]">
+                  <a href={`tel:${store.contact_phone}`} className="flex items-center space-x-3 opacity-70 hover:opacity-100 transition-opacity">
                     <Phone className="w-4 h-4" />
                     <span>{store.contact_phone}</span>
                   </a>
@@ -83,22 +85,22 @@ export default function ClassicElegantFooter() {
           </div>
         </div>
         
-        <div className="mt-16 pt-8 border-t border-gray-200">
+        <div className="mt-16 pt-8 border-t" style={{ borderColor: 'color-mix(in srgb, var(--color-footer-text) 20%, transparent)' }}>
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <p className="text-gray-500 text-sm">
+            <p className="opacity-60 text-sm">
               &copy; {currentYear} {store.name}. All rights reserved.
             </p>
-            <div className="flex space-x-6 text-sm text-gray-500">
-              <Link href={`${baseUrl}/policies/shipping`} className="hover:text-[var(--color-primary)] transition-colors">
+            <div className="flex space-x-6 text-sm opacity-60">
+              <Link href={`${baseUrl}/policies/shipping`} className="hover:opacity-100 transition-opacity">
                 Shipping
               </Link>
-              <Link href={`${baseUrl}/policies/returns`} className="hover:text-[var(--color-primary)] transition-colors">
+              <Link href={`${baseUrl}/policies/returns`} className="hover:opacity-100 transition-opacity">
                 Returns
               </Link>
-              <Link href={`${baseUrl}/policies/privacy`} className="hover:text-[var(--color-primary)] transition-colors">
+              <Link href={`${baseUrl}/policies/privacy`} className="hover:opacity-100 transition-opacity">
                 Privacy
               </Link>
-              <Link href={`${baseUrl}/policies/terms`} className="hover:text-[var(--color-primary)] transition-colors">
+              <Link href={`${baseUrl}/policies/terms`} className="hover:opacity-100 transition-opacity">
                 Terms
               </Link>
             </div>

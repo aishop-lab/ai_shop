@@ -406,15 +406,15 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Branding */}
+        {/* Branding & Appearance */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Palette className="h-5 w-5" />
-              Branding
+              Branding & Appearance
             </CardTitle>
             <CardDescription>
-              Customize your store appearance
+              Customize your store colors, fonts, and layout
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -480,6 +480,19 @@ export default function SettingsPage() {
                   toast.info('Brand color updated from logo')
                 }}
               />
+            </div>
+
+            <div className="pt-4 border-t">
+              <Link href="/dashboard/settings/appearance">
+                <Button variant="outline" className="w-full">
+                  <Palette className="h-4 w-4 mr-2" />
+                  Full Appearance Editor
+                  <ExternalLink className="h-3 w-3 ml-2" />
+                </Button>
+              </Link>
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Customize fonts, colors, layout, themes, announcement bar, and more
+              </p>
             </div>
 
             <div className="pt-4 border-t space-y-2">

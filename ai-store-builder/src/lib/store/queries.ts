@@ -3,6 +3,8 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { Store, Product, PaginatedProducts, StoreSettings } from '@/lib/types/store'
 import { DEFAULT_STORE_SETTINGS, DEFAULT_BRAND_COLORS, DEFAULT_TYPOGRAPHY } from '@/lib/types/store'
+import type { StoreCustomization } from '@/lib/types/customization'
+import { DEFAULT_CUSTOMIZATION } from '@/lib/types/customization'
 import type { ProductWithVariants, ProductVariantOption, ProductVariant } from '@/lib/types/variant'
 
 // Production domain configuration
@@ -444,6 +446,37 @@ export async function getStoreCategories(storeId: string): Promise<string[]> {
 function transformStoreData(data: Record<string, unknown>): Store {
   const blueprint = data.blueprint as Store['blueprint'] | null
   const brandColors = data.brand_colors as { primary?: string; secondary?: string } | null
+  const rawCustomization = data.customization as Partial<StoreCustomization> | null
+
+  // Merge customization with defaults
+  const customization: StoreCustomization = {
+    colors: { ...DEFAULT_CUSTOMIZATION.colors, ...rawCustomization?.colors },
+    typography: { ...DEFAULT_CUSTOMIZATION.typography, ...rawCustomization?.typography },
+    layout: { ...DEFAULT_CUSTOMIZATION.layout, ...rawCustomization?.layout },
+    announcement_bar: {
+      enabled: rawCustomization?.announcement_bar?.enabled ?? DEFAULT_CUSTOMIZATION.announcement_bar!.enabled,
+      text: rawCustomization?.announcement_bar?.text ?? DEFAULT_CUSTOMIZATION.announcement_bar!.text,
+      link_url: rawCustomization?.announcement_bar?.link_url,
+      link_text: rawCustomization?.announcement_bar?.link_text,
+      bg_color: rawCustomization?.announcement_bar?.bg_color ?? DEFAULT_CUSTOMIZATION.announcement_bar!.bg_color,
+      text_color: rawCustomization?.announcement_bar?.text_color ?? DEFAULT_CUSTOMIZATION.announcement_bar!.text_color,
+    },
+    custom_css: rawCustomization?.custom_css || '',
+  }
+
+  // Brand colors: customization > brand_colors column > blueprint > default
+  const resolvedPrimary = rawCustomization?.colors?.primary || brandColors?.primary || blueprint?.branding?.colors?.primary || DEFAULT_BRAND_COLORS.primary
+  const resolvedSecondary = rawCustomization?.colors?.secondary || brandColors?.secondary || blueprint?.branding?.colors?.secondary || DEFAULT_BRAND_COLORS.secondary
+
+  // Typography: customization > blueprint > default
+  const resolvedHeadingFont = rawCustomization?.typography?.heading_font || blueprint?.branding?.typography?.heading_font || DEFAULT_TYPOGRAPHY.heading_font
+  const resolvedBodyFont = rawCustomization?.typography?.body_font || blueprint?.branding?.typography?.body_font || DEFAULT_TYPOGRAPHY.body_font
+
+  // Sync resolved values back into customization
+  customization.colors.primary = resolvedPrimary
+  customization.colors.secondary = resolvedSecondary
+  customization.typography.heading_font = resolvedHeadingFont
+  customization.typography.body_font = resolvedBodyFont
 
   return {
     id: data.id as string,
@@ -455,15 +488,15 @@ function transformStoreData(data: Record<string, unknown>): Store {
     logo_url: data.logo_url as string || blueprint?.branding?.logo_url || undefined,
     blueprint: blueprint || {} as Store['blueprint'],
     brand_colors: {
-      // Priority: brand_colors column > blueprint > default
-      primary: brandColors?.primary || blueprint?.branding?.colors?.primary || DEFAULT_BRAND_COLORS.primary,
-      secondary: brandColors?.secondary || blueprint?.branding?.colors?.secondary || DEFAULT_BRAND_COLORS.secondary
+      primary: resolvedPrimary,
+      secondary: resolvedSecondary,
     },
     typography: {
-      heading_font: blueprint?.branding?.typography?.heading_font || DEFAULT_TYPOGRAPHY.heading_font,
-      body_font: blueprint?.branding?.typography?.body_font || DEFAULT_TYPOGRAPHY.body_font
+      heading_font: resolvedHeadingFont,
+      body_font: resolvedBodyFont,
     },
-    theme_template: blueprint?.theme?.template || 'modern-minimal',
+    theme_template: rawCustomization?.layout?.theme_template || blueprint?.theme?.template || 'modern-minimal',
+    customization,
     contact_email: data.contact_email as string || blueprint?.contact?.email || '',
     contact_phone: data.contact_phone as string || blueprint?.contact?.phone,
     whatsapp_number: data.whatsapp_number as string || blueprint?.contact?.whatsapp || undefined,
