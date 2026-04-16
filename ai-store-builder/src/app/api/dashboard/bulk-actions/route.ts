@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import type { BulkActionRequest, BulkActionResponse } from '@/lib/types/dashboard'
 
@@ -16,14 +17,38 @@ const bulkActionSchema = z.object({
 
 export async function POST(request: NextRequest): Promise<NextResponse<BulkActionResponse>> {
   try {
+    // Authenticate the user
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, updated: 0, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Get the user's store
+    const { data: store, error: storeError } = await supabase
+      .from('stores')
+      .select('id')
+      .eq('owner_id', user.id)
+      .single()
+
+    if (storeError || !store) {
+      return NextResponse.json(
+        { success: false, updated: 0, error: 'No store found' },
+        { status: 404 }
+      )
+    }
+
     const body = await request.json()
 
     // Validate request
     const validationResult = bulkActionSchema.safeParse(body)
     if (!validationResult.success) {
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           updated: 0,
           error: 'Invalid request',
         },
@@ -32,7 +57,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkActio
     }
 
     const { action, resource, ids, data } = validationResult.data as BulkActionRequest
-    
+
     let result
     const timestamp = new Date().toISOString()
 
@@ -71,6 +96,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkActio
             updated_at: timestamp
           })
           .in('id', ids)
+          .eq('store_id', store.id)
         break
 
       case 'delete':
@@ -83,6 +109,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkActio
             updated_at: timestamp
           })
           .in('id', ids)
+          .eq('store_id', store.id)
         break
 
       case 'restore':
@@ -94,6 +121,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkActio
             updated_at: timestamp
           })
           .in('id', ids)
+          .eq('store_id', store.id)
         break
 
       case 'feature':
@@ -111,6 +139,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkActio
             updated_at: timestamp
           })
           .in('id', ids)
+          .eq('store_id', store.id)
         break
 
       case 'unfeature':
@@ -128,6 +157,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkActio
             updated_at: timestamp
           })
           .in('id', ids)
+          .eq('store_id', store.id)
         break
 
       default:

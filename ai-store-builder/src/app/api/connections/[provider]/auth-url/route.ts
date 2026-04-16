@@ -37,7 +37,7 @@ export async function GET(
     const { data: store, error: storeError } = await supabase
       .from('stores')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('owner_id', user.id)
       .single()
 
     if (storeError || !store) {

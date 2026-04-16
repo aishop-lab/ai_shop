@@ -3,6 +3,7 @@
 // Supports both cookie-based auth (localhost) and Bearer token auth (production)
 
 import { createClient } from '@/lib/supabase/server'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { NextRequest } from 'next/server'
 
@@ -48,8 +49,12 @@ export async function authenticateAgentRequest(
     return { error: 'Unauthorized', status: 401 }
   }
 
-  // Look up the store owned by this user
-  const { data: store, error: storeError } = await supabase
+  // Use admin client for store lookup when Bearer token was used,
+  // since the cookie-based client has no session in cross-domain production
+  const usedBearerToken = !cookieAuth?.user
+  const storeClient = usedBearerToken ? getSupabaseAdmin() : supabase
+
+  const { data: store, error: storeError } = await storeClient
     .from('stores')
     .select('id')
     .eq('owner_id', user.id)

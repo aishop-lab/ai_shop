@@ -1,5 +1,19 @@
 # CLAUDE.md - Autonomous AI Agent E-Commerce Platform
 
+## Build & Quality
+
+Always run `npx tsc --noEmit` after making TypeScript changes to catch type errors before committing. Never commit code with TypeScript errors.
+
+## Code Conventions
+
+This project uses TypeScript with strict types. When fixing errors, verify exact field names, function signatures, and import paths from the actual source files — never guess.
+
+## Deployment
+
+When deploying to Vercel, check for: 1) unpushed commits first, 2) client-side bundling of server-only deps, 3) Hobby plan limitations (cron frequency, etc), 4) correct CLI flags. Always `git status` before deployment.
+
+---
+
 ## Product Vision (March 2026 Pivot)
 
 > **Pivoting from "store builder with AI features" to "autonomous AI agent platform for e-commerce."**

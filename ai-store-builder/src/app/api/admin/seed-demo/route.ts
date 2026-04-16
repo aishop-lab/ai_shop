@@ -35,7 +35,7 @@ async function authorize(request: NextRequest): Promise<boolean> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (user?.email === ADMIN_EMAIL) return true
+    if (ADMIN_EMAIL && user?.email === ADMIN_EMAIL) return true
   } catch {
     // ignore — not a session-based request
   }
@@ -56,19 +56,11 @@ export async function POST(request: NextRequest) {
 
     // ── 1. STORE ─────────────────────────────────────────────────────────
 
-    // Find or look up a demo owner profile (use a fixed UUID so this is idempotent)
-    // We need an owner_id — use the admin user's id if available, else a dummy UUID.
-    // Look up admin profile by email.
-    const { data: adminProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', supabase.from('profiles').select('id').eq('email' as never, ADMIN_EMAIL).limit(1).single() as never)
-      .limit(1)
-      .maybeSingle()
-
-    // Try to find admin user directly
+    // Find admin user to use as demo store owner
     const { data: { users: adminUsers } } = await supabase.auth.admin.listUsers()
-    const adminUser = adminUsers.find((u) => u.email === ADMIN_EMAIL)
+    const adminUser = ADMIN_EMAIL
+      ? adminUsers.find((u) => u.email === ADMIN_EMAIL)
+      : undefined
     const ownerId = adminUser?.id ?? '00000000-0000-0000-0000-000000000001'
 
     // Upsert the store by slug

@@ -9,8 +9,13 @@ export const maxDuration = 300
 
 export async function GET(request: Request) {
   // Verify cron secret
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) {
+    console.error('CRON_SECRET environment variable is not set')
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+  }
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

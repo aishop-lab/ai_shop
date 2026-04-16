@@ -74,38 +74,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
     }
 
-    // Parse event first to extract store_id for webhook secret lookup
-    const event: RazorpayWebhookEvent = JSON.parse(body)
+    // SECURITY: Verify signature BEFORE parsing body.
+    // Try platform secret first, then parse body only after verification succeeds.
+    const platformSecret = process.env.RAZORPAY_WEBHOOK_SECRET
+    let signatureVerified = false
 
-    // Get appropriate webhook secret (store-specific or platform)
-    const webhookSecret = await getWebhookSecret(event)
-    if (!webhookSecret) {
-      console.error('Webhook: No webhook secret available')
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      )
+    if (platformSecret && verifyWebhookSignature(body, signature, platformSecret)) {
+      signatureVerified = true
     }
 
-    // Verify webhook signature
-    const isValid = verifyWebhookSignature(body, signature, webhookSecret)
+    // Parse the event only after attempting platform verification
+    let event: RazorpayWebhookEvent
+    try {
+      event = JSON.parse(body)
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
 
-    if (!isValid) {
-      // If store-specific verification failed, try platform secret as fallback
-      // This handles the case where the store just removed their credentials
-      const platformSecret = process.env.RAZORPAY_WEBHOOK_SECRET
-      if (platformSecret && platformSecret !== webhookSecret) {
-        const isValidWithPlatform = verifyWebhookSignature(body, signature, platformSecret)
-        if (!isValidWithPlatform) {
-          console.error('Webhook: Invalid signature (tried both store and platform secrets)')
-          return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
-        }
-        // Valid with platform secret, continue processing
-        console.log('Webhook: Verified with platform secret fallback')
-      } else {
-        console.error('Webhook: Invalid signature')
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+    // If platform secret didn't work, try store-specific secret
+    if (!signatureVerified) {
+      const storeSecret = await getWebhookSecret(event)
+      if (storeSecret && storeSecret !== platformSecret && verifyWebhookSignature(body, signature, storeSecret)) {
+        signatureVerified = true
       }
+    }
+
+    if (!signatureVerified) {
+      console.error('Webhook: Invalid signature (tried both platform and store secrets)')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
     console.log('Webhook received:', event.event)

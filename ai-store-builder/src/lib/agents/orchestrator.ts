@@ -391,6 +391,10 @@ export async function escalateConflict(
       throw new Error(`Failed to escalate conflict: ${error.message}`)
     }
 
+    if (!data) {
+      throw new Error('Failed to escalate conflict: no data returned from insert')
+    }
+
     // Also log as an agent action for the activity feed
     await supabase
       .from('agent_actions')
@@ -492,6 +496,10 @@ export async function resolveEscalation(
 
   if (approvalError) {
     throw new Error(`Failed to resolve escalation: ${approvalError.message}`)
+  }
+
+  if (!approval) {
+    throw new Error(`Escalation not found: ${escalationId}`)
   }
 
   // Update the corresponding agent action

@@ -205,6 +205,10 @@ export async function acknowledgeEvent(
     throw new Error(`Failed to read event for acknowledgment: ${readError.message}`)
   }
 
+  if (!existing) {
+    throw new Error(`Event not found for acknowledgment: ${eventId}`)
+  }
+
   const details = existing.details as Record<string, unknown>
   const acknowledgedBy = (details.acknowledged_by as AgentType[]) ?? []
   const processedBy = (details.processed_by as AgentType[]) ?? []

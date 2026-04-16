@@ -37,8 +37,8 @@ export async function GET() {
   if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const adminEmail = process.env.ADMIN_EMAIL || 'aishop@middlefieldbrands.com'
-  if (user.email !== adminEmail) {
+  const adminEmail = process.env.ADMIN_EMAIL
+  if (!adminEmail || user.email !== adminEmail) {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
   }
 
