@@ -295,7 +295,7 @@ function isRetryableError(statusCode: number, error?: string): boolean {
  * Send WhatsApp message via MSG91 with retry logic
  * Supports per-store credentials with platform fallback
  */
-async function sendWhatsAppMessage(params: {
+export async function sendWhatsAppMessage(params: {
   to: string
   templateName: string
   templateParams: Record<string, string>

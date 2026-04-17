@@ -36,6 +36,7 @@ import {
   PackageX,
   Shield,
   Import,
+  Users,
 } from 'lucide-react'
 import { UserDropdown } from './user-dropdown'
 import { Button } from '@/components/ui/button'
@@ -187,6 +188,14 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
             onNavigate={onClose}
           />
 
+          {/* Customers */}
+          <NavSection
+            label="Customers"
+            icon={Users}
+            href="/dashboard/customers"
+            onNavigate={onClose}
+          />
+
           {/* Refunds */}
           <NavSection
             label="Refunds"
@@ -223,7 +232,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
           <NavSection
             label="Marketing"
             icon={Megaphone}
-            href="/platform/settings"
+            href="/dashboard/marketing"
             onNavigate={onClose}
           />
 
