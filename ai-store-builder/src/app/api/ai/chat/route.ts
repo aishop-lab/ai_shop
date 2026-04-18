@@ -1,8 +1,9 @@
 // Streaming Chat API - Real-time AI assistant chat
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { streamText } from 'ai'
 import { createClient } from '@/lib/supabase/server'
 import { geminiFlash } from '@/lib/ai/provider'
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -21,6 +22,10 @@ When suggesting product information, be specific and actionable.
 Use a friendly, professional tone.`
 
 export async function POST(request: Request) {
+  // Apply AI rate limiting
+  const rateLimitResult = rateLimit(request as NextRequest, RATE_LIMITS.AI)
+  if (rateLimitResult) return rateLimitResult
+
   try {
     const supabase = await createClient()
 

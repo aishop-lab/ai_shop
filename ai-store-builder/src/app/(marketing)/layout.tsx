@@ -1,5 +1,10 @@
 import { Metadata } from 'next'
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL
+  || (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : 'https://storeforge.site')
+
 export const metadata: Metadata = {
   title: 'StoreForge - Autonomous AI Agents for E-commerce',
   description: 'Five AI agents run your entire online business — marketing, sales, support, analytics, and technical operations. Store live in 30 seconds.',
@@ -7,7 +12,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'StoreForge - Autonomous AI Agents for E-commerce',
     description: 'Five AI agents run your entire online business. Store live in 30 seconds.',
-    url: 'https://storeforge.site',
+    url: siteUrl,
     siteName: 'StoreForge',
     type: 'website',
     locale: 'en_IN',

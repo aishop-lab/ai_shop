@@ -52,6 +52,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     return jsonError('Agent is disabled', 400)
   }
 
+  const validAgentTypes: AgentType[] = ['marketing', 'sales', 'support', 'analytics', 'technical']
+  if (!validAgentTypes.includes(agent.agent_type as AgentType)) {
+    return jsonError(`Invalid agent type: ${agent.agent_type}`, 400)
+  }
   const agentType = agent.agent_type as AgentType
 
   let body: { messages: Array<{ role: string; content: string }> }
@@ -109,21 +113,19 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const subAgent = getSubAgent(subAgentId)
 
   // Build a minimal StoreContext so we can call the sub-agent's systemPrompt
-  const blueprint = ((store?.blueprint ?? {}) as Record<string, unknown>)
+  const rawBlueprint = store?.blueprint
+  const blueprint: Record<string, unknown> = (typeof rawBlueprint === 'object' && rawBlueprint !== null) ? rawBlueprint as Record<string, unknown> : {}
+  const bpStr = (key: string, fallback: string) => typeof blueprint[key] === 'string' ? blueprint[key] : fallback
+  const location = (typeof blueprint.location === 'object' && blueprint.location !== null) ? blueprint.location as Record<string, unknown> : {}
   const storeContext: StoreContext = {
     storeId,
     storeName: store?.name ?? 'My Store',
-    storeSlug: (store?.slug as string) ?? '',
-    category:
-      (blueprint.business_type as string) ??
-      (blueprint.category as string) ??
-      'General',
-    description: (blueprint.description as string) ?? '',
-    brandVibe: (blueprint.brand_vibe as string) ?? 'modern',
-    primaryColor: (blueprint.primary_color as string) ?? '#6366f1',
-    currency:
-      ((blueprint.location as Record<string, unknown>)?.currency as string) ??
-      'INR',
+    storeSlug: typeof store?.slug === 'string' ? store.slug : '',
+    category: bpStr('business_type', bpStr('category', 'General')),
+    description: bpStr('description', ''),
+    brandVibe: bpStr('brand_vibe', 'modern'),
+    primaryColor: bpStr('primary_color', '#6366f1'),
+    currency: typeof location.currency === 'string' ? location.currency : 'INR',
     autonomyLevel: (agent.autonomy_level as AutonomyLevel) ?? 3,
     // Lazy-loaded data — stubs for chat context (not needed for system prompt)
     products: async () => [],

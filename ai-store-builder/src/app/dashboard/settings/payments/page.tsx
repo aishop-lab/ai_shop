@@ -478,7 +478,7 @@ export default function PaymentsSettingsPage() {
           <div className="pt-4 border-t mt-4">
             <h4 className="font-medium text-sm mb-2">Webhook URL for your account:</h4>
             <code className="text-xs bg-muted px-2 py-1 rounded block overflow-x-auto">
-              https://storeforge.site/api/webhooks/razorpay
+              {`${process.env.NEXT_PUBLIC_APP_URL || 'https://storeforge.site'}/api/webhooks/razorpay`}
             </code>
             <p className="text-xs text-muted-foreground mt-2">
               Add this URL in your Razorpay webhook settings to receive payment notifications.
@@ -685,7 +685,7 @@ export default function PaymentsSettingsPage() {
           <div className="pt-4 border-t mt-4">
             <h4 className="font-medium text-sm mb-2">Webhook URL for Stripe:</h4>
             <code className="text-xs bg-muted px-2 py-1 rounded block overflow-x-auto">
-              https://storeforge.site/api/webhooks/stripe
+              {`${process.env.NEXT_PUBLIC_APP_URL || 'https://storeforge.site'}/api/webhooks/stripe`}
             </code>
             <p className="text-xs text-muted-foreground mt-2">
               Add this URL in your Stripe webhook settings. Subscribe to: checkout.session.completed, checkout.session.expired, charge.refunded

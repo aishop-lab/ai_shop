@@ -33,13 +33,14 @@ export async function POST(request: Request) {
     const formData = await request.formData()
     
     // Extract store_id and verify ownership
-    const storeId = formData.get('store_id') as string
-    if (!storeId) {
+    const rawStoreId = formData.get('store_id')
+    if (!rawStoreId || typeof rawStoreId !== 'string') {
       return NextResponse.json(
         { success: false, error: 'store_id is required' },
         { status: 400 }
       )
     }
+    const storeId = rawStoreId
 
     const isOwner = await verifyStoreOwnership(user.id, storeId)
     if (!isOwner) {
@@ -162,22 +163,25 @@ export async function POST(request: Request) {
       )
     }
 
+    // Use Zod-validated data instead of raw productData to ensure type safety
+    const validatedData = validation.data
+
     // Create temporary product to get ID for image upload
     // We'll update it with final data after AI extraction
     const tempProduct = await createProduct(storeId, {
-      title: productData.title as string || 'Processing...',
-      description: productData.description as string || 'Processing...',
-      price: productData.price as number || 0,
-      compare_at_price: productData.compare_at_price as number | undefined,
-      cost_per_item: productData.cost_per_item as number | undefined,
-      sku: productData.sku as string | undefined,
-      barcode: productData.barcode as string | undefined,
-      quantity: productData.quantity as number || 0,
-      track_quantity: productData.track_quantity as boolean ?? true,
-      weight: productData.weight as number | undefined,
-      requires_shipping: productData.requires_shipping as boolean ?? true,
-      categories: productData.categories as string[] || [],
-      tags: productData.tags as string[] || [],
+      title: validatedData.title || 'Processing...',
+      description: validatedData.description || 'Processing...',
+      price: validatedData.price || 0,
+      compare_at_price: validatedData.compare_at_price,
+      cost_per_item: validatedData.cost_per_item,
+      sku: validatedData.sku,
+      barcode: validatedData.barcode,
+      quantity: validatedData.quantity || 0,
+      track_quantity: validatedData.track_quantity ?? true,
+      weight: validatedData.weight,
+      requires_shipping: validatedData.requires_shipping ?? true,
+      categories: validatedData.categories || [],
+      tags: validatedData.tags || [],
       status: 'draft', // Always create as draft initially
       featured: false
     })
@@ -201,8 +205,8 @@ export async function POST(request: Request) {
     // Get AI suggestions if title or description is missing
     let aiSuggestions = null
     let shouldAutoApply = false
-    const needsTitle = !productData.title
-    const needsDescription = !productData.description
+    const needsTitle = !validatedData.title
+    const needsDescription = !validatedData.description
     const firstImageUrl = uploadedImages[0]?.url
 
     if ((needsTitle || needsDescription) && firstImageUrl) {
@@ -251,8 +255,8 @@ export async function POST(request: Request) {
         try {
           const basicResult = await productExtractor.getProductSuggestions(
             firstImageUrl,
-            productData.title as string | undefined,
-            productData.description as string | undefined
+            validatedData.title ?? undefined,
+            validatedData.description ?? undefined
           )
           aiSuggestions = basicResult
         } catch (basicError) {
@@ -263,20 +267,20 @@ export async function POST(request: Request) {
     }
 
     // Prepare final product data
-    const finalTitle = productData.title as string || aiSuggestions?.ai_suggested_title || 'Untitled Product'
-    const finalDescription = productData.description as string || aiSuggestions?.ai_suggested_description || 'Product description'
-    const finalCategories = (productData.categories as string[])?.length > 0 
-      ? productData.categories as string[]
+    const finalTitle = validatedData.title || aiSuggestions?.ai_suggested_title || 'Untitled Product'
+    const finalDescription = validatedData.description || aiSuggestions?.ai_suggested_description || 'Product description'
+    const finalCategories = (validatedData.categories?.length ?? 0) > 0
+      ? validatedData.categories!
       : aiSuggestions?.ai_suggested_category || []
-    const finalTags = (productData.tags as string[])?.length > 0
-      ? productData.tags as string[]
+    const finalTags = (validatedData.tags?.length ?? 0) > 0
+      ? validatedData.tags!
       : aiSuggestions?.ai_suggested_tags || []
 
     // Validate pricing if provided
-    if (productData.price) {
+    if (validatedData.price) {
       const priceValidation = validatePricing(
-        productData.price as number,
-        productData.compare_at_price as number | undefined
+        validatedData.price,
+        validatedData.compare_at_price ?? undefined
       )
       if (!priceValidation.valid) {
         return NextResponse.json(
@@ -291,11 +295,11 @@ export async function POST(request: Request) {
     const finalProduct = await updateProduct(tempProduct.id, sanitizeProductData({
       title: finalTitle,
       description: finalDescription,
-      price: productData.price as number || 0,
+      price: validatedData.price || 0,
       categories: finalCategories,
       tags: finalTags,
-      status: productData.status === 'published' ? 'active' : (productData.status as 'draft' | 'active' || 'draft'),
-      published_at: productData.published_at as string | null
+      status: validatedData.status === 'published' ? 'active' : (validatedData.status || 'draft'),
+      published_at: validatedData.published_at ?? null
     }))
 
     // Handle variants if provided
@@ -360,12 +364,12 @@ export async function POST(request: Request) {
     console.error('Product upload error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     const errorStack = error instanceof Error ? error.stack : undefined
+    // Log details server-side only; do not expose internals to the client
     console.error('Error details:', { message: errorMessage, stack: errorStack })
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to upload product',
-        details: errorMessage
+        error: 'Failed to upload product. Please try again or contact support.',
       },
       { status: 500 }
     )

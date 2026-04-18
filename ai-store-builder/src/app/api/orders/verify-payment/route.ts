@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { verifyRazorpaySignature, getStoreRazorpayCredentials } from '@/lib/payment/razorpay'
 import { reduceInventory, releaseReservation } from '@/lib/orders/inventory'
 import { sendOrderConfirmationEmail } from '@/lib/email/order-confirmation'
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import type { VerifyPaymentResponse, Order, OrderItem } from '@/lib/types/order'
 
 // Validation schema for payment verification
@@ -17,6 +18,10 @@ const verifyPaymentSchema = z.object({
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<VerifyPaymentResponse>> {
+  // Apply checkout rate limiting
+  const rateLimitResult = rateLimit(request, RATE_LIMITS.CHECKOUT)
+  if (rateLimitResult) return rateLimitResult as NextResponse<VerifyPaymentResponse>
+
   try {
     const body = await request.json()
 
@@ -59,10 +64,25 @@ export async function POST(
       )
     }
 
-    // 2. Fetch store-specific Razorpay credentials (if configured)
+    // 2. Verify order is a Razorpay order in pending state
+    if (order.payment_method !== 'razorpay') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid payment method for this order' },
+        { status: 400 }
+      )
+    }
+
+    if (order.payment_status !== 'pending' && order.payment_status !== 'paid') {
+      return NextResponse.json(
+        { success: false, error: 'Order is not in a verifiable state' },
+        { status: 400 }
+      )
+    }
+
+    // 3. Fetch store-specific Razorpay credentials (if configured)
     const storeCredentials = await getStoreRazorpayCredentials(order.store_id, getSupabaseAdmin())
 
-    // 3. Verify Razorpay signature (using store credentials if available)
+    // 4. Verify Razorpay signature (using store credentials if available)
     const isValid = verifyRazorpaySignature(
       razorpay_order_id,
       razorpay_payment_id,

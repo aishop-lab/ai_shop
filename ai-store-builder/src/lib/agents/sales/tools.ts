@@ -165,7 +165,7 @@ async function executeGetAbandonedCarts(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId, minValue, maxAge } = args as z.infer<typeof getAbandonedCartsSchema>
+  const { storeId, minValue, maxAge } = getAbandonedCartsSchema.parse(args)
   const supabase = getSupabaseAdmin()
 
   let query = supabase
@@ -213,7 +213,7 @@ async function executeSendRecoveryEmail(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId, cartId, discountPercent } = args as z.infer<typeof sendRecoveryEmailSchema>
+  const { storeId, cartId, discountPercent } = sendRecoveryEmailSchema.parse(args)
   const supabase = getSupabaseAdmin()
 
   // Fetch the cart
@@ -303,7 +303,7 @@ async function executeCreateCoupon(
   _context: AgentExecutionContext
 ) {
   const { storeId, code, discountType, discountValue, expiresInDays, usageLimit } =
-    args as z.infer<typeof createCouponSchema>
+    createCouponSchema.parse(args)
   const supabase = getSupabaseAdmin()
 
   const expiresAt = expiresInDays
@@ -348,7 +348,7 @@ async function executeGetCustomerSegments(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId } = args as z.infer<typeof getCustomerSegmentsSchema>
+  const { storeId } = getCustomerSegmentsSchema.parse(args)
 
   try {
     const segments = await segmentCustomers(storeId)
@@ -381,7 +381,7 @@ async function executeGetProductRecommendations(
   _context: AgentExecutionContext
 ) {
   const { storeId, productId, customerId, limit } =
-    args as z.infer<typeof getProductRecommendationsSchema>
+    getProductRecommendationsSchema.parse(args)
 
   try {
     const recommendations = await getRecommendations({
@@ -413,7 +413,7 @@ async function executeAnalyzeCartValue(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId } = args as z.infer<typeof analyzeCartValueSchema>
+  const { storeId } = analyzeCartValueSchema.parse(args)
   const supabase = getSupabaseAdmin()
 
   // Get all abandoned carts (active and recovered) for analysis
@@ -476,7 +476,7 @@ async function executeSendTargetedCampaign(
   _context: AgentExecutionContext
 ) {
   const { storeId, segment, campaignType, discountPercent, subject, message } =
-    args as z.infer<typeof sendTargetedCampaignSchema>
+    sendTargetedCampaignSchema.parse(args)
 
   try {
     // Get customers in the target segment
@@ -744,7 +744,7 @@ async function executeAnalyzePricing(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId } = args as z.infer<typeof analyzePricingSchema>
+  const { storeId } = analyzePricingSchema.parse(args)
 
   try {
     const recommendations = await analyzePricingOpportunities(storeId)
@@ -794,7 +794,7 @@ async function executeApplyPriceRecommendation(
   _context: AgentExecutionContext
 ) {
   const { storeId, productId, newPrice, reason } =
-    args as z.infer<typeof applyPriceRecommendationSchema>
+    applyPriceRecommendationSchema.parse(args)
 
   try {
     const result = await applyPriceChange(
@@ -828,7 +828,7 @@ async function executeGetCompetitorPrices(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId, productId } = args as z.infer<typeof getCompetitorPricesSchema>
+  const { storeId, productId } = getCompetitorPricesSchema.parse(args)
 
   try {
     const competitorData = await fetchCompetitorPrices(storeId, productId)
@@ -881,7 +881,7 @@ async function executeAddCompetitorPrice(
   _context: AgentExecutionContext
 ) {
   const { storeId, productId, source, price, url } =
-    args as z.infer<typeof addCompetitorPriceSchema>
+    addCompetitorPriceSchema.parse(args)
 
   try {
     const result = await insertCompetitorPrice(storeId, {
@@ -914,7 +914,7 @@ async function executeAnalyzeCompetitivePricing(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId } = args as z.infer<typeof analyzeCompetitivePricingSchema>
+  const { storeId } = analyzeCompetitivePricingSchema.parse(args)
 
   try {
     const analysis = await runCompetitivePricingAnalysis(storeId)

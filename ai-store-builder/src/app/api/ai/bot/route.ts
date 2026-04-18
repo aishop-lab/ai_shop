@@ -1,6 +1,7 @@
 // AI Bot API Endpoint
 // Streaming chat endpoint with tool calling for the AI assistant
 
+import { NextRequest } from 'next/server'
 import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from 'ai'
 import { tool } from '@ai-sdk/provider-utils'
 import { getTextModel } from '@/lib/ai/provider'
@@ -10,6 +11,7 @@ import { executeTool } from '@/lib/ai/bot/tool-executor'
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import type { PageContext } from '@/components/dashboard/ai-bot/ai-bot-provider'
 
 export const runtime = 'nodejs'
@@ -58,6 +60,10 @@ function createExecutableTools(storeId: string, isConfirmedAction: boolean) {
 }
 
 export async function POST(req: Request) {
+  // Apply AI rate limiting
+  const rateLimitResult = rateLimit(req as NextRequest, RATE_LIMITS.AI)
+  if (rateLimitResult) return rateLimitResult
+
   try {
     // --- Authentication ---
     // Try cookie-based auth first, fall back to Authorization header

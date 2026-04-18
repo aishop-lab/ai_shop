@@ -3,6 +3,7 @@
 // and organization data. Queries Supabase for product/store data.
 
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { getStoreUrl } from '@/lib/store/queries'
 import { logger } from '@/lib/logger'
 
 // ---------------------------------------------------------------------------
@@ -88,6 +89,7 @@ type ProductData = {
 type StoreData = {
   name: string
   slug: string
+  customDomain?: string | null
   description?: string | null
   logo_url?: string | null
   currency: string
@@ -117,7 +119,7 @@ export function generateProductSchema(
         product.stock_quantity > 0
           ? 'https://schema.org/InStock'
           : 'https://schema.org/OutOfStock',
-      url: `https://${storeData.slug}.storeforge.site/products/${product.slug}`,
+      url: `${getStoreUrl(storeData.slug, storeData.customDomain)}/products/${product.slug}`,
       seller: { '@type': 'Organization', name: storeData.name },
     },
   }
@@ -144,7 +146,7 @@ export function generateOrganizationSchema(
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: storeData.name,
-    url: `https://${storeData.slug}.storeforge.site`,
+    url: getStoreUrl(storeData.slug, storeData.customDomain),
   }
 
   if (storeData.logo_url) {
@@ -173,9 +175,10 @@ export function generateOrganizationSchema(
 export function generateBreadcrumbs(
   storeName: string,
   storeSlug: string,
-  segments: Array<{ name: string; slug?: string }>
+  segments: Array<{ name: string; slug?: string }>,
+  customDomain?: string | null
 ): BreadcrumbSchema {
-  const baseUrl = `https://${storeSlug}.storeforge.site`
+  const baseUrl = getStoreUrl(storeSlug, customDomain)
 
   const itemListElement: BreadcrumbSchema['itemListElement'] = [
     {
@@ -218,7 +221,7 @@ export async function generateAllStructuredData(
   // Fetch store
   const { data: store, error: storeError } = await supabase
     .from('stores')
-    .select('id, name, slug, description, logo_url, blueprint')
+    .select('id, name, slug, description, logo_url, blueprint, custom_domain')
     .eq('id', storeId)
     .single()
 
@@ -247,6 +250,7 @@ export async function generateAllStructuredData(
   const storeData: StoreData = {
     name: store.name,
     slug: store.slug,
+    customDomain: store.custom_domain,
     description: store.description,
     logo_url: store.logo_url,
     currency: (location?.currency as string) || 'INR',

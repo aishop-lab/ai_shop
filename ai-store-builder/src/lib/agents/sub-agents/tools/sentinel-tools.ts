@@ -89,7 +89,9 @@ const send_email_reply = tool({
     reply_to: z.string().email().optional().describe('Reply-to email address'),
   }),
   execute: async ({ to_email, subject, body_html, store_name, reply_to }) => {
-    const resend = new Resend(process.env.RESEND_API_KEY)
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) return { success: false, error: 'RESEND_API_KEY not configured' }
+    const resend = new Resend(apiKey)
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@storeforge.site'
 
     const payload: Parameters<typeof resend.emails.send>[0] = {

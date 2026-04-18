@@ -32,51 +32,63 @@ export interface RateLimitConfig {
   prefix?: string
 }
 
+/**
+ * Parse an integer from an env var, returning the default if unset or invalid.
+ */
+function envInt(envVar: string | undefined, defaultValue: number): number {
+  if (!envVar) return defaultValue
+  const parsed = parseInt(envVar, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue
+}
+
 // Predefined rate limit configurations
-export const RATE_LIMITS = {
+// Each limit can be overridden via environment variables:
+//   RATE_LIMIT_API, RATE_LIMIT_AI, RATE_LIMIT_AUTH, RATE_LIMIT_CHECKOUT,
+//   RATE_LIMIT_SEARCH, RATE_LIMIT_UPLOAD, RATE_LIMIT_WEBHOOK
+export const RATE_LIMITS: Record<string, RateLimitConfig> = {
   // General API endpoints: 100 requests per minute
   API: {
-    limit: 100,
+    limit: envInt(process.env.RATE_LIMIT_API, 100),
     windowSeconds: 60,
     prefix: 'api'
   },
   // AI endpoints: 10 requests per minute (expensive operations)
   AI: {
-    limit: 10,
+    limit: envInt(process.env.RATE_LIMIT_AI, 10),
     windowSeconds: 60,
     prefix: 'ai'
   },
   // Auth endpoints: 5 requests per minute (prevent brute force)
   AUTH: {
-    limit: 5,
+    limit: envInt(process.env.RATE_LIMIT_AUTH, 5),
     windowSeconds: 60,
     prefix: 'auth'
   },
   // Checkout/payment: 20 requests per minute
   CHECKOUT: {
-    limit: 20,
+    limit: envInt(process.env.RATE_LIMIT_CHECKOUT, 20),
     windowSeconds: 60,
     prefix: 'checkout'
   },
   // Search: 30 requests per minute
   SEARCH: {
-    limit: 30,
+    limit: envInt(process.env.RATE_LIMIT_SEARCH, 30),
     windowSeconds: 60,
     prefix: 'search'
   },
   // Uploads: 10 requests per minute
   UPLOAD: {
-    limit: 10,
+    limit: envInt(process.env.RATE_LIMIT_UPLOAD, 10),
     windowSeconds: 60,
     prefix: 'upload'
   },
   // Webhooks: 100 requests per minute (from external services)
   WEBHOOK: {
-    limit: 100,
+    limit: envInt(process.env.RATE_LIMIT_WEBHOOK, 100),
     windowSeconds: 60,
     prefix: 'webhook'
   }
-} as const
+}
 
 /**
  * Get client identifier from request

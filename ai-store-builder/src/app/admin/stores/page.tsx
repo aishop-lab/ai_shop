@@ -216,7 +216,7 @@ export default function AdminStoresPage() {
       header: 'Revenue',
       render: (store: StoreWithDetails) => (
         <span className="text-sm font-medium">
-          {formatCurrency(store.revenue, 'INR')}
+          {formatCurrency(store.revenue, store.currency || 'INR')}
         </span>
       )
     },

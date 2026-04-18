@@ -238,11 +238,11 @@ export default function OrderDetailPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{item.product_title}</p>
                       <p className="text-sm text-muted-foreground">
-                        {item.quantity} × {formatCurrency(item.unit_price, 'INR')}
+                        {item.quantity} × {formatCurrency(item.unit_price, order?.currency || 'INR')}
                       </p>
                     </div>
                     <p className="font-semibold">
-                      {formatCurrency(item.total_price, 'INR')}
+                      {formatCurrency(item.total_price, order?.currency || 'INR')}
                     </p>
                   </div>
                 ))}
@@ -250,32 +250,32 @@ export default function OrderDetailPage() {
                 <div className="border-t pt-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>{formatCurrency(order.subtotal, 'INR')}</span>
+                    <span>{formatCurrency(order.subtotal, order?.currency || 'INR')}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Shipping</span>
                     <span>
                       {order.shipping_cost === 0
                         ? <span className="text-green-600">Free</span>
-                        : formatCurrency(order.shipping_cost, 'INR')
+                        : formatCurrency(order.shipping_cost, order?.currency || 'INR')
                       }
                     </span>
                   </div>
                   {order.tax_amount > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Tax</span>
-                      <span>{formatCurrency(order.tax_amount, 'INR')}</span>
+                      <span>{formatCurrency(order.tax_amount, order?.currency || 'INR')}</span>
                     </div>
                   )}
                   {order.discount_amount > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
                       <span>Discount</span>
-                      <span>-{formatCurrency(order.discount_amount, 'INR')}</span>
+                      <span>-{formatCurrency(order.discount_amount, order?.currency || 'INR')}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-lg font-bold border-t pt-2">
                     <span>Total</span>
-                    <span className="text-primary">{formatCurrency(order.total_amount, 'INR')}</span>
+                    <span className="text-primary">{formatCurrency(order.total_amount, order?.currency || 'INR')}</span>
                   </div>
                 </div>
               </div>
@@ -439,7 +439,7 @@ export default function OrderDetailPage() {
                       className="flex items-center justify-between text-sm border-b pb-2 last:border-0 last:pb-0"
                     >
                       <div>
-                        <p className="font-medium">{formatCurrency(refund.amount, 'INR')}</p>
+                        <p className="font-medium">{formatCurrency(refund.amount, order?.currency || 'INR')}</p>
                         <p className="text-xs text-muted-foreground">{refund.reason}</p>
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(refund.created_at), 'MMM dd, h:mm a')}

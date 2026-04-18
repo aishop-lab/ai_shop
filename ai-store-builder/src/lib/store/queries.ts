@@ -29,7 +29,9 @@ export function getStoreUrl(slug: string, customDomain?: string | null): string 
 }
 
 /**
- * Get just the display hostname for a store (without protocol)
+ * Get just the display hostname for a store (without protocol).
+ * In production returns a real hostname; in dev returns `localhost:3000`
+ * (the slug is a path segment, not part of the hostname).
  */
 export function getStoreHostname(slug: string, customDomain?: string | null): string {
   if (IS_PRODUCTION && customDomain) {
@@ -38,7 +40,14 @@ export function getStoreHostname(slug: string, customDomain?: string | null): st
   if (IS_PRODUCTION) {
     return `${slug}.${PRODUCTION_DOMAIN}`
   }
-  return `localhost:3000/${slug}`
+  // In development, the store is accessed via path-based routing on localhost,
+  // so the hostname is just the host portion of BASE_URL.
+  try {
+    const url = new URL(BASE_URL)
+    return url.host // e.g. "localhost:3000"
+  } catch {
+    return 'localhost:3000'
+  }
 }
 
 /**

@@ -181,7 +181,7 @@ export async function checkStoreSSL(storeId: string): Promise<SSLCertificateResu
 
   const { data: store, error } = await supabase
     .from('stores')
-    .select('slug')
+    .select('slug, custom_domain')
     .eq('id', storeId)
     .single()
 
@@ -189,6 +189,7 @@ export async function checkStoreSSL(storeId: string): Promise<SSLCertificateResu
     throw new Error(`Store ${storeId} not found`)
   }
 
-  const domain = `${store.slug}.storeforge.site`
+  const { getStoreHostname } = await import('@/lib/store/queries')
+  const domain = getStoreHostname(store.slug, store.custom_domain)
   return checkSSLCertificate(domain)
 }

@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/lib/hooks/use-toast'
 import { formatCurrency, cn } from '@/lib/utils'
+import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
 import { format } from 'date-fns'
 
 interface Refund {
@@ -54,6 +55,7 @@ function RefundsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
+  const { currency } = useStoreCurrency()
 
   const [refunds, setRefunds] = useState<Refund[]>([])
   const [stats, setStats] = useState<RefundsStats>({
@@ -193,7 +195,7 @@ function RefundsPageContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(stats.totalRefunded, 'INR')}
+              {formatCurrency(stats.totalRefunded, currency)}
             </div>
           </CardContent>
         </Card>
@@ -323,7 +325,7 @@ function RefundsPageContent() {
                         </div>
                       </td>
                       <td className="px-4 py-3 font-medium">
-                        {formatCurrency(refund.amount, 'INR')}
+                        {formatCurrency(refund.amount, currency)}
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm">{refund.reason || '-'}</span>

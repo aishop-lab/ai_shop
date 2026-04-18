@@ -8,6 +8,33 @@ const reportSchema = z.object({
     end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
 })
 
+interface OrderItem {
+    id: string
+    product_id: string
+    product_title: string
+    quantity: number
+    unit_price: number
+    total_price: number
+    hsn_code?: string
+}
+
+interface Order {
+    id: string
+    created_at: string
+    order_number: string
+    invoice_number?: string
+    customer_name: string
+    customer_email: string
+    subtotal: number
+    shipping_cost: number
+    tax_amount: number
+    discount_amount: number
+    total_amount: number
+    payment_method: string
+    payment_status: string
+    order_items: OrderItem[]
+}
+
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient()
@@ -76,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 }
 
-function generateGSTReport(orders: any[]) {
+function generateGSTReport(orders: Order[]) {
     const totalSales = orders.reduce((sum, o) => sum + (o.total_amount || 0), 0)
     const totalTax = orders.reduce((sum, o) => sum + (o.tax_amount || 0), 0)
     const totalSubtotal = orders.reduce((sum, o) => sum + (o.subtotal || 0), 0)
@@ -120,7 +147,7 @@ function generateGSTReport(orders: any[]) {
     }
 }
 
-function generateSalesReport(orders: any[]) {
+function generateSalesReport(orders: Order[]) {
     // Group by date
     const salesByDate: Record<string, { date: string; orders: number; revenue: number; tax: number }> = {}
 

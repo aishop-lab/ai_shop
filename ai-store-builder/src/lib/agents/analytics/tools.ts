@@ -33,7 +33,7 @@ const queryRevenueSchema = z.object({
 })
 
 async function executeQueryRevenue(args: Record<string, unknown>) {
-  const { storeId, period } = args as z.infer<typeof queryRevenueSchema>
+  const { storeId, period } = queryRevenueSchema.parse(args)
   const range = getDateRange(period)
   const data = await queryRevenue(storeId, range)
 
@@ -52,7 +52,7 @@ const queryOrdersSchema = z.object({
 })
 
 async function executeQueryOrders(args: Record<string, unknown>) {
-  const { storeId, period } = args as z.infer<typeof queryOrdersSchema>
+  const { storeId, period } = queryOrdersSchema.parse(args)
   const range = getDateRange(period)
   const data = await queryOrders(storeId, range)
 
@@ -75,7 +75,7 @@ const queryProductsSchema = z.object({
 })
 
 async function executeQueryProducts(args: Record<string, unknown>) {
-  const { storeId, period, limit } = args as z.infer<typeof queryProductsSchema>
+  const { storeId, period, limit } = queryProductsSchema.parse(args)
   const range = getDateRange(period)
   const data = await queryTopProducts(storeId, range, limit || 5)
 
@@ -98,7 +98,7 @@ const queryCustomersSchema = z.object({
 })
 
 async function executeQueryCustomers(args: Record<string, unknown>) {
-  const { storeId, period } = args as z.infer<typeof queryCustomersSchema>
+  const { storeId, period } = queryCustomersSchema.parse(args)
   const range = getDateRange(period)
   const data = await queryCustomerMetrics(storeId, range)
 
@@ -116,7 +116,7 @@ const detectAnomaliesSchema = z.object({
 })
 
 async function executeDetectAnomalies(args: Record<string, unknown>) {
-  const { storeId } = args as z.infer<typeof detectAnomaliesSchema>
+  const { storeId } = detectAnomaliesSchema.parse(args)
   const anomalies = await runAnomalyDetection(storeId)
 
   if (anomalies.length === 0) {
@@ -144,7 +144,7 @@ const generateReportSchema = z.object({
 })
 
 async function executeGenerateReport(args: Record<string, unknown>) {
-  const { storeId, type } = args as z.infer<typeof generateReportSchema>
+  const { storeId, type } = generateReportSchema.parse(args)
   const report = await runReportGeneration(storeId, type)
 
   return {
@@ -162,7 +162,7 @@ const compareTimePeriodsSchema = z.object({
 })
 
 async function executeCompareTimePeriods(args: Record<string, unknown>) {
-  const { storeId, currentPeriod } = args as z.infer<typeof compareTimePeriodsSchema>
+  const { storeId, currentPeriod } = compareTimePeriodsSchema.parse(args)
   const currentRange = getDateRange(currentPeriod as '7d' | '30d' | '90d')
 
   const duration = currentPeriod === '7d' ? 7 : currentPeriod === '30d' ? 30 : 90
@@ -186,7 +186,7 @@ const getInsightsSchema = z.object({
 })
 
 async function executeGetInsights(args: Record<string, unknown>) {
-  const { storeId } = args as z.infer<typeof getInsightsSchema>
+  const { storeId } = getInsightsSchema.parse(args)
   const range = getDateRange('7d')
 
   const [revenue, topProducts, customers, carts, anomalies] = await Promise.all([
@@ -212,7 +212,7 @@ const queryTrafficOverviewSchema = z.object({
 })
 
 async function executeQueryTrafficOverview(args: Record<string, unknown>) {
-  const { storeId, period } = args as z.infer<typeof queryTrafficOverviewSchema>
+  const { storeId, period } = queryTrafficOverviewSchema.parse(args)
 
   try {
     const data = await fetchTrafficOverview(storeId, period)
@@ -242,7 +242,7 @@ const queryTrafficSourcesSchema = z.object({
 })
 
 async function executeQueryTrafficSources(args: Record<string, unknown>) {
-  const { storeId, period } = args as z.infer<typeof queryTrafficSourcesSchema>
+  const { storeId, period } = queryTrafficSourcesSchema.parse(args)
 
   try {
     const data = await fetchTrafficSources(storeId, period)
@@ -278,7 +278,7 @@ const queryTopPagesSchema = z.object({
 })
 
 async function executeQueryTopPages(args: Record<string, unknown>) {
-  const { storeId, period } = args as z.infer<typeof queryTopPagesSchema>
+  const { storeId, period } = queryTopPagesSchema.parse(args)
 
   try {
     const data = await fetchTopPages(storeId, period)
@@ -317,7 +317,7 @@ const calculateAttributionSchema = z.object({
 })
 
 async function executeCalculateAttribution(args: Record<string, unknown>) {
-  const { storeId, model, period } = args as z.infer<typeof calculateAttributionSchema>
+  const { storeId, model, period } = calculateAttributionSchema.parse(args)
 
   const data = await runAttribution(storeId, model as AttributionModel, period)
 
@@ -352,7 +352,7 @@ const getChannelPerformanceSchema = z.object({
 })
 
 async function executeGetChannelPerformance(args: Record<string, unknown>) {
-  const { storeId, period } = args as z.infer<typeof getChannelPerformanceSchema>
+  const { storeId, period } = getChannelPerformanceSchema.parse(args)
 
   const data = await runChannelPerformance(storeId, period)
 

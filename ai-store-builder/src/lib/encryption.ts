@@ -30,6 +30,20 @@ function getEncryptionKey(): Buffer {
  * @param plaintext - The string to encrypt
  * @returns Encrypted string (base64 encoded)
  */
+/**
+ * Check if encryption is configured. Use before encrypt/decrypt to avoid hard crashes.
+ */
+export function isEncryptionConfigured(): boolean {
+  const key = process.env.CREDENTIALS_ENCRYPTION_KEY
+  if (!key) return false
+  try {
+    const buf = Buffer.from(key, 'base64')
+    return buf.length === 32
+  } catch {
+    return false
+  }
+}
+
 export function encrypt(plaintext: string): string {
   const key = getEncryptionKey()
   const iv = crypto.randomBytes(IV_LENGTH)

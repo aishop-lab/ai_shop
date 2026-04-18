@@ -208,7 +208,7 @@ export default function AdminOrdersPage() {
       header: 'Amount',
       render: (order: OrderWithDetails) => (
         <span className="text-sm font-medium">
-          {formatCurrency(order.total_amount, 'INR')}
+          {formatCurrency(order.total_amount, order.currency || 'INR')}
         </span>
       )
     },

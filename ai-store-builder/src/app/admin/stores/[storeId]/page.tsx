@@ -137,7 +137,13 @@ export default function AdminStoreDetailPage() {
   }
 
   const { store, recentOrders, customersCount } = data
-  const storeUrl = `https://${store.slug}.storeforge.site`
+  const productionDomain = process.env.NEXT_PUBLIC_PRODUCTION_DOMAIN || 'storeforge.site'
+  const isProduction = process.env.NODE_ENV === 'production'
+  const storeUrl = isProduction && store.custom_domain
+    ? `https://${store.custom_domain}`
+    : isProduction
+      ? `https://${store.slug}.${productionDomain}`
+      : `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/${store.slug}`
 
   return (
     <div className="space-y-6">
@@ -258,7 +264,7 @@ export default function AdminStoreDetailPage() {
         />
         <AdminStatsCard
           title="Revenue"
-          value={formatCurrency(store.revenue, 'INR')}
+          value={formatCurrency(store.revenue, store.currency || 'INR')}
           icon={DollarSign}
           iconColor="text-green-500"
         />

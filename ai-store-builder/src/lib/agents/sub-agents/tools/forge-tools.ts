@@ -75,7 +75,9 @@ const send_recovery_email = tool({
     sequence_step: z.number().min(1).max(3).describe('Recovery sequence step: 1, 2, or 3'),
   }),
   execute: async ({ store_id, cart_id, to_email, subject, body_html, sequence_step }) => {
-    const resend = new Resend(process.env.RESEND_API_KEY)
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) return { success: false, error: 'RESEND_API_KEY not configured' }
+    const resend = new Resend(apiKey)
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@storeforge.site'
 
     const { error: sendError } = await resend.emails.send({
@@ -399,7 +401,9 @@ const send_winback_email = tool({
     store_name: z.string().describe('Store name for the From display name'),
   }),
   execute: async ({ to_email, customer_name, subject, body_html, store_name }) => {
-    const resend = new Resend(process.env.RESEND_API_KEY)
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) return { success: false, error: 'RESEND_API_KEY not configured' }
+    const resend = new Resend(apiKey)
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@storeforge.site'
 
     const { error } = await resend.emails.send({

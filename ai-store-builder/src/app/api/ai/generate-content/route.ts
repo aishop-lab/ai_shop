@@ -1,9 +1,10 @@
 // AI Content Generation API
 // Generates various types of content: collection descriptions, meta tags, FAQs, etc.
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { vercelAI } from '@/lib/ai/vercel-ai-service'
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { z } from 'zod'
 
 const requestSchema = z.discriminatedUnion('type', [
@@ -52,6 +53,10 @@ export interface ContentGenerationResponse {
 }
 
 export async function POST(request: Request) {
+  // Apply AI rate limiting
+  const rateLimitResult = rateLimit(request as NextRequest, RATE_LIMITS.AI)
+  if (rateLimitResult) return rateLimitResult
+
   try {
     const supabase = await createClient()
 

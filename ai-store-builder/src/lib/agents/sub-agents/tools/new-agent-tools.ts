@@ -530,7 +530,9 @@ const send_report_email = tool({
     body_html: z.string(),
   }),
   execute: async ({ to_email, store_name, subject, body_html }) => {
-    const resend = new Resend(process.env.RESEND_API_KEY)
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) return { success: false, error: 'RESEND_API_KEY not configured' }
+    const resend = new Resend(apiKey)
     const fromEmail =
       process.env.RESEND_FROM_EMAIL || 'noreply@storeforge.site'
     const { error } = await resend.emails.send({
@@ -898,7 +900,7 @@ async function getOutreachResendCredentials(storeId: string) {
         fromEmail:
           store.resend_from_email ||
           process.env.RESEND_FROM_EMAIL ||
-          'noreply@storeforge.site',
+          process.env.RESEND_FROM_EMAIL || 'noreply@storeforge.site',
         fromName: store.resend_from_name || store.name || 'Store',
       }
     }

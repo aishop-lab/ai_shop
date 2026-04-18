@@ -412,7 +412,7 @@ export default function PaymentsSettingsPage() {
           <div className="rounded border border-[var(--platform-border)] bg-[var(--platform-bg)] px-3 py-2.5">
             <p className="text-[11px] text-[var(--platform-text-muted)] mb-1">Webhook URL for Razorpay:</p>
             <code className="block text-xs font-mono text-[var(--platform-text-secondary)] overflow-x-auto">
-              https://storeforge.site/api/webhooks/razorpay
+              {`${process.env.NEXT_PUBLIC_APP_URL || 'https://storeforge.site'}/api/webhooks/razorpay`}
             </code>
           </div>
 
@@ -638,7 +638,7 @@ export default function PaymentsSettingsPage() {
           <div className="rounded border border-[var(--platform-border)] bg-[var(--platform-bg)] px-3 py-2.5">
             <p className="text-[11px] text-[var(--platform-text-muted)] mb-1">Webhook URL for Stripe:</p>
             <code className="block text-xs font-mono text-[var(--platform-text-secondary)] overflow-x-auto">
-              https://storeforge.site/api/webhooks/stripe
+              {`${process.env.NEXT_PUBLIC_APP_URL || 'https://storeforge.site'}/api/webhooks/stripe`}
             </code>
             <p className="text-[11px] text-[var(--platform-text-muted)] mt-1.5">
               Subscribe to: checkout.session.completed, checkout.session.expired, charge.refunded

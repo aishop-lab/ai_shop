@@ -24,6 +24,7 @@ export interface StoreWithDetails {
   id: string
   name: string
   slug: string
+  custom_domain: string | null
   status: string
   logo_url: string | null
   created_at: string
@@ -34,6 +35,7 @@ export interface StoreWithDetails {
   products_count: number
   orders_count: number
   revenue: number
+  currency?: string
 }
 
 export interface SellerDetails {
@@ -69,6 +71,7 @@ export interface OrderWithDetails {
   customer_name: string
   customer_email: string
   total_amount: number
+  currency?: string
   payment_status: string
   order_status: string
   created_at: string
@@ -183,7 +186,7 @@ export async function getStoresWithDetails(options: {
   // Build query - fetch stores without join first
   let query = supabase
     .from('stores')
-    .select('id, name, slug, status, logo_url, created_at, activated_at, owner_id', { count: 'exact' })
+    .select('id, name, slug, custom_domain, status, logo_url, created_at, activated_at, owner_id, blueprint', { count: 'exact' })
 
   if (status && status !== 'all') {
     query = query.eq('status', status)
@@ -241,10 +244,12 @@ export async function getStoresWithDetails(options: {
 
   const storesWithDetails: StoreWithDetails[] = stores.map(store => {
     const profile = profilesById[store.owner_id]
+    const blueprint = store.blueprint as Record<string, any> | null
     return {
       id: store.id,
       name: store.name,
       slug: store.slug,
+      custom_domain: store.custom_domain ?? null,
       status: store.status,
       logo_url: store.logo_url,
       created_at: store.created_at,
@@ -254,7 +259,8 @@ export async function getStoresWithDetails(options: {
       owner_name: profile?.full_name || 'Unknown',
       products_count: productsCounts[store.id] || 0,
       orders_count: ordersCounts[store.id] || 0,
-      revenue: revenues[store.id] || 0
+      revenue: revenues[store.id] || 0,
+      currency: blueprint?.location?.currency || undefined
     }
   })
 
@@ -269,7 +275,7 @@ export async function getStoreDetails(storeId: string): Promise<StoreWithDetails
 
   const { data: store, error } = await supabase
     .from('stores')
-    .select('id, name, slug, status, logo_url, created_at, activated_at, owner_id')
+    .select('id, name, slug, custom_domain, status, logo_url, created_at, activated_at, owner_id, blueprint')
     .eq('id', storeId)
     .single()
 
@@ -289,11 +295,13 @@ export async function getStoreDetails(storeId: string): Promise<StoreWithDetails
   const revenue = paidOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0)
 
   const profile = profileResult.data
+  const blueprint = store.blueprint as Record<string, any> | null
 
   return {
     id: store.id,
     name: store.name,
     slug: store.slug,
+    custom_domain: store.custom_domain ?? null,
     status: store.status,
     logo_url: store.logo_url,
     created_at: store.created_at,
@@ -303,7 +311,8 @@ export async function getStoreDetails(storeId: string): Promise<StoreWithDetails
     owner_name: profile?.full_name || 'Unknown',
     products_count: productsResult.count || 0,
     orders_count: orders.length,
-    revenue
+    revenue,
+    currency: blueprint?.location?.currency || undefined
   }
 }
 
@@ -501,7 +510,7 @@ export async function getAdminOrders(options: {
 
   let query = supabase
     .from('orders')
-    .select('id, order_number, customer_name, customer_email, total_amount, payment_status, order_status, created_at, store_id', { count: 'exact' })
+    .select('id, order_number, customer_name, customer_email, total_amount, currency, payment_status, order_status, created_at, store_id', { count: 'exact' })
 
   if (storeId) {
     query = query.eq('store_id', storeId)
@@ -550,6 +559,7 @@ export async function getAdminOrders(options: {
       customer_name: order.customer_name,
       customer_email: order.customer_email,
       total_amount: order.total_amount,
+      currency: order.currency || undefined,
       payment_status: order.payment_status,
       order_status: order.order_status,
       created_at: order.created_at,
@@ -849,7 +859,7 @@ export async function getRecentOrders(limit: number = 10): Promise<OrderWithDeta
 
   const { data: orders, error } = await supabase
     .from('orders')
-    .select('id, order_number, customer_name, customer_email, total_amount, payment_status, order_status, created_at, store_id')
+    .select('id, order_number, customer_name, customer_email, total_amount, currency, payment_status, order_status, created_at, store_id')
     .order('created_at', { ascending: false })
     .limit(limit)
 
@@ -879,6 +889,7 @@ export async function getRecentOrders(limit: number = 10): Promise<OrderWithDeta
       customer_name: order.customer_name,
       customer_email: order.customer_email,
       total_amount: order.total_amount,
+      currency: order.currency || undefined,
       payment_status: order.payment_status,
       order_status: order.order_status,
       created_at: order.created_at,

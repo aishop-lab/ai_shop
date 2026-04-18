@@ -73,11 +73,12 @@ async function getSearchConsoleToken(storeId: string): Promise<string> {
  */
 async function getStoreSiteUrl(storeId: string): Promise<string> {
   const { getSupabaseAdmin } = await import('@/lib/supabase/admin')
+  const { getStoreHostname } = await import('@/lib/store/queries')
   const supabase = getSupabaseAdmin()
 
   const { data: store, error } = await supabase
     .from('stores')
-    .select('slug')
+    .select('slug, custom_domain')
     .eq('id', storeId)
     .single()
 
@@ -86,7 +87,8 @@ async function getStoreSiteUrl(storeId: string): Promise<string> {
   }
 
   // Search Console expects the full URL as site property
-  return `sc-domain:${store.slug}.storeforge.site`
+  const hostname = getStoreHostname(store.slug, store.custom_domain)
+  return `sc-domain:${hostname}`
 }
 
 /**
@@ -226,14 +228,15 @@ export async function checkIndexingStatus(
   // If no URL provided, check the store homepage
   if (!inspectUrl) {
     const { getSupabaseAdmin } = await import('@/lib/supabase/admin')
+    const { getStoreUrl } = await import('@/lib/store/queries')
     const supabase = getSupabaseAdmin()
     const { data: store } = await supabase
       .from('stores')
-      .select('slug')
+      .select('slug, custom_domain')
       .eq('id', storeId)
       .single()
 
-    inspectUrl = `https://${store?.slug}.storeforge.site`
+    inspectUrl = store ? getStoreUrl(store.slug, store.custom_domain) : ''
   }
 
   const url = 'https://searchconsole.googleapis.com/v1/urlInspection/index:inspect'

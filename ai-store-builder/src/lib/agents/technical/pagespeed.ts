@@ -252,7 +252,7 @@ export async function auditStorePageSpeed(
 
   const { data: store, error } = await supabase
     .from('stores')
-    .select('slug')
+    .select('slug, custom_domain')
     .eq('id', storeId)
     .single()
 
@@ -260,6 +260,7 @@ export async function auditStorePageSpeed(
     throw new Error(`Store ${storeId} not found`)
   }
 
-  const storeUrl = `https://${store.slug}.storeforge.site`
+  const { getStoreUrl } = await import('@/lib/store/queries')
+  const storeUrl = getStoreUrl(store.slug, store.custom_domain)
   return runPageSpeedAudit(storeUrl, strategy)
 }

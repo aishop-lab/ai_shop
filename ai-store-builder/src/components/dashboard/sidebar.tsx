@@ -151,7 +151,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
               { label: 'All Products', href: '/platform/products' },
               { label: 'Add Product', href: '/platform/products/new', icon: Plus },
               { label: 'Import Products', href: '/dashboard/migrate', icon: Import },
-              { label: 'Collections', href: '/dashboard/collections', icon: Folder },
+              { label: 'Collections', href: '/platform/collections', icon: Folder },
             ]}
             onNavigate={onClose}
           />
@@ -176,7 +176,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
           <NavSection
             label="Coupons"
             icon={Ticket}
-            href="/dashboard/coupons"
+            href="/platform/coupons"
             onNavigate={onClose}
           />
 
@@ -192,7 +192,7 @@ export function Sidebar({ isOpen, onClose, store }: SidebarProps) {
           <NavSection
             label="Customers"
             icon={Users}
-            href="/dashboard/customers"
+            href="/platform/customers"
             onNavigate={onClose}
           />
 

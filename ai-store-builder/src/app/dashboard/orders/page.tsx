@@ -32,6 +32,8 @@ export default function OrdersPage() {
   const [total, setTotal] = useState(0)
   const [storeId, setStoreId] = useState<string | null>(null)
 
+  const [error, setError] = useState<string | null>(null)
+
   // Fetch store ID on mount
   useEffect(() => {
     async function fetchStore() {
@@ -41,10 +43,18 @@ export default function OrdersPage() {
           const data = await response.json()
           if (data.store?.id) {
             setStoreId(data.store.id)
+          } else {
+            setError('No store found')
+            setLoading(false)
           }
+        } else {
+          setError('Failed to load store')
+          setLoading(false)
         }
-      } catch (error) {
-        console.error('Failed to fetch store:', error)
+      } catch (err) {
+        console.error('Failed to fetch store:', err)
+        setError('Failed to load store')
+        setLoading(false)
       }
     }
     fetchStore()
@@ -70,8 +80,9 @@ export default function OrdersPage() {
       setOrders(data.orders || [])
       setTotalPages(data.totalPages || 1)
       setTotal(data.total || 0)
-    } catch (error) {
-      console.error('Failed to fetch orders:', error)
+    } catch (err) {
+      console.error('Failed to fetch orders:', err)
+      setError('Failed to load orders. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -160,7 +171,16 @@ export default function OrdersPage() {
       </Tabs>
 
       {/* Orders table */}
-      {loading ? (
+      {error ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center bg-destructive/10 rounded-lg">
+          <ShoppingCart className="h-12 w-12 text-destructive mb-4" />
+          <h3 className="text-lg font-semibold">{error}</h3>
+          <p className="text-sm text-muted-foreground mt-1">Please try refreshing the page</p>
+          <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
+            <RefreshCw className="h-4 w-4 mr-2" /> Retry
+          </Button>
+        </div>
+      ) : loading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
         </div>

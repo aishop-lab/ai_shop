@@ -38,7 +38,7 @@ async function executeCreateAdCampaign(
     headlines,
     descriptions,
     finalUrl,
-  } = args as z.infer<typeof createAdCampaignSchema>
+  } = createAdCampaignSchema.parse(args)
 
   try {
     if (platform === 'meta') {
@@ -105,7 +105,7 @@ async function executePauseAdCampaign(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId, platform, campaignId, action } = args as z.infer<typeof pauseAdCampaignSchema>
+  const { storeId, platform, campaignId, action } = pauseAdCampaignSchema.parse(args)
 
   try {
     if (platform === 'meta') {
@@ -150,7 +150,7 @@ async function executeAdjustBudget(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId, platform, campaignId, newDailyBudget } = args as z.infer<typeof adjustBudgetSchema>
+  const { storeId, platform, campaignId, newDailyBudget } = adjustBudgetSchema.parse(args)
 
   try {
     // Check total spend limits before adjusting
@@ -224,7 +224,7 @@ async function executeGenerateAdCreative(
     format,
     tone,
     targetAudience,
-  } = args as z.infer<typeof generateAdCreativeSchema>
+  } = generateAdCreativeSchema.parse(args)
 
   try {
     const { generateAdCreative } = await import('./content-generator')
@@ -267,7 +267,7 @@ async function executeGetAdPerformance(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId, platform, campaignId, period } = args as z.infer<typeof getAdPerformanceSchema>
+  const { storeId, platform, campaignId, period } = getAdPerformanceSchema.parse(args)
 
   try {
     if (platform === 'meta') {
@@ -327,7 +327,7 @@ async function executeCreateSocialPost(
   _context: AgentExecutionContext
 ) {
   const { storeId, platform, content, imageUrl, scheduledTime, generateContent } =
-    args as z.infer<typeof createSocialPostSchema>
+    createSocialPostSchema.parse(args)
 
   try {
     let finalContent = content
@@ -384,7 +384,7 @@ async function executeGetAudienceInsights(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId, platform } = args as z.infer<typeof getAudienceInsightsSchema>
+  const { storeId, platform } = getAudienceInsightsSchema.parse(args)
 
   try {
     if (platform === 'meta') {
@@ -428,7 +428,7 @@ async function executeGetBudgetStatus(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId } = args as z.infer<typeof getBudgetStatusSchema>
+  const { storeId } = getBudgetStatusSchema.parse(args)
 
   try {
     const { getBudgetStatus } = await import('./budget-manager')
@@ -460,7 +460,7 @@ async function executeGetMarketingROAS(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId, period } = args as z.infer<typeof getMarketingROASSchema>
+  const { storeId, period } = getMarketingROASSchema.parse(args)
 
   try {
     const { getOverallROAS } = await import('./budget-manager')
@@ -487,7 +487,7 @@ async function executeGetUpcomingSeasonalEvents(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { daysAhead } = args as z.infer<typeof getUpcomingSeasonalEventsSchema>
+  const { daysAhead } = getUpcomingSeasonalEventsSchema.parse(args)
 
   try {
     const { getUpcomingEvents } = await import('./seasonal-campaigns')
@@ -525,7 +525,7 @@ async function executeGenerateSeasonalCampaign(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { storeId, eventId } = args as z.infer<typeof generateSeasonalCampaignSchema>
+  const { storeId, eventId } = generateSeasonalCampaignSchema.parse(args)
 
   try {
     const { generateCampaignPlan } = await import('./seasonal-campaigns')
@@ -552,7 +552,7 @@ async function executeGetSeasonalCalendar(
   args: Record<string, unknown>,
   _context: AgentExecutionContext
 ) {
-  const { month } = args as z.infer<typeof getSeasonalCalendarSchema>
+  const { month } = getSeasonalCalendarSchema.parse(args)
 
   try {
     const { getSeasonalCalendar } = await import('./seasonal-campaigns')
@@ -615,7 +615,7 @@ async function executeTrackConversion(
     numItems,
     orderId,
     eventSourceUrl,
-  } = args as z.infer<typeof trackConversionSchema>
+  } = trackConversionSchema.parse(args)
 
   try {
     const { sendConversionEvent, hashUserData } = await import('./meta-capi')

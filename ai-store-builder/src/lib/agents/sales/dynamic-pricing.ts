@@ -50,19 +50,48 @@ interface PriceHistoryEntry {
   appliedBy: 'agent' | 'merchant'
 }
 
+// ---- Pricing Constraints (per-store configurable) ----
+
+export interface PricingConstraints {
+  /** Maximum price increase allowed in a single change (default: 0.30 = 30%) */
+  max_increase_percent: number
+  /** Maximum discount from compare_at_price (default: 0.50 = 50%) */
+  max_discount_from_compare: number
+  /** Minimum confidence to include in recommendations (default: 0.3) */
+  min_recommendation_confidence: number
+  /** Default margin target when cost_price is available (default: 0.35 = 35%) */
+  default_margin_target: number
+}
+
+/** Default pricing constraints — used when store has no overrides */
+export const DEFAULT_PRICING_CONSTRAINTS: PricingConstraints = {
+  max_increase_percent: 0.30,
+  max_discount_from_compare: 0.50,
+  min_recommendation_confidence: 0.3,
+  default_margin_target: 0.35,
+}
+
+/**
+ * Resolve pricing constraints for a store.
+ * Falls back to DEFAULT_PRICING_CONSTRAINTS for any missing fields.
+ */
+function resolvePricingConstraints(
+  storeOverrides?: Partial<PricingConstraints> | null
+): PricingConstraints {
+  if (!storeOverrides) return DEFAULT_PRICING_CONSTRAINTS
+  return {
+    max_increase_percent:
+      storeOverrides.max_increase_percent ?? DEFAULT_PRICING_CONSTRAINTS.max_increase_percent,
+    max_discount_from_compare:
+      storeOverrides.max_discount_from_compare ?? DEFAULT_PRICING_CONSTRAINTS.max_discount_from_compare,
+    min_recommendation_confidence:
+      storeOverrides.min_recommendation_confidence ?? DEFAULT_PRICING_CONSTRAINTS.min_recommendation_confidence,
+    default_margin_target:
+      storeOverrides.default_margin_target ?? DEFAULT_PRICING_CONSTRAINTS.default_margin_target,
+  }
+}
+
 // ---- Constants ----
-
-/** Maximum price increase allowed in a single change (30%) */
-const MAX_INCREASE_PERCENT = 0.30
-
-/** Maximum discount from compare_at_price (50%) */
-const MAX_DISCOUNT_FROM_COMPARE = 0.50
-
-/** Minimum confidence to include in recommendations */
-const MIN_RECOMMENDATION_CONFIDENCE = 0.3
-
-/** Default margin target when cost_price is available */
-const DEFAULT_MARGIN_TARGET = 0.35
 
 /** Memory key prefix for price history entries */
 const PRICE_HISTORY_PREFIX = 'price_history:'
@@ -175,7 +204,8 @@ function calculateSeasonality(): number {
  */
 export function calculateOptimalPrice(
   product: ProductRow,
-  factors: PricingFactors
+  factors: PricingFactors,
+  constraints: PricingConstraints = DEFAULT_PRICING_CONSTRAINTS
 ): { price: number; reason: string; confidence: number } {
   const currentPrice = product.price
   const costPrice = product.cost_price
@@ -248,9 +278,9 @@ export function calculateOptimalPrice(
 
   // ---- Apply constraints ----
 
-  // Cap the increase at MAX_INCREASE_PERCENT
-  if (adjustmentPercent > MAX_INCREASE_PERCENT) {
-    adjustmentPercent = MAX_INCREASE_PERCENT
+  // Cap the increase at the configured max
+  if (adjustmentPercent > constraints.max_increase_percent) {
+    adjustmentPercent = constraints.max_increase_percent
   }
 
   let recommendedPrice = currentPrice * (1 + adjustmentPercent)
@@ -261,9 +291,9 @@ export function calculateOptimalPrice(
     reasons.push('floored at cost + 5%')
   }
 
-  // Never discount more than 50% from compare_at_price
+  // Never discount more than the configured max from compare_at_price
   if (compareAtPrice && compareAtPrice > 0) {
-    const minFromCompare = compareAtPrice * (1 - MAX_DISCOUNT_FROM_COMPARE)
+    const minFromCompare = compareAtPrice * (1 - constraints.max_discount_from_compare)
     if (recommendedPrice < minFromCompare) {
       recommendedPrice = minFromCompare
       reasons.push(`floored at 50% off compare price (${compareAtPrice.toFixed(2)})`)
@@ -295,9 +325,11 @@ export function calculateOptimalPrice(
  * Scan all products in a store for dynamic pricing opportunities.
  */
 export async function analyzePricingOpportunities(
-  storeId: string
+  storeId: string,
+  storeConstraints?: Partial<PricingConstraints> | null
 ): Promise<PricingRecommendation[]> {
   const supabase = getSupabaseAdmin()
+  const constraints = resolvePricingConstraints(storeConstraints)
 
   // Fetch all active products with pricing data
   const { data: products, error } = await supabase
@@ -331,7 +363,7 @@ export async function analyzePricingOpportunities(
 
     // Determine margin target
     const marginTarget = product.cost_price && product.cost_price > 0
-      ? DEFAULT_MARGIN_TARGET
+      ? constraints.default_margin_target
       : 0
 
     const factors: PricingFactors = {
@@ -342,12 +374,12 @@ export async function analyzePricingOpportunities(
       seasonality,
     }
 
-    const { price: recommendedPrice, reason, confidence } = calculateOptimalPrice(product, factors)
+    const { price: recommendedPrice, reason, confidence } = calculateOptimalPrice(product, factors, constraints)
 
     // Skip if no meaningful change or low confidence
     if (
       recommendedPrice === product.price ||
-      confidence < MIN_RECOMMENDATION_CONFIDENCE
+      confidence < constraints.min_recommendation_confidence
     ) {
       continue
     }
@@ -386,9 +418,11 @@ export async function applyPriceChange(
   storeId: string,
   productId: string,
   newPrice: number,
-  reason: string = 'Dynamic pricing adjustment'
+  reason: string = 'Dynamic pricing adjustment',
+  storeConstraints?: Partial<PricingConstraints> | null
 ): Promise<{ success: boolean; summary: string; data?: Record<string, unknown> }> {
   const supabase = getSupabaseAdmin()
+  const constraints = resolvePricingConstraints(storeConstraints)
 
   // Fetch current product
   const { data: product, error: fetchError } = await supabase
@@ -413,15 +447,15 @@ export async function applyPriceChange(
   }
 
   const increasePercent = (newPrice - oldPrice) / oldPrice
-  if (increasePercent > MAX_INCREASE_PERCENT) {
+  if (increasePercent > constraints.max_increase_percent) {
     return {
       success: false,
-      summary: `Price increase of ${(increasePercent * 100).toFixed(1)}% exceeds maximum allowed (${MAX_INCREASE_PERCENT * 100}%)`,
+      summary: `Price increase of ${(increasePercent * 100).toFixed(1)}% exceeds maximum allowed (${constraints.max_increase_percent * 100}%)`,
     }
   }
 
   if (product.compare_at_price && product.compare_at_price > 0) {
-    const minAllowed = product.compare_at_price * (1 - MAX_DISCOUNT_FROM_COMPARE)
+    const minAllowed = product.compare_at_price * (1 - constraints.max_discount_from_compare)
     if (newPrice < minAllowed) {
       return {
         success: false,

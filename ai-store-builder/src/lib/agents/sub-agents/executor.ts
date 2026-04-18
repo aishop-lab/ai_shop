@@ -250,7 +250,7 @@ async function executeLLM(
   const toolCallActions: Array<{ tool: string; args: unknown; result: unknown }> = []
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const generateOptions: any = {
+  const generateOptions: Record<string, any> = {
     model: geminiFlash,
     system: systemPrompt,
     prompt: userPrompt,
@@ -274,7 +274,8 @@ async function executeLLM(
     }
   }
 
-  const llmResult = await generateText(generateOptions)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const llmResult = await generateText(generateOptions as any)
 
   const tokensIn = llmResult.usage.inputTokens || 0
   const tokensOut = llmResult.usage.outputTokens || 0

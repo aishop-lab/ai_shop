@@ -234,7 +234,9 @@ const sendReplyTool: AgentToolConfig = {
           .single()
         const storeName = store?.name || 'Store'
 
-        const resend = new Resend(process.env.RESEND_API_KEY)
+        const resendApiKey = process.env.RESEND_API_KEY
+        if (!resendApiKey) return { success: false, summary: 'RESEND_API_KEY not configured' }
+        const resend = new Resend(resendApiKey)
         const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@storeforge.site'
 
         const { error } = await resend.emails.send({

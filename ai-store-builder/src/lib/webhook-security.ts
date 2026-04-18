@@ -125,8 +125,9 @@ export function getClientIP(request: NextRequest): string {
  * Verify Shiprocket webhook by IP allowlist
  */
 export function verifyShiprocketWebhook(request: NextRequest): boolean {
-  // In development, allow all IPs
+  // In development, allow all IPs but log for awareness
   if (process.env.NODE_ENV !== 'production') {
+    console.log('[Webhook] Shiprocket verification skipped in non-production environment')
     return true
   }
 

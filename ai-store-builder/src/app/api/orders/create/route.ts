@@ -13,6 +13,7 @@ import { autoCreateShipmentForStore } from '@/lib/shipping/provider-manager'
 import { createNotification } from '@/lib/notifications'
 import { emitTrigger } from '@/lib/agents/trigger-emitter'
 import { validateSession } from '@/lib/customer/auth'
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import type { StoreSettings } from '@/lib/types/store'
 import type { CreateOrderResponse, ShippingAddress } from '@/lib/types/order'
 
@@ -49,6 +50,10 @@ const createOrderSchema = z.object({
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<CreateOrderResponse>> {
+  // Apply checkout rate limiting
+  const rateLimitResult = rateLimit(request, RATE_LIMITS.CHECKOUT)
+  if (rateLimitResult) return rateLimitResult as NextResponse<CreateOrderResponse>
+
   try {
     const body = await request.json()
 
@@ -145,10 +150,7 @@ export async function POST(
 
     // 5. Generate order ID and number
     const orderId = crypto.randomUUID()
-    const orderNumber = `ORD-${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(2, 7)
-      .toUpperCase()}`
+    const orderNumber = `ORD-${Date.now()}-${crypto.randomUUID().replace(/-/g, '').substring(0, 8).toUpperCase()}`
 
     // 6. Reserve inventory (prevents overselling) - variant-aware
     const reservationResult = await reserveInventory(

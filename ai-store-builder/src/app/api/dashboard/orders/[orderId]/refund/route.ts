@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { refundPayment, getStoreRazorpayCredentials } from '@/lib/payment/razorpay'
+import { refundStripePayment, getStoreStripeCredentials } from '@/lib/payment/stripe'
 import { restoreInventory } from '@/lib/orders/inventory'
 import { sendRefundProcessedEmail } from '@/lib/email/order-confirmation'
 import { z } from 'zod'
@@ -72,7 +73,7 @@ export async function POST(
       )
     }
 
-    if (amount > order.total_amount) {
+    if (amount > order.total) {
       return NextResponse.json(
         { error: 'Refund amount exceeds order total' },
         { status: 400 }
@@ -88,38 +89,82 @@ export async function POST(
 
     const totalRefunded = existingRefunds?.reduce((sum, r) => sum + Number(r.amount), 0) || 0
 
-    if (totalRefunded + amount > order.total_amount) {
+    if (totalRefunded + amount > order.total) {
       return NextResponse.json(
         { error: `Total refund amount would exceed order total. Already refunded: ${totalRefunded}` },
         { status: 400 }
       )
     }
 
-    // Check if Razorpay payment exists
-    if (!order.razorpay_payment_id) {
+    // Process refund based on payment method
+    let refundId: string
+    let refundStatus: string
+
+    if (order.razorpay_payment_id) {
+      // Razorpay refund path
+      const storeCredentials = await getStoreRazorpayCredentials(order.stores.id, supabase)
+      try {
+        const razorpayRefund = await refundPayment(
+          order.razorpay_payment_id,
+          amount,
+          { reason, order_id: orderId },
+          storeCredentials || undefined
+        )
+        refundId = razorpayRefund.id
+        refundStatus = razorpayRefund.status === 'processed' ? 'processed' : 'pending'
+      } catch (rpError) {
+        console.error('Razorpay refund failed:', rpError)
+        return NextResponse.json(
+          { error: 'Failed to process refund with payment provider' },
+          { status: 500 }
+        )
+      }
+    } else if (order.stripe_session_id || order.stripe_payment_intent_id) {
+      // Stripe refund path
+      const stripeCredentials = await getStoreStripeCredentials(order.stores.id, supabase)
+      try {
+        let paymentIntentId = order.stripe_payment_intent_id
+
+        // If we only have session ID, retrieve the payment intent from it
+        if (!paymentIntentId && order.stripe_session_id) {
+          const { getStripeSession } = await import('@/lib/payment/stripe')
+          const session = await getStripeSession(order.stripe_session_id, stripeCredentials || undefined)
+          paymentIntentId = typeof session.payment_intent === 'string'
+            ? session.payment_intent
+            : session.payment_intent?.id
+        }
+
+        if (!paymentIntentId) {
+          return NextResponse.json(
+            { error: 'Could not find Stripe payment intent for this order' },
+            { status: 400 }
+          )
+        }
+
+        const stripeRefund = await refundStripePayment(
+          paymentIntentId,
+          amount,
+          'requested_by_customer',
+          stripeCredentials || undefined
+        )
+        refundId = stripeRefund.id
+        refundStatus = stripeRefund.status === 'succeeded' ? 'processed' : 'pending'
+      } catch (stripeError) {
+        console.error('Stripe refund failed:', stripeError)
+        return NextResponse.json(
+          { error: 'Failed to process refund with Stripe' },
+          { status: 500 }
+        )
+      }
+    } else if (order.payment_method === 'cod') {
       return NextResponse.json(
-        { error: 'No Razorpay payment ID found. Cannot process refund for COD orders.' },
+        { error: 'Cannot process online refund for COD orders. Handle manually.' },
         { status: 400 }
       )
-    }
-
-    // Fetch store-specific Razorpay credentials (if configured)
-    const storeCredentials = await getStoreRazorpayCredentials(order.stores.id, supabase)
-
-    // Process Razorpay refund with appropriate credentials
-    let razorpayRefund
-    try {
-      razorpayRefund = await refundPayment(
-        order.razorpay_payment_id,
-        amount,
-        { reason, order_id: orderId },
-        storeCredentials || undefined
-      )
-    } catch (rpError) {
-      console.error('Razorpay refund failed:', rpError)
+    } else {
       return NextResponse.json(
-        { error: 'Failed to process refund with payment provider' },
-        { status: 500 }
+        { error: 'No payment provider ID found on this order' },
+        { status: 400 }
       )
     }
 
@@ -130,9 +175,10 @@ export async function POST(
         order_id: orderId,
         amount,
         reason,
-        status: razorpayRefund.status === 'processed' ? 'processed' : 'pending',
-        razorpay_refund_id: razorpayRefund.id,
-        processed_at: razorpayRefund.status === 'processed' ? new Date().toISOString() : null
+        status: refundStatus,
+        razorpay_refund_id: refundId.startsWith('rfnd_') ? refundId : null,
+        stripe_refund_id: refundId.startsWith('re_') ? refundId : null,
+        processed_at: refundStatus === 'processed' ? new Date().toISOString() : null
       })
       .select()
       .single()
@@ -144,7 +190,7 @@ export async function POST(
     }
 
     // Determine if this is a full refund
-    const isFullRefund = amount >= order.total_amount - totalRefunded
+    const isFullRefund = amount >= order.total - totalRefunded
     const newPaymentStatus = isFullRefund ? 'refunded' : 'paid'
 
     // Update order payment status
@@ -202,12 +248,11 @@ export async function POST(
     return NextResponse.json({
       success: true,
       refund: refundRecord || {
-        id: razorpayRefund.id,
+        id: refundId,
         order_id: orderId,
         amount,
         reason,
-        status: razorpayRefund.status,
-        razorpay_refund_id: razorpayRefund.id
+        status: refundStatus,
       },
       message: `Refund of ${amount} processed successfully`
     })

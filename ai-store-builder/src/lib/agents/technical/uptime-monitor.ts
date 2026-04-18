@@ -29,7 +29,7 @@ export async function checkStoreUptime(storeId: string): Promise<UptimeCheckResu
 
   const { data: store, error: storeError } = await supabase
     .from('stores')
-    .select('slug')
+    .select('slug, custom_domain')
     .eq('id', storeId)
     .single()
 
@@ -37,7 +37,8 @@ export async function checkStoreUptime(storeId: string): Promise<UptimeCheckResu
     throw new Error(`Store ${storeId} not found`)
   }
 
-  const url = `https://${store.slug}.storeforge.site`
+  const { getStoreUrl } = await import('@/lib/store/queries')
+  const url = getStoreUrl(store.slug, store.custom_domain)
   return checkUrlUptime(url)
 }
 

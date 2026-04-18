@@ -1,8 +1,10 @@
 // Streaming Description Generation API
 // Streams product description generation for real-time UI feedback
 
+import { NextRequest } from 'next/server'
 import { vercelAI } from '@/lib/ai/vercel-ai-service'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { z } from 'zod'
 
 const requestSchema = z.object({
@@ -12,6 +14,10 @@ const requestSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  // Apply AI rate limiting
+  const rateLimitResult = rateLimit(request as NextRequest, RATE_LIMITS.AI)
+  if (rateLimitResult) return rateLimitResult
+
   try {
     const supabase = await createClient()
 

@@ -158,8 +158,13 @@ const ACTION_ITEMS: CommandItem[] = [
 
 function getStoreUrl(slug: string | null | undefined): string {
   if (!slug) return '/'
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') return `/${slug}`
-  return `https://${slug}.storeforge.site`
+  const domain = process.env.NEXT_PUBLIC_PRODUCTION_DOMAIN || 'storeforge.site'
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname
+    // Use path-based routing on localhost and Vercel preview deployments
+    if (host === 'localhost' || host.includes('vercel.app')) return `/${slug}`
+  }
+  return `https://${slug}.${domain}`
 }
 
 const ALL_ITEMS_TEMPLATE = [...NAV_ITEMS, ...AGENT_ITEMS, ...ACTION_ITEMS]

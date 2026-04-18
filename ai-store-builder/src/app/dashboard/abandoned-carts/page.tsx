@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency } from '@/lib/utils'
+import { useStoreCurrency } from '@/lib/hooks/use-store-currency'
 import { format, formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
 
@@ -51,6 +52,7 @@ interface AbandonedCartsResponse {
 }
 
 export default function AbandonedCartsPage() {
+  const { currency } = useStoreCurrency()
   const [carts, setCarts] = useState<AbandonedCart[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -207,7 +209,7 @@ export default function AbandonedCartsPage() {
           </div>
           <p className="text-2xl font-bold">{stats.active}</p>
           <p className="text-xs text-muted-foreground">
-            {formatCurrency(stats.total_value, 'INR')} potential
+            {formatCurrency(stats.total_value, currency)} potential
           </p>
         </div>
 
@@ -288,7 +290,7 @@ export default function AbandonedCartsPage() {
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                     <span>{cart.item_count} item{cart.item_count !== 1 ? 's' : ''}</span>
                     <span className="font-medium text-foreground">
-                      {formatCurrency(cart.subtotal, 'INR')}
+                      {formatCurrency(cart.subtotal, currency)}
                     </span>
                     <span>
                       Abandoned {formatDistanceToNow(new Date(cart.abandoned_at || cart.created_at), { addSuffix: true })}

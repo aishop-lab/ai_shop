@@ -52,7 +52,10 @@ export async function GET(request: NextRequest) {
     let searchQuery = query
     if (storeSlug) {
       // Restrict search to specific store's product pages
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'localhost:3000'
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+        || process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, '')
+        || process.env.VERCEL_PROJECT_PRODUCTION_URL
+        || 'localhost:3000'
       searchQuery = `${query} site:${siteUrl}/${storeSlug}/products`
     }
 

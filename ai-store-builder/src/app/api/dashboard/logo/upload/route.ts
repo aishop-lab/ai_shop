@@ -20,8 +20,12 @@ export async function POST(request: Request) {
     }
 
     const formData = await request.formData()
-    const file = formData.get('file') as File
-    const storeId = formData.get('storeId') as string
+    const rawFile = formData.get('file')
+    const rawStoreId = formData.get('storeId')
+
+    // Guard against File objects being passed where strings are expected
+    const file = rawFile instanceof File ? rawFile : null
+    const storeId = typeof rawStoreId === 'string' ? rawStoreId : null
 
     if (!file) {
       return NextResponse.json(
